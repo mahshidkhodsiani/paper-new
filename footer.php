@@ -1,5 +1,5 @@
 <div class="container">
-    <footer class="row row-cols-1 row-cols-sm-2 row-cols-md-5 py-5 my-5 border-top">
+    <footer class="row row-cols-1 row-cols-sm-2 row-cols-md-5 border-top mt-5 pt-5">
         <div class="col-9 col-md-3 mb-3" >
             <a href="./" class="">
                 <img src="images/logo.jpeg" class="img-fluid" height="200px" width="200px">
