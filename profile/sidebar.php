@@ -8,7 +8,7 @@
         </div>
 
         <div class="text-center mb-4">
-            <p class="bg-info">
+            <p class="">
                 <i class="far fa-user-circle"></i>
                 <?= $_SESSION['user_data']['name'] . " " . $_SESSION['user_data']['family']; ?>
             </p>
@@ -17,11 +17,11 @@
         <div class="list-group">
             <a class="list-group-item list-group-item-action" href="./">Main</a>
             <a class="list-group-item list-group-item-action" href="settings.php">Settings</a>
-            <a class="list-group-item list-group-item-action active" href="resume-media.php">Resume &amp; Introduction Media</a>
+            <a class="list-group-item list-group-item-action active" href="resume-media.php">Resume And Introduction Media</a>
             <a class="list-group-item list-group-item-action" href="my-presentations.php">My Presentations</a>
             <a class="list-group-item list-group-item-action" href="saved-presentations.php">Saved Presentations</a>
-            <a class="list-group-item list-group-item-action" href="saved-peoples.php">Saved Peoples</a>
-            <a class="list-group-item list-group-item-action" href="tickets.php">Tickets</a>
+            <a class="list-group-item list-group-item-action" href="saved-peoples.php">Connections</a>
+            <a class="list-group-item list-group-item-action" href="tickets.php">Messages</a>
         </div>
     </div>
 </div>

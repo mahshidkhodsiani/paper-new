@@ -28,6 +28,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $google_scholar_url = filter_input(INPUT_POST, 'google_scholar_url', FILTER_SANITIZE_URL);
     $github_url = filter_input(INPUT_POST, 'github_url', FILTER_SANITIZE_URL);
     $website_url = filter_input(INPUT_POST, 'website_url', FILTER_SANITIZE_URL);
+    // --- اضافه کردن فیلد جدید: biography ---
+    $biography = filter_input(INPUT_POST, 'biography', FILTER_SANITIZE_STRING);
+
 
     $password_new = filter_input(INPUT_POST, 'password', FILTER_SANITIZE_STRING);
     $password_confirm = filter_input(INPUT_POST, 'confirm_password', FILTER_SANITIZE_STRING);
@@ -37,114 +40,110 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $bindValues = [];
 
     // اضافه کردن فیلدهای متنی به لیست برای UPDATE
-    if ($name !== null) {
+    // از isset استفاده می‌کنیم تا اگر فیلد خالی هم ارسال شد، در دیتابیس خالی ذخیره شود.
+    if (isset($_POST['first_name'])) {
         $updateFields[] = "name = ?";
         $bindParams .= "s";
         $bindValues[] = $name;
     }
-    if ($family !== null) {
+    if (isset($_POST['last_name'])) {
         $updateFields[] = "family = ?";
         $bindParams .= "s";
         $bindValues[] = $family;
     }
-    if ($university !== null) {
+    if (isset($_POST['university'])) {
         $updateFields[] = "university = ?";
         $bindParams .= "s";
         $bindValues[] = $university;
     }
-    if ($birthdate !== null) {
+    if (isset($_POST['birthdate'])) {
         $updateFields[] = "birthdate = ?";
         $bindParams .= "s";
         $bindValues[] = $birthdate;
     }
-    if ($education !== null) {
+    if (isset($_POST['education'])) {
         $updateFields[] = "education = ?";
         $bindParams .= "s";
         $bindValues[] = $education;
     }
-    if ($workplace !== null) {
+    if (isset($_POST['workplace'])) {
         $updateFields[] = "workplace = ?";
         $bindParams .= "s";
         $bindValues[] = $workplace;
     }
-    if ($meeting_info !== null) {
+    if (isset($_POST['meeting_info'])) {
         $updateFields[] = "meeting_info = ?";
         $bindParams .= "s";
         $bindValues[] = $meeting_info;
     }
-    if ($linkedin_url !== null) {
+    if (isset($_POST['linkedin_url'])) {
         $updateFields[] = "linkedin_url = ?";
         $bindParams .= "s";
         $bindValues[] = $linkedin_url;
     }
-    if ($x_url !== null) {
+    if (isset($_POST['x_url'])) {
         $updateFields[] = "x_url = ?";
         $bindParams .= "s";
         $bindValues[] = $x_url;
     }
-    if ($google_scholar_url !== null) {
+    if (isset($_POST['google_scholar_url'])) {
         $updateFields[] = "google_scholar_url = ?";
         $bindParams .= "s";
         $bindValues[] = $google_scholar_url;
     }
-    if ($github_url !== null) {
+    if (isset($_POST['github_url'])) {
         $updateFields[] = "github_url = ?";
         $bindParams .= "s";
         $bindValues[] = $github_url;
     }
-    if ($website_url !== null) {
+    if (isset($_POST['website_url'])) {
         $updateFields[] = "website_url = ?";
         $bindParams .= "s";
         $bindValues[] = $website_url;
     }
+    // --- اضافه کردن biography به لیست برای UPDATE ---
+    if (isset($_POST['biography'])) {
+        $updateFields[] = "biography = ?";
+        $bindParams .= "s";
+        $bindValues[] = $biography;
+    }
+
 
     // --- مدیریت رمز عبور ---
-    if (!empty($password_new) && !empty($password_confirm)) {
-        if ($password_new === $password_confirm) {
+    if (!empty($password_new) || !empty($password_confirm)) {
+        if ($password_new === $password_confirm && !empty($password_new)) {
             $hashed_password = password_hash($password_new, PASSWORD_DEFAULT);
             $updateFields[] = "password = ?";
             $bindParams .= "s";
             $bindValues[] = $hashed_password;
         } else {
-            $message = 'رمزهای عبور با یکدیگر مطابقت ندارند.';
+            $message = 'رمزهای عبور با یکدیگر مطابقت ندارند یا خالی هستند.';
             $messageType = 'danger';
         }
-    } elseif (!empty($password_new) && empty($password_confirm)) {
-        $message = 'لطفاً رمز عبور جدید را تأیید کنید.';
-        $messageType = 'danger';
     }
 
     // --- مدیریت آپلود تصویر پروفایل ---
     if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] == UPLOAD_ERR_OK) {
-        // مسیر روت پروژه (یک سطح بالاتر از پوشه 'profile')
         $baseUploadDir = '../uploads/pics/';
-        $userUploadDir = $baseUploadDir . $userId . '/'; // پوشه اختصاصی کاربر
+        $userUploadDir = $baseUploadDir . $userId . '/';
 
-        // ایجاد پوشه کاربر اگر وجود ندارد
         if (!is_dir($userUploadDir)) {
-            mkdir($userUploadDir, 0775, true); // 0775 permissions, true برای ایجاد پوشه های تو در تو
+            mkdir($userUploadDir, 0775, true);
         }
 
         $fileName = basename($_FILES['profile_image']['name']);
         $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-        $allowedTypes = ['jpg', 'jpeg', 'png', 'gif']; // افزودن gif در صورت نیاز
+        $allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
 
         if (in_array($fileExt, $allowedTypes)) {
-            // نام عکس پروفایل: نام منحصر به فرد + پسوند
             $newFileName = 'profile_pic_' . uniqid() . '.' . $fileExt;
             $uploadFilePath = $userUploadDir . $newFileName;
 
-
             if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $uploadFilePath)) {
-                // آدرس نسبی که در دیتابیس ذخیره می شود
-                // فرض بر این است که فایل settings.php در profile/ قرار دارد
-                // و uploads/pics/user_id/pic_name.jpg از روت قابل دسترسی است
                 $dbFilePath = 'uploads/pics/' . $userId . '/' . $newFileName;
-
                 $updateFields[] = "profile_pic = ?";
                 $bindParams .= "s";
                 $bindValues[] = $dbFilePath;
-                $message = 'تصویر پروفایل با موفقیت آپلود شد. ';
             } else {
                 $message = 'خطا در آپلود تصویر پروفایل. ';
                 $messageType = 'danger';
@@ -157,28 +156,47 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 
     if (!empty($updateFields) && $messageType !== 'danger') {
+        $conn_update = new mysqli($servername, $username, $password, $dbname);
+        if ($conn_update->connect_error) {
+            die("Connection failed: " . $conn_update->connect_error);
+        }
+        $conn_update->set_charset("utf8mb4");
+
         $sql_update = "UPDATE users SET " . implode(", ", $updateFields) . " WHERE id = ?";
         $bindParams .= "i";
         $bindValues[] = $userId;
 
-        $stmt_update = $conn->prepare($sql_update);
+        $stmt_update = $conn_update->prepare($sql_update);
         if ($stmt_update) {
-            call_user_func_array([$stmt_update, 'bind_param'], array_merge([$bindParams], $bindValues));
+            // استفاده از array_merge برای ترکیب پارامترها با نوع و مقادیر
+            $bind_names = array_merge([$bindParams], $bindValues);
+            // مرجع سازی مقادیر برای bind_param
+            $refs = [];
+            foreach ($bind_names as $key => $value) {
+                $refs[$key] = &$bind_names[$key];
+            }
+            call_user_func_array([$stmt_update, 'bind_param'], $refs);
 
             if ($stmt_update->execute()) {
-                $message = 'اطلاعات با موفقیت به روزرسانی شد!';
+                $message = 'Information updated successfully.!';
                 $messageType = 'success';
-                // بعد از بروزرسانی موفقیت آمیز، اطلاعات session را نیز بروز کنید
-                // و صفحه را رفرش کنید تا تغییرات در فرم منعکس شوند
-                // (مهم: فقط فیلدهایی که در سشن نگه می دارید را بروز کنید)
-                $_SESSION['user_data']['name'] = $name;
-                $_SESSION['user_data']['family'] = $family;
-                // اگر profile_pic هم در سشن ذخیره می کنید، آن را نیز بروز کنید
-                if (isset($dbFilePath)) {
-                    $_SESSION['user_data']['profile_pic'] = $dbFilePath;
-                }
 
-                header("Location: settings.php?status=success&msg=" . urlencode($message));
+                // --- بخش حیاتی: به‌روزرسانی کامل $_SESSION['user_data'] از دیتابیس ---
+                // --- اضافه کردن biography به SELECT query ---
+                $sql_fetch_updated_user = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, created_at, updated_at FROM users WHERE id = ?";
+                $stmt_fetch = $conn_update->prepare($sql_fetch_updated_user);
+                if ($stmt_fetch) {
+                    $stmt_fetch->bind_param("i", $userId);
+                    $stmt_fetch->execute();
+                    $result_fetch = $stmt_fetch->get_result();
+                    if ($result_fetch->num_rows > 0) {
+                        $_SESSION['user_data'] = $result_fetch->fetch_assoc(); // اینجا سشن به‌طور کامل به‌روز می‌شود
+                    }
+                    $stmt_fetch->close();
+                }
+                // --- پایان بخش حیاتی ---
+
+                header("Location: settings.php?status=" . urlencode($messageType) . "&msg=" . urlencode($message));
                 exit();
             } else {
                 $message = 'خطا در به روزرسانی اطلاعات: ' . $stmt_update->error;
@@ -186,36 +204,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
             $stmt_update->close();
         } else {
-            $message = 'خطا در آماده سازی کوئری به روزرسانی: ' . $conn->error;
+            $message = 'خطا در آماده سازی کوئری به روزرسانی: ' . $conn_update->error;
             $messageType = 'danger';
         }
+        $conn_update->close();
     } elseif (empty($updateFields) && $messageType !== 'danger') {
         $message = 'هیچ اطلاعاتی برای به روزرسانی وجود نداشت.';
         $messageType = 'info';
     }
-
-    // اگر پیام از طریق ریدایرکت ارسال شده باشد
-    // این قسمت باید قبل از کد لود اطلاعات کاربر باشد
-    if (isset($_GET['status']) && isset($_GET['msg'])) {
-        $messageType = $_GET['status'];
-        $message = urldecode($_GET['msg']);
-    }
 }
 
-// این قسمت برای لود کردن اطلاعات کاربر بعد از ارسال فرم (یا بارگذاری اولیه صفحه) است
-// مطمئن شوید که $conn قبل از این بخش، دوباره باز شده باشد اگر در بخش POST بسته شده بود
-// اگر در config.php فقط یک بار $conn تعریف و وصل می شود و در صورت نیاز re-include می شود، مشکلی نیست
-// اگر اتصال در بخش POST بسته می شود، باید اینجا دوباره آن را باز کنید یا از یک سیستم مدیریت اتصال بهتر استفاده کنید.
-// به دلیل اینکه در انتهای هر دو شاخه (POST و غیر POST) اتصال بسته می شود، مشکل خاصی پیش نمی آید.
+// --- مدیریت پیام ها پس از ریدایرکت (GET) ---
+if (isset($_GET['status']) && isset($_GET['msg'])) {
+    $messageType = $_GET['status'];
+    $message = urldecode($_GET['msg']);
+}
 
-$conn = new mysqli($servername, $username, $password, $dbname); // بازگشایی مجدد اتصال
+
+// --- لود کردن اطلاعات کاربر برای نمایش در فرم (در صورت عدم ارسال POST یا پس از ریدایرکت) ---
+$conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
-$conn->set_charset("utf8mb4"); // تنظیم charset
+$conn->set_charset("utf8mb4");
 
 $user = [];
-$sql = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url FROM users WHERE id = ?";
+// --- اضافه کردن biography به SELECT query ---
+$sql = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography FROM users WHERE id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -223,12 +238,16 @@ $result = $stmt->get_result();
 
 if ($result->num_rows > 0) {
     $user = $result->fetch_assoc();
+} else {
+    header("Location: ../login.php");
+    exit();
 }
 
 $stmt->close();
 $conn->close();
 
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -274,19 +293,19 @@ $conn->close();
 
                         <div class="mb-3">
                             <label for="firstName" class="form-label">First Name</label>
-                            <input type="text" class="form-control" id="firstName" name="first_name" value="<?php echo htmlspecialchars($user['name'] ?? ''); ?>">
+                            <input type="text" class="form-control" id="firstName" name="first_name" value="<?php echo htmlspecialchars($_POST['first_name'] ?? $user['name'] ?? ''); ?>">
                         </div>
 
                         <div class="mb-3">
                             <label for="lastName" class="form-label">Last Name</label>
-                            <input type="text" class="form-control" id="lastName" name="last_name" value="<?php echo htmlspecialchars($user['family'] ?? ''); ?>">
+                            <input type="text" class="form-control" id="lastName" name="last_name" value="<?php echo htmlspecialchars($_POST['last_name'] ?? $user['family'] ?? ''); ?>">
                         </div>
 
                         <div class="mb-3" id="passwordGroup">
                             <label for="password" class="form-label">Password</label>
                             <div class="input-group">
                                 <input type="password" class="form-control" id="password" name="password" disabled>
-                                <button class="btn btn-outline-secondary" type="button" id="editPasswordBtn">Edit Password</button>
+                                <button class="btn btn-outline-secondary" type="button" id="editPasswordBtn">Reset Password</button>
                             </div>
                             <small class="form-text text-muted" id="passwordStrength">Password strength: Weak</small>
                         </div>
@@ -300,52 +319,57 @@ $conn->close();
 
                         <div class="mb-3">
                             <label for="university" class="form-label">University</label>
-                            <input type="text" class="form-control" id="university" name="university" value="<?php echo htmlspecialchars($user['university'] ?? ''); ?>">
+                            <input type="text" class="form-control" id="university" name="university" value="<?php echo htmlspecialchars($_POST['university'] ?? $user['university'] ?? ''); ?>">
                         </div>
 
                         <div class="mb-3">
                             <label for="birthdate" class="form-label">Birthdate</label>
-                            <input type="date" class="form-control" id="birthdate" name="birthdate" value="<?php echo htmlspecialchars($user['birthdate'] ?? ''); ?>">
+                            <input type="date" class="form-control" id="birthdate" name="birthdate" value="<?php echo htmlspecialchars($_POST['birthdate'] ?? $user['birthdate'] ?? ''); ?>">
                         </div>
 
                         <div class="mb-3">
                             <label for="education" class="form-label">Education</label>
-                            <input type="text" class="form-control" id="education" name="education" value="<?php echo htmlspecialchars($user['education'] ?? ''); ?>">
+                            <input type="text" class="form-control" id="education" name="education" value="<?php echo htmlspecialchars($_POST['education'] ?? $user['education'] ?? ''); ?>">
                         </div>
 
                         <div class="mb-3">
                             <label for="workplace" class="form-label">Workplace</label>
-                            <input type="text" class="form-control" id="workplace" name="workplace" value="<?php echo htmlspecialchars($user['workplace'] ?? ''); ?>">
+                            <input type="text" class="form-control" id="workplace" name="workplace" value="<?php echo htmlspecialchars($_POST['workplace'] ?? $user['workplace'] ?? ''); ?>">
                         </div>
 
                         <div class="mb-3">
                             <label for="meetingInfo" class="form-label">Meeting Info</label>
-                            <textarea class="form-control" id="meetingInfo" name="meeting_info" rows="4"><?php echo htmlspecialchars($user['meeting_info'] ?? 'Mon - Fri: 9:00 AM - 5:00 PM (CST)'); ?></textarea>
+                            <textarea class="form-control" id="meetingInfo" name="meeting_info" rows="4"><?php echo htmlspecialchars($_POST['meeting_info'] ?? $user['meeting_info'] ?? 'Mon - Fri: 9:00 AM - 5:00 PM (CST)'); ?></textarea>
                         </div>
 
                         <div class="mb-3">
+                            <label for="aboutMe" class="form-label">About Me (Bio)</label>
+                            <textarea class="form-control" id="aboutMe" name="biography" rows="6" placeholder="Tell us a bit about yourself..."><?php echo htmlspecialchars($_POST['biography'] ?? $user['biography'] ?? ''); ?></textarea>
+                            <small class="form-text text-muted">Share a brief biography or description about yourself.</small>
+                        </div>
+                        <div class="mb-3">
                             <label for="linkedin" class="form-label">LinkedIn Profile Link</label>
-                            <input type="url" class="form-control" id="linkedin" name="linkedin_url" value="<?php echo htmlspecialchars($user['linkedin_url'] ?? ''); ?>">
+                            <input type="url" class="form-control" id="linkedin" name="linkedin_url" value="<?php echo htmlspecialchars($_POST['linkedin_url'] ?? $user['linkedin_url'] ?? ''); ?>">
                         </div>
 
                         <div class="mb-3">
                             <label for="xProfile" class="form-label">X Profile Link</label>
-                            <input type="url" class="form-control" id="xProfile" name="x_url" value="<?php echo htmlspecialchars($user['x_url'] ?? ''); ?>">
+                            <input type="url" class="form-control" id="xProfile" name="x_url" value="<?php echo htmlspecialchars($_POST['x_url'] ?? $user['x_url'] ?? ''); ?>">
                         </div>
 
                         <div class="mb-3">
                             <label for="googleScholar" class="form-label">Google Scholar Profile Link</label>
-                            <input type="url" class="form-control" id="googleScholar" name="google_scholar_url" value="<?php echo htmlspecialchars($user['google_scholar_url'] ?? ''); ?>">
+                            <input type="url" class="form-control" id="googleScholar" name="google_scholar_url" value="<?php echo htmlspecialchars($_POST['google_scholar_url'] ?? $user['google_scholar_url'] ?? ''); ?>">
                         </div>
 
                         <div class="mb-3">
                             <label for="github" class="form-label">Github Profile Link</label>
-                            <input type="url" class="form-control" id="github" name="github_url" value="<?php echo htmlspecialchars($user['github_url'] ?? ''); ?>">
+                            <input type="url" class="form-control" id="github" name="github_url" value="<?php echo htmlspecialchars($_POST['github_url'] ?? $user['github_url'] ?? ''); ?>">
                         </div>
 
                         <div class="mb-3">
                             <label for="websiteLink" class="form-label">Website Link</label>
-                            <input type="url" class="form-control" id="websiteLink" name="website_url" value="<?php echo htmlspecialchars($user['website_url'] ?? ''); ?>">
+                            <input type="url" class="form-control" id="websiteLink" name="website_url" value="<?php echo htmlspecialchars($_POST['website_url'] ?? $user['website_url'] ?? ''); ?>">
                         </div>
 
                         <button type="submit" class="btn btn-primary mt-4">Update</button>

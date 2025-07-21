@@ -1,0 +1,107 @@
+
+.availability-status-box.status-google-calendar {
+  border: 1px solid #ccc;
+  padding: 15px;
+  text-align: center;
+}
+
+.availability-status-box.status-google-calendar iframe {
+  max-width: 100%;
+  height: 300px;
+}
+.profile-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.profile-image-display {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border: 3px solid #007bff;
+  margin-bottom: 15px;
+}
+
+.profile-name {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.profile-section-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #007bff;
+  margin-top: 25px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.social-links a {
+  font-size: 1.5rem;
+  margin-right: 15px;
+  color: #555;
+  transition: color 0.3s ease;
+}
+
+.social-links a:hover {
+  color: #007bff;
+}
+
+.social-links .fa-linkedin {
+  color: #0077b5;
+}
+
+.social-links .fa-x-twitter {
+  color: #1da1f2;
+}
+
+.social-links .fa-graduation-cap {
+  color: #db4437;
+}
+
+.social-links .fa-github {
+  color: #333;
+}
+
+.social-links .fa-globe {
+  color: #009688;
+}
+
+/* New styles for optional column */
+.availability-status-box {
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.status-available {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-busy {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status-meeting-link {
+  background-color: #cfe2ff;
+  color: #052c65;
+  border: 1px solid #b6d4fe;
+}
+
+.status-icon {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.status-text {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
