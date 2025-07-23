@@ -20,7 +20,7 @@ if (isset($_POST['register'])) {
             exit();
         }
 
-        $sql = "INSERT INTO users (name, family, email, password, profile_img) 
+        $sql = "INSERT INTO users (name, family, email, password, profile_pic) 
                 VALUES ('$name', '$family', '$email', '$password', '$profile_img')";
 
         if ($conn->query($sql) === TRUE) {

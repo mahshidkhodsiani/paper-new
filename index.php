@@ -33,14 +33,12 @@
                     <i class="fab fa-google"></i> Sign in/up With Google
                 </button>
                 <br>
-                <button class="btn btn-outline-info rounded mb-3">
+                <a href="profile/send_email" class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-microphone"></i> Request To Present
-                </button>
+                </a>
                 <br>
-                <button class="btn btn-outline-info rounded mb-3">
-                    <i class="fab fa-google"></i> Sign in/up With Google
-                </button>
-                <br>
+              
+              
                 <button class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-user-plus"></i> Invite
                 </button>
