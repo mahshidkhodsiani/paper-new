@@ -1,27 +1,62 @@
 <div class="col-md-3">
     <div class="sidebar-content shadow p-3 mb-5 bg-white rounded">
         <div class="text-center mb-4">
-
             <img decoding="async" width="150" height="150"
-                src="../<?= !empty($_SESSION['user_data']['profile_pic']) ? $_SESSION['user_data']['profile_pic'] : '../images/2.png'; ?>"
+                src="../<?= !empty($user['profile_pic']) ? $user['profile_pic'] : '../images/2.png'; ?>"
                 class="img-fluid rounded-circle" alt="profile-pic">
         </div>
 
         <div class="text-center mb-4">
             <p class="">
                 <i class="far fa-user-circle"></i>
-                <?= $_SESSION['user_data']['name'] . " " . $_SESSION['user_data']['family']; ?>
+                <?= $user['name'] . " " . $user['family']; ?>
             </p>
         </div>
 
         <div class="list-group">
-            <a class="list-group-item list-group-item-action" href="./">Main</a>
-            <a class="list-group-item list-group-item-action" href="settings.php">Settings</a>
-            <a class="list-group-item list-group-item-action active" href="resume-media.php">Resume And Introduction Media</a>
-            <a class="list-group-item list-group-item-action" href="my_presentations.php">My Presentations</a>
-            <a class="list-group-item list-group-item-action" href="saved-presentations.php">Saved Presentations</a>
-            <a class="list-group-item list-group-item-action" href="saved-peoples.php">Connections</a>
-            <a class="list-group-item list-group-item-action" href="tickets.php">Messages</a>
+            <?php
+            // بررسی می‌کنیم که آیا کاربر لاگین کرده و ID سشن موجود است
+            if (isset($_SESSION['user_data']['id'])) {
+                $loggedInUserId = $_SESSION['user_data']['id'];
+                // فقط در صورتی دکمه نمایش داده شود که ID کاربر لاگین کرده با ID پروفایل یکی نباشد
+                if ($loggedInUserId != $user['id']) {
+            ?>
+                    <button type="button" class="btn btn-primary w-100 mt-3" data-bs-toggle="modal" data-bs-target="#messageModal">
+                        <i class="fas fa-paper-plane me-2"></i>Send Message
+                    </button>
+            <?php
+                }
+            }
+            ?>
+        </div>
+    </div>
+</div>
+
+<!-- Modal ارسال پیام -->
+<div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="messageModalLabel">New Message to <?= $user['name'] . ' ' . $user['family'] ?></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="messageForm">
+                    <input type="hidden" name="receiver_id" value="<?= $user['id'] ?>">
+                    <div class="mb-3">
+                        <label for="messageSubject" class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="messageSubject" name="subject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="messageContent" class="form-label">Message</label>
+                        <textarea class="form-control" id="messageContent" name="content" rows="5" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="sendMessageBtn">Send</button>
+            </div>
         </div>
     </div>
 </div>
@@ -30,29 +65,33 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script>
     $(document).ready(function() {
-        // دریافت مسیر فعلی صفحه
-        var currentPath = window.location.pathname;
-        var fileName = currentPath.split('/').pop(); // فقط نام فایل رو استخراج می کنیم
+        $('#sendMessageBtn').click(function() {
+            const formData = $('#messageForm').serialize();
 
-        // حذف کلاس active از تمام لینک ها
-        $('.list-group-item-action').removeClass('active');
-
-        // اضافه کردن کلاس active به لینکی که آدرسش با نام فایل فعلی مطابقت دارد
-        $('.list-group-item-action').each(function() {
-            var linkHref = $(this).attr('href');
-            var linkFileName = linkHref.split('/').pop();
-
-            if (linkFileName === fileName) {
-                $(this).addClass('active');
-            }
+            $.ajax({
+                url: 'send_message.php',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                beforeSend: function() {
+                    $('#sendMessageBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...');
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#messageModal').modal('hide');
+                        alert('Message sent successfully!');
+                        $('#messageForm')[0].reset();
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('An error occurred while sending the message.');
+                },
+                complete: function() {
+                    $('#sendMessageBtn').prop('disabled', false).text('Send');
+                }
+            });
         });
-
-        // برای مدیریت کلیک ها در صورتی که نیاز به تغییر آدرس صفحه نداشته باشید
-        // $('.list-group-item-action').on('click', function(e) {
-        //     e.preventDefault(); // جلوی رفتن به آدرس جدید رو میگیره اگر نمیخواهید صفحه رفرش بشه
-        //     $('.list-group-item-action').removeClass('active');
-        //     $(this).addClass('active');
-        //     // اینجا میتونید محتوای صفحه رو با Ajax لود کنید
-        // });
     });
 </script>

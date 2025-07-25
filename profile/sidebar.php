@@ -21,7 +21,7 @@
             <a class="list-group-item list-group-item-action" href="my_presentations.php">My Presentations</a>
             <a class="list-group-item list-group-item-action" href="saved-presentations.php">Saved Presentations</a>
             <a class="list-group-item list-group-item-action" href="saved-peoples.php">Connections</a>
-            <a class="list-group-item list-group-item-action" href="tickets.php">Messages</a>
+            <a class="list-group-item list-group-item-action" href="messages.php">Messages</a>
         </div>
     </div>
 </div>
