@@ -3,7 +3,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$unread_count = 0;
+$unread_message_count = 0; // تغییر نام متغیر برای وضوح بیشتر
+$pending_requests_count = 0; // متغیر جدید برای شمارش درخواست‌های اتصال
 
 $config_path = realpath(__DIR__ . '/../config.php');
 
@@ -24,13 +25,25 @@ function safe($value)
 
 if (isset($_SESSION['user_data']['id'])) {
     $user_id = $_SESSION['user_data']['id'];
-    $stmt = $conn->prepare("SELECT COUNT(*) FROM messages WHERE receiver_id = ? AND is_read = FALSE");
 
-    if ($stmt) {
-        $stmt->bind_param("i", $user_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $unread_count = (int)$result->fetch_row()[0];
+    // شمارش پیام‌های خوانده نشده
+    $stmt_messages = $conn->prepare("SELECT COUNT(*) FROM messages WHERE receiver_id = ? AND is_read = FALSE");
+    if ($stmt_messages) {
+        $stmt_messages->bind_param("i", $user_id);
+        $stmt_messages->execute();
+        $result_messages = $stmt_messages->get_result();
+        $unread_message_count = (int)$result_messages->fetch_row()[0];
+        $stmt_messages->close();
+    }
+
+    // شمارش درخواست‌های اتصال در حال انتظار
+    $stmt_connections = $conn->prepare("SELECT COUNT(*) FROM connections WHERE receiver_id = ? AND status = 'pending'");
+    if ($stmt_connections) {
+        $stmt_connections->bind_param("i", $user_id);
+        $stmt_connections->execute();
+        $result_connections = $stmt_connections->get_result();
+        $pending_requests_count = (int)$result_connections->fetch_row()[0];
+        $stmt_connections->close();
     }
 }
 ?>
@@ -53,20 +66,30 @@ if (isset($_SESSION['user_data']['id'])) {
                 <li class="nav-item dropdown">
                     <a class="nav-link px-2 link-dark dropdown-toggle" href="#" id="navbarDropdownNotification" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-bell"></i> Notification
-                        <?php if ($unread_count > 0): ?>
-                            <span class="badge bg-danger rounded-pill"><?= safe($unread_count) ?></span>
+                        <?php if ($unread_message_count > 0 || $pending_requests_count > 0): // نمایش Badge فقط در صورت وجود اعلان 
+                        ?>
+                            <span class="badge bg-danger rounded-pill">
+                                <?= safe($unread_message_count + $pending_requests_count) ?>
+                            </span>
                         <?php endif; ?>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownNotification">
-                        <?php if ($unread_count > 0): ?>
-                            <li><a class="dropdown-item" href="messages.php"><i class="fas fa-envelope me-2"></i> You have <?= safe($unread_count) ?> unread message(s)</a></li>
-                        <?php else: ?>
+                        <?php if ($unread_message_count > 0): ?>
+                            <li><a class="dropdown-item" href="messages.php"><i class="fas fa-envelope me-2"></i> You have <?= safe($unread_message_count) ?> unread message(s)</a></li>
+                        <?php endif; ?>
+                        <?php if ($pending_requests_count > 0): ?>
+                            <li><a class="dropdown-item" href="my_requests.php"><i class="fas fa-user-plus me-2"></i> You have <?= safe($pending_requests_count) ?> new connection request(s)</a></li>
+                        <?php endif; ?>
+
+                        <?php if ($unread_message_count == 0 && $pending_requests_count == 0): ?>
                             <li><a class="dropdown-item" href="#"><i class="fas fa-check-circle me-2"></i> No new notifications</a></li>
                         <?php endif; ?>
+
                         <li>
                             <hr class="dropdown-divider">
                         </li>
                         <li><a class="dropdown-item" href="messages.php"><i class="fas fa-inbox me-2"></i> View all messages</a></li>
+                        <li><a class="dropdown-item" href="my_requests.php"><i class="fas fa-users me-2"></i> View all connection requests</a></li>
                     </ul>
                 </li>
             </ul>

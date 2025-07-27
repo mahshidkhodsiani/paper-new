@@ -20,8 +20,9 @@
             <a class="list-group-item list-group-item-action active" href="resume-media.php">Resume And Introduction Media</a>
             <a class="list-group-item list-group-item-action" href="my_presentations.php">My Presentations</a>
             <a class="list-group-item list-group-item-action" href="saved-presentations.php">Saved Presentations</a>
-            <a class="list-group-item list-group-item-action" href="saved-peoples.php">Connections</a>
+            <a class="list-group-item list-group-item-action" href="saved_peoples.php">Connections</a>
             <a class="list-group-item list-group-item-action" href="messages.php">Messages</a>
+            <a class="list-group-item list-group-item-action" href="my_requests.php">My requests</a>
         </div>
     </div>
 </div>

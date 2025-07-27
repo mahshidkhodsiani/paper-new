@@ -4,21 +4,24 @@ include "../config.php"; // Database connection file
 
 $user = null; // Variable to hold user data
 $profileId = null;
+$presentations = []; // Variable to hold presentations data
+$savedPresentationIds = []; // To store IDs of presentations already saved by the current user
 
 // Handle potential database connection errors early
 if (!($conn instanceof mysqli) || $conn->connect_error) {
-    // Log the error for debugging (optional, but good practice)
     error_log("Database connection failed in profile.php: " . $conn->connect_error);
-    // Redirect to an error page or display a message
     header("Location: ../error.php?code=db_conn_failed");
     exit();
 }
+
+// Check if a user is logged in to determine if "Save" button should be shown
+// This assumes you have $_SESSION['user_id'] set upon login
+$loggedInUserId = $_SESSION['user_id'] ?? null;
 
 // Get user ID from GET parameter (for viewing other profiles)
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $profileId = intval($_GET['id']);
 
-    // Use prepared statements for security against SQL injection
     $sql = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, custom_profile_link, availability_status, meeting_link, google_calendar, last_resume_update, intro_video_path 
             FROM users 
             WHERE id = ?";
@@ -31,36 +34,72 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
         if ($result->num_rows > 0) {
             $user = $result->fetch_assoc();
         } else {
-            // User with given ID not found
             error_log("User not found for profileId: " . $profileId);
         }
-        $stmt->close(); // Close statement after use
+        $stmt->close();
     } else {
-        // Error preparing the statement
         error_log("Failed to prepare statement in profile.php: " . $conn->error);
     }
-} else {
-    // If no ID is provided or it's not numeric, potentially redirect to the logged-in user's profile
-    // or to a generic people listing, or an error page.
-    // For now, redirecting to home page as in your original code.
-}
 
-// If user not found (either no ID or ID not found in DB), redirect
-if (!$user) {
-    header("Location: ../index.php"); // or to error page: error.php?code=404
+    // Fetch presentations for the profileId
+    if ($user) {
+        $presentations_sql = "SELECT id, title, description, file_path, created_at FROM presentations WHERE user_id = ? ORDER BY created_at DESC";
+        $presentations_stmt = $conn->prepare($presentations_sql);
+        if ($presentations_stmt) {
+            $presentations_stmt->bind_param("i", $profileId);
+            $presentations_stmt->execute();
+            $presentations_result = $presentations_stmt->get_result();
+            while ($row = $presentations_result->fetch_assoc()) {
+                $presentations[] = $row;
+            }
+            $presentations_stmt->close();
+        } else {
+            error_log("Failed to prepare presentations statement in profile.php: " . $conn->error);
+        }
+
+        // New: Fetch saved presentations for the logged-in user if available
+        if ($loggedInUserId) {
+            $saved_sql = "SELECT presentation_id FROM saved_presentations WHERE user_id = ?";
+            $saved_stmt = $conn->prepare($saved_sql);
+            if ($saved_stmt) {
+                $saved_stmt->bind_param("i", $loggedInUserId);
+                $saved_stmt->execute();
+                $saved_result = $saved_stmt->get_result();
+                while ($row = $saved_result->fetch_assoc()) {
+                    $savedPresentationIds[] = $row['presentation_id'];
+                }
+                $saved_stmt->close();
+            } else {
+                error_log("Failed to prepare saved presentations statement: " . $conn->error);
+            }
+        }
+    }
+} else {
+    // Redirect logic if no ID is provided in the URL (e.g., redirect to index or logged-in user's profile)
+    if ($loggedInUserId) {
+        header("Location: ../../people/profile.php?id=" . $loggedInUserId);
+    } else {
+        header("Location: ../index.php");
+    }
     exit();
 }
 
-// --- Message handling (if redirected from another page) ---
-$message = ''; // For success/error messages
+// If user data could not be fetched (e.g., invalid ID)
+if (!$user) {
+    header("Location: ../index.php"); // Redirect to home page or an error page
+    exit();
+}
+
+// --- Message handling (if redirected from another page with status/msg in URL) ---
+// This part remains to receive status/msg, but the JS will handle the URL cleanup
+$message = '';
 $messageType = '';
 if (isset($_GET['status']) && isset($_GET['msg'])) {
-    $messageType = $_GET['status'];
-    $message = urldecode($_GET['msg']);
+    $messageType = htmlspecialchars($_GET['status']); // Sanitize input
+    $message = htmlspecialchars(urldecode($_GET['msg'])); // Sanitize and decode URL message
 }
 
 // --- Handling multiple universities/educations (assuming separated by semicolons) ---
-// Use null coalescing operator to avoid "Undefined array key" notices if the column is null
 $user_universities_array = !empty($user['university']) ? explode(';', $user['university']) : [];
 $user_educations_array = !empty($user['education']) ? explode(';', $user['education']) : [];
 ?>
@@ -73,9 +112,9 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile of <?php echo htmlspecialchars($user['name'] . ' ' . $user['family']); ?></title>
 
-    <?php include "../includes.php"; // This should include your CSS/JS frameworks 
-    ?>
-    <link rel="stylesheet" href="styles.css">
+    <?php include "../includes.php"; ?>
+    <!-- If you have a separate styles.css file in the same directory as profile.php, uncomment this: -->
+    <!-- <link rel="stylesheet" href="styles.css"> -->
 
     <style>
         /* CSS for circular video container */
@@ -234,6 +273,76 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             width: 100%;
             height: 100%;
         }
+
+        /* Style for presentation items */
+        .presentation-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #f8f9fa;
+        }
+
+        .presentation-item h6 {
+            color: #343a40;
+            margin-bottom: 5px;
+        }
+
+        .presentation-item p {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        .presentation-item .actions {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            /* To push button to the right */
+        }
+
+        .presentation-item a.view-link {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .presentation-item a.view-link:hover {
+            text-decoration: none;
+            color: #0056b3;
+        }
+
+        .presentation-item .btn-save-presentation {
+            font-size: 0.85em;
+            padding: 5px 10px;
+        }
+
+        .presentation-item .btn-saved {
+            background-color: #28a745;
+            color: white;
+            cursor: default;
+        }
+
+        .presentation-item .btn-saved:hover {
+            background-color: #28a745;
+            color: white;
+        }
+
+        /* Styles for the dynamic alert at the top (if you decide to re-enable it) */
+        /* .alert.fixed-top {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: auto;
+            max-width: 80%;
+            margin: 15px auto;
+            z-index: 1050;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: .25rem;
+            padding: .75rem 1.25rem;
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+        } */
     </style>
 </head>
 
@@ -247,11 +356,8 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             <div class="col-md-6">
                 <div class="main-content shadow-lg p-3 mb-5 bg-white rounded">
 
-
                     <?php
-                    // Use null coalescing operator for intro_video_path to prevent errors if null
                     $introVideoPath = htmlspecialchars($user['intro_video_path'] ?? '');
-                    // Check if the path is not empty and the file exists on the server
                     $hasVideo = !empty($introVideoPath) && file_exists($introVideoPath);
                     ?>
                     <div class="circular-video-container <?= !$hasVideo ? 'no-video' : '' ?>" id="introVideoContainer">
@@ -265,19 +371,12 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                             </div>
                         <?php else : ?>
                             <i class="fas fa-video-slash"></i>
-                            <p class="text-muted mt-3" style="position: absolute; bottom: 20px;">No introduction video</p>
+                            <p class="text-muted mt-3" style="position: absolute; bottom: 20px;">No intro video uploaded</p>
                         <?php endif; ?>
                     </div>
 
-                    <?php if (!empty($message)) : ?>
-                        <div class="alert alert-<?php echo htmlspecialchars($messageType); ?> alert-dismissible fade show" role="alert">
-                            <?php echo htmlspecialchars($message); ?>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    <?php endif; ?>
-
                     <div class="mb-4">
-                        <h5 class="profile-section-title"><i class="fas fa-briefcase me-2"></i>Academic and Professional Information</h5>
+                        <h5 class="profile-section-title"><i class="fas fa-briefcase me-2"></i>Academic & Work Information</h5>
                         <?php if (!empty($user_universities_array)) : ?>
                             <h6><i class="fas fa-university me-2 text-primary"></i>Universities:</h6>
                             <ul>
@@ -298,10 +397,10 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                             <p><i class="fas fa-building me-2 text-primary"></i>Workplace: <?= htmlspecialchars($user['workplace']) ?></p>
                         <?php endif; ?>
                         <?php if (!empty($user['birthdate'])) : ?>
-                            <p><i class="fas fa-birthday-cake me-2 text-primary"></i>Birthdate: <?= htmlspecialchars($user['birthdate']) ?></p>
+                            <p><i class="fas fa-birthday-cake me-2 text-primary"></i>Date of Birth: <?= htmlspecialchars($user['birthdate']) ?></p>
                         <?php endif; ?>
                         <?php if (!empty($user['last_resume_update'])) : ?>
-                            <p><i class="fas fa-calendar-alt me-2 text-primary"></i>Last resume update: <?= date('Y-m-d H:i', strtotime($user['last_resume_update'])) ?></p>
+                            <p><i class="fas fa-calendar-alt me-2 text-primary"></i>Last Resume Update: <?= date('Y-m-d H:i', strtotime($user['last_resume_update'])) ?></p>
                         <?php endif; ?>
                     </div>
 
@@ -314,7 +413,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
 
                     <?php if (!empty($user['linkedin_url']) || !empty($user['x_url']) || !empty($user['google_scholar_url']) || !empty($user['github_url']) || !empty($user['website_url'])) : ?>
                         <div class="mb-4">
-                            <h5 class="profile-section-title"><i class="fas fa-link me-2"></i>Social Media and Web Links</h5>
+                            <h5 class="profile-section-title"><i class="fas fa-link me-2"></i>Social & Web Links</h5>
                             <div class="social-links">
                                 <?php if (!empty($user['linkedin_url'])) : ?>
                                     <a href="<?= htmlspecialchars($user['linkedin_url']) ?>" target="_blank" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
@@ -334,44 +433,86 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                             </div>
                         </div>
                     <?php endif; ?>
+
+                    <?php if (!empty($presentations)) : ?>
+                        <div class="mb-4">
+                            <h5 class="profile-section-title"><i class="fas fa-chalkboard-teacher me-2"></i>Presentations</h5>
+                            <?php foreach ($presentations as $presentation) : ?>
+                                <div class="presentation-item">
+                                    <h6><?= htmlspecialchars($presentation['title']) ?></h6>
+                                    <?php if (!empty($presentation['description'])) : ?>
+                                        <p><?= nl2br(htmlspecialchars($presentation['description'])) ?></p>
+                                    <?php endif; ?>
+                                    <div class="actions">
+                                        <?php if (!empty($presentation['file_path'])) : ?>
+                                            <p class="mb-0">
+                                                <a href="<?= htmlspecialchars($presentation['file_path']) ?>" target="_blank" class="view-link">
+                                                    <i class="fas fa-file-pdf me-1"></i> View Presentation
+                                                </a>
+                                            </p>
+                                        <?php endif; ?>
+                                        <?php
+                                        // Check if the current user is logged in AND if this presentation is not their own AND if they haven't saved it yet
+                                        $isLoggedIn = !empty($loggedInUserId);
+                                        $isOwnPresentation = ($loggedInUserId == $profileId); // profileId is the ID of the user whose profile is being viewed
+                                        $isAlreadySaved = in_array($presentation['id'], $savedPresentationIds);
+
+                                        if ($isLoggedIn && !$isOwnPresentation) :
+                                            if ($isAlreadySaved) : ?>
+                                                <button class="btn btn-success btn-sm btn-saved" disabled>
+                                                    <i class="fas fa-check-circle me-1"></i> Saved
+                                                </button>
+                                            <?php else : ?>
+                                                <!-- IMPORTANT CHANGE: Using a standard HTML form for saving -->
+                                                <form action="../profile/save_presentation.php" method="POST" style="display:inline;">
+                                                    <input type="hidden" name="presentation_id" value="<?= htmlspecialchars($presentation['id']) ?>">
+                                                    <button type="submit" class="btn btn-outline-primary btn-sm btn-save-presentation">
+                                                        <i class="fas fa-plus me-1"></i> Add to Saved
+                                                    </button>
+                                                </form>
+                                        <?php endif;
+                                        endif; ?>
+                                    </div>
+                                    <small class="text-muted mt-2 d-block">Uploaded on: <?= date('Y-m-d', strtotime($presentation['created_at'])) ?></small>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else : ?>
+                        <div class="mb-4">
+                            <h5 class="profile-section-title"><i class="fas fa-chalkboard-teacher me-2"></i>Presentations</h5>
+                            <p class="text-muted">No presentations available for this user.</p>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
             <div class="col-md-3">
                 <div class="optional-sidebar shadow-sm p-3 mb-5 bg-white rounded">
-                    <?php if (!empty($message)) : ?>
-                        <div class="alert alert-<?php echo htmlspecialchars($messageType); ?> alert-dismissible fade show" role="alert">
-                            <?php echo htmlspecialchars($message); ?>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    <?php endif; ?>
-
                     <h5 class="profile-section-title mt-4">
                         <i class="fas fa-clock me-2"></i>Current Availability Status
                     </h5>
 
                     <div class="availability-status-box
-    <?php
-    // Use null coalescing to provide a default empty string if 'availability_status' is not set
-    switch ($user['availability_status'] ?? '') {
-        case 'available':
-            echo 'status-available';
-            break;
-        case 'busy':
-            echo 'status-busy';
-            break;
-        case 'meeting_link':
-            echo 'status-meeting-link';
-            break;
-        case 'google_calendar_embed':
-            echo 'status-google-calendar';
-            break;
-        default:
-            echo 'status-available'; // Default to available if status is not explicitly set
-            break;
-    }
-    ?>
-">
+                        <?php
+                        switch ($user['availability_status'] ?? '') {
+                            case 'available':
+                                echo 'status-available';
+                                break;
+                            case 'busy':
+                                echo 'status-busy';
+                                break;
+                            case 'meeting_link':
+                                echo 'status-meeting-link';
+                                break;
+                            case 'google_calendar_embed':
+                                echo 'status-google-calendar';
+                                break;
+                            default:
+                                echo 'status-available'; // Default to available if not set
+                                break;
+                        }
+                        ?>
+                    ">
                         <?php if (($user['availability_status'] ?? '') == 'available') : ?>
                             <i class="fas fa-circle-check status-icon"></i>
                             <p class="status-text">Currently Available</p>
@@ -398,12 +539,9 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
 
                         <?php elseif (($user['availability_status'] ?? '') == 'google_calendar_embed' && !empty($user['google_calendar'])) : ?>
                             <i class="fas fa-calendar-alt status-icon"></i>
-                            <p class="status-text">Check My Availability</p>
+                            <p class="status-text">Check My Schedule</p>
                             <div class="calendar-container mt-3">
                                 <?php
-                                // Ensure the embedded calendar code is properly handled (and sanitized if from user input)
-                                // If google_calendar might contain arbitrary HTML, you should sanitize it more robustly.
-                                // For trusted sources, direct echo might be acceptable.
                                 if (strpos($user['google_calendar'], '<iframe') !== false) {
                                     echo $user['google_calendar'];
                                 } else {
@@ -415,7 +553,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
 
                         <?php else : ?>
                             <i class="fas fa-question-circle status-icon"></i>
-                            <p class="status-text">Availability Not Set</p>
+                            <p class="status-text">Availability status not set</p>
                         <?php endif; ?>
                     </div>
 
@@ -474,34 +612,26 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                 });
             }
 
-            // Logic for URL cleanup and closing alerts
+            // --- IMPORTANT: Logic for URL cleanup (WITHOUT showing any alert) ---
             const urlParams = new URLSearchParams(window.location.search);
             const statusParam = urlParams.get('status');
             const msgParam = urlParams.get('msg');
 
             if (statusParam && msgParam) {
-                setTimeout(() => {
-                    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-                    window.history.replaceState({}, document.title, cleanUrl);
-                }, 3000);
-
-                const alertElement = document.querySelector('.alert');
-                if (alertElement) {
-                    setTimeout(() => {
-                        const bsAlert = new bootstrap.Alert(alertElement);
-                        bsAlert.close();
-                    }, 3000);
-                }
+                // If status and msg parameters exist, clear them from the URL after 3 seconds
+                setTimeout(function() {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('status');
+                    url.searchParams.delete('msg');
+                    window.history.replaceState({}, document.title, url.toString());
+                }, 3000); // Wait for 3 seconds
             }
+
+            // IMPORTANT: The fetch-related JavaScript for .btn-save-presentation is removed
+            // because we are now using a standard HTML form submission.
+            // The form will handle the navigation to save_presentation.php directly.
         });
     </script>
 </body>
 
 </html>
-
-<?php
-// Close database connection at the very end of the script
-if ($conn instanceof mysqli) {
-    $conn->close();
-}
-?>

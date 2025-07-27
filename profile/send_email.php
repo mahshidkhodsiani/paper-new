@@ -1,203 +1,154 @@
 <?php
+
+// شروع سشن برای دسترسی به متغیرهای سشن، مثل اطلاعات کاربر لاگین شده
 session_start();
 
-if (!isset($_SESSION['user_data'])) {
-    header("Location: ../login.php");
-    exit();
-}
+// خطوط زیر برای نمایش خطاها در محیط توسعه مفید هستند.
+// در محیط پروداکشن (هاست واقعی) بهتر است غیرفعال باشند یا خطاها به فایل لاگ شوند.
+// ini_set('display_errors', 1);
+// ini_set('display_startup_errors', 1);
+// error_reporting(E_ALL);
 
-$userId = $_SESSION['user_data']['id'];
-include "../config.php";
-
-// Include PHPMailer
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-require '../vendor/autoload.php'; // مسیر را بر اساس ساختار پروژه تنظیم کنید
+// مطمئن شوید که مسیر به autoload.php صحیح است.
+// اگر فایل send_email.php در profile/ قرار دارد و vendor/ در روت پروژه،
+// ممکن است نیاز باشد مسیر را به ../vendor/autoload.php تغییر دهید.
+require __DIR__ . '/../vendor/autoload.php'; // فرض می‌کنیم vendor در یک سطح بالاتر از profile/ قرار دارد
 
-// Process form submission
+// **مرحله اول: بررسی وضعیت لاگین کاربر**
+if (!isset($_SESSION['user_data'])) {
+    // اگر کاربر لاگین نکرده بود، به صفحه لاگین هدایت شود.
+    // مسیر ../login.php به این معنی است که login.php یک سطح بالاتر از پوشه profile/ قرار دارد.
+    header("Location: ../login.php");
+    exit(); // مهم: بعد از هدایت، اجرای اسکریپت متوقف شود.
+}
+
+// اگر کاربر لاگین بود، ادامه کد اجرا می‌شود.
+
 if (isset($_POST['send_present_request'])) {
-    $recipient_email = $_POST['email_address'];
-    $message = $_POST['custom_message'] ?? '';
+    // ایمیل گیرنده را از فرم دریافت می‌کنیم.
+    // اگر ایمیلی وارد نشده بود، از یک ایمیل پیش‌فرض استفاده می‌کنیم.
+    $recipient_email = $_POST['email_address'] ?? 'mahshidkhodsiani2@gmail.com';
+    // نام مقاله را از فرم دریافت می‌کنیم.
+    $article_name = $_POST['article_name'] ?? 'Untitled Article'; // نام مقاله پیش‌فرض
 
+    $mail = new PHPMailer(true);
     try {
-        $mail = new PHPMailer(true);
-
-        // SMTP Configuration
+        // تنظیمات سرور SMTP هاستینگر (همان تنظیمات قبلی شما)
         $mail->isSMTP();
-        $mail->Host = 'smtp.hostinger.com';
+        $mail->Host = 'smtp.hostinger.com'; // برای Hostinger
         $mail->SMTPAuth = true;
-        $mail->Username = 'noreply@paperet.com';
-        $mail->Password = 'Paperet@2251518';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port = 465;
-        $mail->CharSet = 'UTF-8';
+        $mail->Username = 'noreply@paperet.com'; // ایمیل شما روی هاست
+        $mail->Password = 'Mypaperet@5805'; // رمز عبور ایمیل هاست
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // یا PHPMailer::ENCRYPTION_STARTTLS برای پورت 587
+        $mail->Port = 465; // یا 587 اگر از TLS استفاده می‌کنی
+        $mail->CharSet = 'UTF-8'; // برای پشتیبانی از کاراکترهای فارسی در صورت نیاز (هرچند ایمیل انگلیسی است)
 
-        // Sender and recipient
-        $mail->setFrom('noreply@paperet.com', 'تیم Paperet');
+        // فرستنده و گیرنده
+        $mail->setFrom('noreply@paperet.com', 'Paperet Team'); // نام فرستنده به انگلیسی
         $mail->addAddress($recipient_email);
 
-        // Email content
+        // محتوای ایمیل به زبان انگلیسی
         $mail->isHTML(true);
-        $mail->Subject = 'درخواست ارائه پرزنتیشن برای شما';
-
-        $emailBody = '
-            <div style="font-family: Tahoma, sans-serif; direction: rtl; text-align: right;">
-                <h2 style="color: #007bff;">درخواست ارائه پرزنتیشن</h2>
-                <p>سلام،</p>
-                <p>شما یک درخواست برای ارائه پرزنتیشن مقاله خود دریافت کرده‌اید.</p>
-                ';
-
-        if (!empty($message)) {
-            $emailBody .= '
-                <div style="background: #f8f9fa; padding: 15px; border-right: 4px solid #007bff; margin: 15px 0;">
-                    <p><strong>پیام شخصی از درخواست‌دهنده:</strong></p>
-                    <p>' . nl2br(htmlspecialchars($message)) . '</p>
-                </div>
-            ';
-        }
-
-        $emailBody .= '
-                <p>لطفاً برای پاسخ به این درخواست وارد حساب کاربری خود در Paperet شوید.</p>
-                <p>با تشکر،<br>تیم Paperet</p>
-            </div>
+        $mail->Subject = 'Presentation Request for Your Article: ' . htmlspecialchars($article_name);
+        $mail->Body    = '
+            <p>Dear recipient,</p>
+            <p>A request has been sent to you for a presentation regarding the article: <strong>' . htmlspecialchars($article_name) . '</strong>.</p>
+            <p>Best regards,<br>The Paperet Team</p>
         ';
+        $mail->AltBody = 'Dear recipient, A request has been sent to you for a presentation regarding the article: ' . htmlspecialchars($article_name) . '. Best regards, The Paperet Team';
 
-        $mail->Body = $emailBody;
-        $mail->AltBody = 'درخواست ارائه پرزنتیشن برای شما ارسال شده است. لطفاً به حساب کاربری خود مراجعه کنید.';
-
-        if ($mail->send()) {
-            $success_msg = "درخواست با موفقیت ارسال شد!";
-        } else {
-            $error_msg = "خطا در ارسال درخواست. لطفاً مجدداً تلاش کنید.";
-        }
+        $mail->send();
+        echo 'Email sent successfully.'; // پیغام موفقیت به انگلیسی
     } catch (Exception $e) {
-        $error_msg = "خطا در ارسال ایمیل: {$mail->ErrorInfo}";
+        echo "Error sending email: {$mail->ErrorInfo}"; // پیغام خطا به انگلیسی
     }
-}
+} else {
+    // فرم HTML برای ارسال درخواست پرزنت
 ?>
+    <!DOCTYPE html>
+    <html lang="en">
 
-<!DOCTYPE html>
-<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Request to Present</title>
+        <!-- می‌توانید لینک‌های CSS و JS مورد نیاز (مثل Bootstrap) را اینجا اضافه کنید -->
+        <!-- مثلاً اگر از Bootstrap استفاده می‌کنید: -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+            body {
+                font-family: 'Inter', sans-serif;
+                /* استفاده از فونت Inter */
+                background-color: #f8f9fa;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                margin: 0;
+            }
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Request To Present</title>
-    <?php include "../includes.php"; ?>
-    <style>
-        .presentation-request-card {
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            padding: 25px;
-            margin-bottom: 30px;
-        }
+            .form-container {
+                background-color: #ffffff;
+                padding: 30px;
+                border-radius: 15px;
+                /* گوشه‌های گرد */
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                width: 100%;
+                max-width: 500px;
+            }
 
-        .request-form label {
-            font-weight: 600;
-            margin-bottom: 8px;
-            display: block;
-        }
+            .form-container h2 {
+                color: #007bff;
+                margin-bottom: 25px;
+                font-weight: bold;
+            }
 
-        .request-form input,
-        .request-form textarea {
-            margin-bottom: 20px;
-            border-radius: 5px;
-            border: 1px solid #ced4da;
-            padding: 10px 15px;
-        }
+            .btn-primary {
+                background-color: #007bff;
+                border-color: #007bff;
+                border-radius: 10px;
+                /* گوشه‌های گرد برای دکمه */
+                padding: 10px 20px;
+                font-size: 1.1rem;
+                transition: background-color 0.3s ease;
+            }
 
-        .request-form textarea {
-            min-height: 120px;
-        }
+            .btn-primary:hover {
+                background-color: #0056b3;
+                border-color: #0056b3;
+            }
 
-        .submit-btn {
-            background-color: #007bff;
-            border: none;
-            padding: 10px 25px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
+            .form-control {
+                border-radius: 10px;
+                /* گوشه‌های گرد برای اینپوت‌ها */
+                padding: 10px;
+            }
+        </style>
+    </head>
 
-        .submit-btn:hover {
-            background-color: #0069d9;
-            transform: translateY(-2px);
-        }
-
-        .page-title {
-            color: #343a40;
-            margin-bottom: 25px;
-            font-weight: 700;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 10px;
-            display: inline-block;
-        }
-    </style>
-</head>
-
-<body>
-    <?php include "header.php"; ?>
-
-    <div class="container mt-4">
-        <div class="row">
-            <?php include "sidebar.php"; ?>
-
-            <div class="col-md-6">
-                <div class="main-content shadow-lg p-3 mb-5 bg-white rounded">
-                    <h2 class="page-title">درخواست ارائه پرزنتیشن</h2>
-
-                    <?php if (isset($success_msg)): ?>
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <?php echo $success_msg; ?>
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if (isset($error_msg)): ?>
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <?php echo $error_msg; ?>
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="presentation-request-card">
-                        <form method="POST" action="" class="request-form">
-                            <div class="form-group">
-                                <label for="email_address">آدرس ایمیل نویسنده مقاله</label>
-                                <input type="email" class="form-control" id="email_address" name="email_address" required placeholder="example@example.com">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="custom_message">پیام شخصی (اختیاری)</label>
-                                <textarea class="form-control" id="custom_message" name="custom_message" placeholder="می‌توانید پیام شخصی خود را برای نویسنده مقاله بنویسید..."></textarea>
-                            </div>
-
-                            <button type="submit" name="send_present_request" class="btn btn-primary submit-btn">
-                                ارسال درخواست
-                            </button>
-                        </form>
-                    </div>
+    <body>
+        <div class="form-container">
+            <h2 class="text-center">Request to Present</h2>
+            <form method="POST" action="">
+                <div class="mb-3">
+                    <label for="email_address" class="form-label">Recipient Email:</label>
+                    <input type="email" id="email_address" name="email_address" class="form-control" value="mahshidkhodsiani2@gmail.com" required>
                 </div>
-            </div>
-
-            <div class="col-md-3">
-                <!-- Sidebar content if needed -->
-            </div>
+                <div class="mb-3">
+                    <label for="article_name" class="form-label">Article Name:</label>
+                    <input type="text" id="article_name" name="article_name" class="form-control" placeholder="Enter article name" required>
+                </div>
+                <div class="d-grid">
+                    <button type="submit" name="send_present_request" class="btn btn-primary">Send Presentation Request</button>
+                </div>
+            </form>
         </div>
-    </div>
+        <!-- می‌توانید لینک‌های JS مورد نیاز (مثل Bootstrap JS) را اینجا اضافه کنید -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
 
-    <script>
-        // Auto-dismiss alerts after 5 seconds
-        $(document).ready(function() {
-            setTimeout(function() {
-                $('.alert').alert('close');
-            }, 5000);
-        });
-    </script>
-</body>
-
-</html>
+    </html>
+<?php } ?>

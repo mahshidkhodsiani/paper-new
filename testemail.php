@@ -22,10 +22,11 @@ if (isset($_POST['send_present_request'])) {
         $mail->Host = 'smtp.hostinger.com'; // برای Hostinger
         $mail->SMTPAuth = true;
         $mail->Username = 'noreply@paperet.com'; // ایمیل شما روی هاست
-        $mail->Password = 'Paperet@2251518'; // رمز عبور ایمیل هاست
+        $mail->Password = 'Mypaperet@5805'; // رمز عبور ایمیل هاست
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // یا PHPMailer::ENCRYPTION_STARTTLS برای پورت 587
         $mail->Port = 465; // یا 587 اگر از TLS استفاده می‌کنی
         $mail->CharSet = 'UTF-8';
+        
 
         // فرستنده و گیرنده
         $mail->setFrom('noreply@paperet.com', 'تیم Paperet');

@@ -1,13 +1,35 @@
 <?php
 
+// خطوط زیر را برای نمایش خطاها فعال کنید
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+
+
+session_start(); // Start the session at the very beginning
 
 include(__DIR__ . '/../config.php');
 
-// بلافاصله بعد از include کردن config.php، معتبر بودن اتصال را بررسی کنید
+// Check for valid database connection
 if (!($conn instanceof mysqli) || $conn->connect_error) {
-    // اگر اتصال برقرار نشد، یک پیام خطای کاربرپسند نمایش دهید و اجرا را متوقف کنید
     die("<div class='alert alert-danger container mt-5'>System temporarily unavailable. Please try again later. (DB Connection Error)</div>");
 }
+
+// Check if user is logged in
+$current_user_id = null;
+if (isset($_SESSION['user_data']['id'])) {
+    $current_user_id = $_SESSION['user_data']['id'];
+} else {
+    // If not logged in, redirect to login page
+    header("Location: ../login.php");
+    exit();
+}
+
+
+
+
+
 ?>
 
 <!DOCTYPE html>
@@ -96,32 +118,68 @@ if (!($conn instanceof mysqli) || $conn->connect_error) {
 <body>
 
     <?php
-    // فایل header.php را شامل کنید
-    // فرض بر این است که header.php خود به $conn نیاز دارد و آن را include نمی‌کند.
+    // Include header.php
+    // فرض بر این است که header.php خود به $conn نیاز ندارد یا آن را include نمی‌کند.
     include 'header.php';
     ?>
+
+    <div class="container mt-3" id="message-container" style="display: none;">
+        <div class="alert" role="alert" id="message-alert"></div>
+    </div>
 
     <div class="container mt-5">
         <div class="row">
             <?php
             try {
-                // Query to fetch all users from the database
-                $sql = "SELECT id, name, family, education, university, profile_pic FROM users";
-                $result = $conn->query($sql);
+                // Query to fetch all users from the database, excluding the current logged-in user
+                $sql = "SELECT id, name, family, education, university, profile_pic FROM users WHERE id != ?";
+                $stmt = $conn->prepare($sql);
+                $stmt->bind_param("i", $current_user_id);
+                $stmt->execute();
+                $result = $stmt->get_result();
 
                 if ($result && $result->num_rows > 0) {
                     // Display each user in a card
                     while ($row = $result->fetch_assoc()) {
-                        // استفاده از Null Coalescing Operator (??) برای جلوگیری از ارسال null به htmlspecialchars
+                        $target_user_id = $row["id"];
                         $fullName = htmlspecialchars($row["name"] . " " . $row["family"]);
-                        $education = htmlspecialchars($row["education"] ?? 'نامشخص'); // اگر education null بود، 'نامشخص' نمایش داده شود
-                        $university = htmlspecialchars($row["university"] ?? 'نامشخص'); // اگر university null بود، 'نامشخص' نمایش داده شود
-                        $profilePic = htmlspecialchars($row["profile_pic"] ?? 'https://via.placeholder.com/100'); // اگر profile_pic null بود، تصویر پیش‌فرض نمایش داده شود
-
+                        $education = htmlspecialchars($row["education"] ?? 'نامشخص');
+                        $university = htmlspecialchars($row["university"] ?? 'نامشخص');
+                        $profilePic = htmlspecialchars($row["profile_pic"] ?? 'https://via.placeholder.com/100');
                         $coverPic = 'https://via.placeholder.com/800x450'; // Default cover image
+                        $profileLink = "profile.php?id=" . (int)$target_user_id;
 
-                        // اطمینان از اینکه id به عدد صحیح تبدیل می‌شود برای امنیت
-                        $profileLink = "profile.php?id=" . (int)$row["id"];
+                        // Determine connection status
+                        $button_text = 'Connect';
+                        $button_class = 'btn-outline-primary';
+                        $button_disabled = '';
+
+                        // Check if a connection or pending request already exists
+                        $conn_stmt = $conn->prepare("SELECT status, sender_id FROM connections WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)");
+                        $conn_stmt->bind_param("iiii", $current_user_id, $target_user_id, $target_user_id, $current_user_id);
+                        $conn_stmt->execute();
+                        $conn_result = $conn_stmt->get_result();
+
+                        if ($conn_result->num_rows > 0) {
+                            $conn_row = $conn_result->fetch_assoc();
+                            $connection_status = $conn_row['status'];
+                            if ($connection_status == 'pending') {
+                                if ($conn_row['sender_id'] == $current_user_id) {
+                                    $button_text = 'Request Sent';
+                                    $button_class = 'btn-secondary';
+                                    $button_disabled = 'disabled';
+                                } else {
+                                    $button_text = 'Pending Request'; // This user needs to accept/decline
+                                    $button_class = 'btn-warning';
+                                    $button_disabled = 'disabled'; // For this page, disable. Acceptance happens elsewhere.
+                                }
+                            } elseif ($connection_status == 'accepted') {
+                                $button_text = 'Connected';
+                                $button_class = 'btn-success';
+                                $button_disabled = 'disabled';
+                            }
+                        }
+                        $conn_stmt->close();
             ?>
                         <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                             <div class="user-card">
@@ -141,7 +199,12 @@ if (!($conn instanceof mysqli) || $conn->connect_error) {
                                         </svg>
                                         <span>University: <?= $university ?></span>
                                     </div>
-                                    <a href="#" class="btn btn-outline-primary btn-sm btn-custom"><i class="fas fa-user-plus"></i> Connect</a>
+                                    <?php if ($target_user_id != $current_user_id) : // Don't show connect button for self 
+                                    ?>
+                                        <button type="button" class="btn <?= $button_class ?> btn-sm btn-custom connect-btn" data-user-id="<?= $target_user_id ?>" <?= $button_disabled ?>>
+                                            <i class="fas fa-user-plus"></i> <?= $button_text ?>
+                                        </button>
+                                    <?php endif; ?>
                                     <a href="<?= $profileLink ?>" class="btn btn-primary btn-sm btn-custom"><i class="fas fa-user-graduate"></i> View Profile</a>
                                 </div>
                             </div>
@@ -151,12 +214,11 @@ if (!($conn instanceof mysqli) || $conn->connect_error) {
                 } else {
                     echo "<div class='col-12 text-center'><p>No users found.</p></div>";
                 }
+                $stmt->close();
             } catch (Exception $e) {
-                // ثبت خطا در لاگ سرور
-                error_log("Query error in index.php: " . $e->getMessage());
+                error_log("Query error in people/index.php: " . $e->getMessage());
                 echo "<div class='col-12 alert alert-danger'>Error loading user data. Please try again later.</div>";
             } finally {
-                // اطمینان از بسته شدن اتصال به دیتابیس
                 if ($conn instanceof mysqli) {
                     $conn->close();
                 }
@@ -166,6 +228,75 @@ if (!($conn instanceof mysqli) || $conn->connect_error) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Function to display messages (replaces alert)
+            function showMessage(message, type = 'info') {
+                const msgContainer = document.getElementById('message-container');
+                const msgAlert = document.getElementById('message-alert');
+                msgAlert.textContent = message;
+                msgAlert.className = 'alert alert-' + type; // e.g., alert-info, alert-success, alert-danger
+                msgContainer.style.display = 'block';
+                // Optionally hide after a few seconds
+                setTimeout(() => {
+                    msgContainer.style.display = 'none';
+                }, 5000);
+            }
+
+            const connectButtons = document.querySelectorAll('.connect-btn');
+
+            connectButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const receiverId = this.dataset.userId;
+                    const clickedButton = this; // Reference to the clicked button
+
+                    if (clickedButton.disabled) {
+                        return; // Do nothing if button is disabled
+                    }
+
+                    // Show a loading state or disable the button immediately
+                    const originalText = clickedButton.innerHTML; // Save original content
+                    clickedButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; // Loading spinner
+                    clickedButton.disabled = true;
+                    clickedButton.classList.remove('btn-outline-primary', 'btn-secondary', 'btn-success', 'btn-warning', 'btn-danger');
+                    clickedButton.classList.add('btn-info'); // Change color to indicate sending
+
+                    fetch('../profile/handle_connection.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: 'receiver_id=' + receiverId
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                clickedButton.innerHTML = '<i class="fas fa-check"></i> Request Sent';
+                                clickedButton.classList.remove('btn-info');
+                                clickedButton.classList.add('btn-secondary');
+                                showMessage(data.message, 'success');
+                                // Keep disabled as request is sent
+                            } else {
+                                clickedButton.innerHTML = originalText; // Revert text
+                                clickedButton.classList.remove('btn-info');
+                                clickedButton.classList.add('btn-danger'); // Indicate error
+                                clickedButton.disabled = false; // Re-enable to allow retry
+                                console.error('Error:', data.message);
+                                showMessage('Failed to send connection request: ' + data.message, 'danger');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Fetch error:', error);
+                            clickedButton.innerHTML = originalText; // Revert text
+                            clickedButton.classList.remove('btn-info');
+                            clickedButton.classList.add('btn-danger'); // Indicate error
+                            clickedButton.disabled = false; // Re-enable on network error
+                            showMessage('Network error or server issue. Please try again.', 'danger');
+                        });
+                });
+            });
+        });
+    </script>
 </body>
 
 </html>

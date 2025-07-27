@@ -134,7 +134,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_resume_pdf'])) 
 
     uploadFile('resume_pdf', $baseTargetDir, $allowedExtensions, $maxFileSize, $conn, $userId, 'resume_pdf_path', $_SESSION['user_data']['resume_pdf_path'] ?? '');
 
-    $conn->close();
+
     // Redirect to prevent form resubmission
     header("Location: resume-media.php?status=" . urlencode($messageType) . "&msg=" . urlencode($message));
     exit();
