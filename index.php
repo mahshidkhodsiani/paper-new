@@ -25,9 +25,9 @@
                 <h2>Your Journey Starts Right Here!</h2>
                 <p>Showcase Yourself To The World</p>
 
-                <button class="btn btn-outline-info rounded mb-3">
+                <a href="profile" class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-user-circle"></i> Your Profile
-                </button>
+                </a>
                 <br>
                 <button class="btn btn-outline-info rounded mb-3">
                     <i class="fab fa-google"></i> Sign in/up With Google

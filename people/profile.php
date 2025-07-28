@@ -2,23 +2,24 @@
 session_start();
 include "../config.php"; // Database connection file
 
-$user = null; // Variable to hold user data
-$profileId = null;
-$presentations = []; // Variable to hold presentations data
-$savedPresentationIds = []; // To store IDs of presentations already saved by the current user
+$user = null; // Variable to hold user information
+$profileId = null; // ID of the user whose profile is being displayed
+$presentations = []; // Variable to hold presentation information
+$savedPresentationIds = []; // To hold IDs of presentations saved by the currently logged-in user
 
-// Handle potential database connection errors early
+// Handle potential database connection errors at the very beginning
 if (!($conn instanceof mysqli) || $conn->connect_error) {
     error_log("Database connection failed in profile.php: " . $conn->connect_error);
     header("Location: ../error.php?code=db_conn_failed");
     exit();
 }
 
-// Check if a user is logged in to determine if "Save" button should be shown
-// This assumes you have $_SESSION['user_id'] set upon login
-$loggedInUserId = $_SESSION['user_id'] ?? null;
+// Check if a user is logged in to determine if the "Save" button should be displayed
+// This assumes $_SESSION['user_id'] is set after login
+// If you are using $_SESSION['user_data']['id'], change it as follows:
+$loggedInUserId = $_SESSION['user_id'] ?? ($_SESSION['user_data']['id'] ?? null);
 
-// Get user ID from GET parameter (for viewing other profiles)
+// Get user ID from GET parameter (to view other users' profiles)
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $profileId = intval($_GET['id']);
 
@@ -41,7 +42,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
         error_log("Failed to prepare statement in profile.php: " . $conn->error);
     }
 
-    // Fetch presentations for the profileId
+    // Fetch presentations for profileId
     if ($user) {
         $presentations_sql = "SELECT id, title, description, file_path, created_at FROM presentations WHERE user_id = ? ORDER BY created_at DESC";
         $presentations_stmt = $conn->prepare($presentations_sql);
@@ -75,7 +76,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
         }
     }
 } else {
-    // Redirect logic if no ID is provided in the URL (e.g., redirect to index or logged-in user's profile)
+    // Redirect logic if no ID is provided in the URL (e.g., redirect to home page or logged-in user's profile)
     if ($loggedInUserId) {
         header("Location: ../../people/profile.php?id=" . $loggedInUserId);
     } else {
@@ -84,14 +85,14 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     exit();
 }
 
-// If user data could not be fetched (e.g., invalid ID)
+// If user information could not be fetched (e.g., invalid ID)
 if (!$user) {
     header("Location: ../index.php"); // Redirect to home page or an error page
     exit();
 }
 
 // --- Message handling (if redirected from another page with status/msg in URL) ---
-// This part remains to receive status/msg, but the JS will handle the URL cleanup
+// This section remains for receiving status/msg, but JS will clean the URL
 $message = '';
 $messageType = '';
 if (isset($_GET['status']) && isset($_GET['msg'])) {
@@ -99,7 +100,7 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
     $message = htmlspecialchars(urldecode($_GET['msg'])); // Sanitize and decode URL message
 }
 
-// --- Handling multiple universities/educations (assuming separated by semicolons) ---
+// --- Handle multiple universities/educations (assuming separated by semicolon) ---
 $user_universities_array = !empty($user['university']) ? explode(';', $user['university']) : [];
 $user_educations_array = !empty($user['education']) ? explode(';', $user['education']) : [];
 ?>
@@ -113,9 +114,6 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
     <title>Profile of <?php echo htmlspecialchars($user['name'] . ' ' . $user['family']); ?></title>
 
     <?php include "../includes.php"; ?>
-    <!-- If you have a separate styles.css file in the same directory as profile.php, uncomment this: -->
-    <!-- <link rel="stylesheet" href="styles.css"> -->
-
     <style>
         /* CSS for circular video container */
         .circular-video-container {
@@ -326,23 +324,6 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             background-color: #28a745;
             color: white;
         }
-
-        /* Styles for the dynamic alert at the top (if you decide to re-enable it) */
-        /* .alert.fixed-top {
-            position: fixed;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: auto;
-            max-width: 80%;
-            margin: 15px auto;
-            z-index: 1050;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            border-radius: .25rem;
-            padding: .75rem 1.25rem;
-            opacity: 1;
-            transition: opacity 0.5s ease-out;
-        } */
     </style>
 </head>
 
@@ -371,12 +352,12 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                             </div>
                         <?php else : ?>
                             <i class="fas fa-video-slash"></i>
-                            <p class="text-muted mt-3" style="position: absolute; bottom: 20px;">No intro video uploaded</p>
+                            <p class="text-muted mt-3" style="position: absolute; bottom: 20px;">Intro video not uploaded</p>
                         <?php endif; ?>
                     </div>
 
                     <div class="mb-4">
-                        <h5 class="profile-section-title"><i class="fas fa-briefcase me-2"></i>Academic & Work Information</h5>
+                        <h5 class="profile-section-title"><i class="fas fa-briefcase me-2"></i>Education and Work Information</h5>
                         <?php if (!empty($user_universities_array)) : ?>
                             <h6><i class="fas fa-university me-2 text-primary"></i>Universities:</h6>
                             <ul>
@@ -397,7 +378,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                             <p><i class="fas fa-building me-2 text-primary"></i>Workplace: <?= htmlspecialchars($user['workplace']) ?></p>
                         <?php endif; ?>
                         <?php if (!empty($user['birthdate'])) : ?>
-                            <p><i class="fas fa-birthday-cake me-2 text-primary"></i>Date of Birth: <?= htmlspecialchars($user['birthdate']) ?></p>
+                            <p><i class="fas fa-birthday-cake me-2 text-primary"></i>Birthdate: <?= htmlspecialchars($user['birthdate']) ?></p>
                         <?php endif; ?>
                         <?php if (!empty($user['last_resume_update'])) : ?>
                             <p><i class="fas fa-calendar-alt me-2 text-primary"></i>Last Resume Update: <?= date('Y-m-d H:i', strtotime($user['last_resume_update'])) ?></p>
@@ -413,7 +394,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
 
                     <?php if (!empty($user['linkedin_url']) || !empty($user['x_url']) || !empty($user['google_scholar_url']) || !empty($user['github_url']) || !empty($user['website_url'])) : ?>
                         <div class="mb-4">
-                            <h5 class="profile-section-title"><i class="fas fa-link me-2"></i>Social & Web Links</h5>
+                            <h5 class="profile-section-title"><i class="fas fa-link me-2"></i>Social and Web Links</h5>
                             <div class="social-links">
                                 <?php if (!empty($user['linkedin_url'])) : ?>
                                     <a href="<?= htmlspecialchars($user['linkedin_url']) ?>" target="_blank" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
@@ -452,10 +433,10 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                             </p>
                                         <?php endif; ?>
                                         <?php
-                                        // Check if the current user is logged in AND if this presentation is not their own AND if they haven't saved it yet
+                                        // Check if the user is logged in, if this presentation is not their own, and if they haven't already saved it
                                         $isLoggedIn = !empty($loggedInUserId);
                                         $isOwnPresentation = ($loggedInUserId == $profileId); // profileId is the ID of the user whose profile is being viewed
-                                        $isAlreadySaved = in_array($presentation['id'], $savedPresentationIds);
+                                        $isAlreadySaved = in_array($presentation['id'], $savedPresentationIds); // Check if already saved
 
                                         if ($isLoggedIn && !$isOwnPresentation) :
                                             if ($isAlreadySaved) : ?>
@@ -463,9 +444,9 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                                     <i class="fas fa-check-circle me-1"></i> Saved
                                                 </button>
                                             <?php else : ?>
-                                                <!-- IMPORTANT CHANGE: Using a standard HTML form for saving -->
                                                 <form action="../profile/save_presentation.php" method="POST" style="display:inline;">
                                                     <input type="hidden" name="presentation_id" value="<?= htmlspecialchars($presentation['id']) ?>">
+                                                    <input type="hidden" name="current_profile_id" value="<?= htmlspecialchars($profileId) ?>">
                                                     <button type="submit" class="btn btn-outline-primary btn-sm btn-save-presentation">
                                                         <i class="fas fa-plus me-1"></i> Add to Saved
                                                     </button>
@@ -508,7 +489,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                 echo 'status-google-calendar';
                                 break;
                             default:
-                                echo 'status-available'; // Default to available if not set
+                                echo 'status-available'; // Default to "available" if not set
                                 break;
                         }
                         ?>
@@ -549,7 +530,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                 }
                                 ?>
                             </div>
-                            <small class="form-text text-muted mt-2 d-block">Check my available times in the calendar above.</small>
+                            <small class="form-text text-muted mt-2 d-block">Check my available times on the calendar above.</small>
 
                         <?php else : ?>
                             <i class="fas fa-question-circle status-icon"></i>
@@ -612,7 +593,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                 });
             }
 
-            // --- IMPORTANT: Logic for URL cleanup (WITHOUT showing any alert) ---
+            // --- IMPORTANT: Logic to clean URL (without displaying any alerts) ---
             const urlParams = new URLSearchParams(window.location.search);
             const statusParam = urlParams.get('status');
             const msgParam = urlParams.get('msg');
@@ -626,10 +607,6 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                     window.history.replaceState({}, document.title, url.toString());
                 }, 3000); // Wait for 3 seconds
             }
-
-            // IMPORTANT: The fetch-related JavaScript for .btn-save-presentation is removed
-            // because we are now using a standard HTML form submission.
-            // The form will handle the navigation to save_presentation.php directly.
         });
     </script>
 </body>

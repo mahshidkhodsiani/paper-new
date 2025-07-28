@@ -75,6 +75,7 @@
 </head>
 
 <body>
+    <?php include "header.php"; ?>
 
     <div class="container login-container">
         <div class="row w-100 align-items-center justify-content-center">

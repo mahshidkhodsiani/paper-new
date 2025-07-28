@@ -31,7 +31,6 @@ if (isset($_SESSION['user_data']['id'])) {
         $stmt->execute();
         $result = $stmt->get_result();
         $unread_count = (int)$result->fetch_row()[0];
-      
     }
 }
 ?>
@@ -60,29 +59,45 @@ if (isset($_SESSION['user_data']['id'])) {
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownNotification">
                         <?php if ($unread_count > 0): ?>
-                            <li><a class="dropdown-item" href="messages.php"><i class="fas fa-envelope me-2"></i> You have <?= safe($unread_count) ?> unread message(s)</a></li>
+                            <li>
+                                <a class="dropdown-item" href="../profile/messages"><i class="fas fa-envelope me-2"></i> You have <?= safe($unread_count) ?> unread message(s)</a>
+                            </li>
                         <?php else: ?>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-check-circle me-2"></i> No new notifications</a></li>
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-check-circle me-2"></i> No new notifications</a>
+                            </li>
                         <?php endif; ?>
                         <li>
                             <hr class="dropdown-divider">
                         </li>
-                        <li><a class="dropdown-item" href="messages.php"><i class="fas fa-inbox me-2"></i> View all messages</a></li>
+                        <li><a class="dropdown-item" href="../profile/messages"><i class="fas fa-inbox me-2"></i> View all messages</a></li>
+                        <li><a class="dropdown-item" href="../profile/my_requests"><i class="fas fa-users me-2"></i> View all connection requests</a></li>
+
                     </ul>
                 </li>
             </ul>
 
             <div class="dropdown text-end">
-                <a href="#" class="d-block link-dark text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
-                    <img src="<?= isset($_SESSION['user_data']['profile_pic']) ? safe($_SESSION['user_data']['profile_pic']) : 'https://github.com/mdo.png' ?>" alt="profile" width="32" height="32" class="rounded-circle">
+                <a href="#" class="d-block link-dark text-decoration-none dropdown-toggle" id="dropdownUser1"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <?php
+                    if ($_SESSION['user_data']['profile_pic'] == "images/2.png") {
+                        $pic = "../images/2.png";
+                    } else {
+                        $pic = "../" . $_SESSION['user_data']['profile_pic'];
+                    }
+
+                    ?>
+                    <img src="<?= $pic ?>" alt="profile" width="32" height="32" class="rounded-circle">
                 </a>
                 <ul class="dropdown-menu text-small" aria-labelledby="dropdownUser1">
-                    <li><a class="dropdown-item" href="profile"><i class="fas fa-user-circle me-2"></i> Profile</a></li>
-                    <li><a class="dropdown-item" href="settings.php"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                    <li><a class="dropdown-item" href="../profile"><i class="fas fa-user-circle me-2"></i> Profile</a></li>
+                    <li><a class="dropdown-item" href="../profile/settings.php"><i class="fas fa-cog me-2"></i> Settings</a></li>
                     <li>
                         <hr class="dropdown-divider">
                     </li>
-                    <li><a class="dropdown-item" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i> Sign out</a></li>
+                    <li><a class="dropdown-item" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i> log out</a></li>
                 </ul>
             </div>
         </div>

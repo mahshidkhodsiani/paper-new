@@ -60,6 +60,7 @@ if (isset($_SESSION['user_data']['id'])) {
             </form>
 
             <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+
                 <li>
                     <a href="#" class="nav-link px-2 link-secondary"><i class="fab fa-linkedin"></i>
                         LinkedIn
@@ -70,6 +71,10 @@ if (isset($_SESSION['user_data']['id'])) {
                         People
                     </a>
                 </li>
+
+                <li><a href="#" class="nav-link px-2 link-secondary"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
+                <li><a href="../people" class="nav-link px-2 link-dark"><i class="fas fa-users"></i> People</a></li>
+
 
                 <li class="nav-item dropdown">
                     <a class="nav-link px-2 link-dark dropdown-toggle" href="#" id="navbarDropdownNotification" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -101,18 +106,31 @@ if (isset($_SESSION['user_data']['id'])) {
                     </ul>
                 </li>
             </ul>
+            <!-- D:\project\xamp\htdocs\paper-new\images\2.png -->
 
+            <?php
+            if ($_SESSION['user_data']['profile_pic'] == "images/2.png") {
+                $pic = "../images/2.png";
+            } else {
+                $pic = "../" . $_SESSION['user_data']['profile_pic'];
+            }
+
+            ?>
             <div class="dropdown text-end">
                 <a href="#" class="d-block link-dark text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
-                    <img src="<?= isset($_SESSION['user_data']['profile_pic']) ? safe($_SESSION['user_data']['profile_pic']) : 'https://github.com/mdo.png' ?>" alt="profile" width="32" height="32" class="rounded-circle">
+                    <img src="<?= $pic ?>" alt="profile" width="32" height="32" class="rounded-circle">
                 </a>
                 <ul class="dropdown-menu text-small" aria-labelledby="dropdownUser1">
-                    <li><a class="dropdown-item" href="profile"><i class="fas fa-user-circle me-2"></i> Profile</a></li>
-                    <li><a class="dropdown-item" href="settings.php"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                    <li>
+                        <a class="dropdown-item" href="./"><i class="fas fa-user-circle me-2"></i> Profile</a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="settings.php"><i class="fas fa-cog me-2"></i> Settings</a>
+                    </li>
                     <li>
                         <hr class="dropdown-divider">
                     </li>
-                    <li><a class="dropdown-item" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i> Sign out</a></li>
+                    <li><a class="dropdown-item" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i> log out</a></li>
                 </ul>
             </div>
         </div>
