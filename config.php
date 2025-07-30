@@ -29,3 +29,10 @@ if ($conn->connect_error) {
 // }
 
 // $conn->set_charset("utf8");
+
+
+
+
+define('GOOGLE_CLIENT_ID', '420518057369-1v9f8r5vgad3nc9s8r686qckba3bb95i.apps.googleusercontent.com'); // مطمئن شو دقیقاً همین باشه
+define('GOOGLE_CLIENT_SECRET', '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'); // این رو هم چک کن
+define('GOOGLE_REDIRECT_URI', 'https://localhost/paper-new/google_login_callback.php'); // این باید دقیقاً با Authorized redirect URIs در کنسول گوگل یکی باشه

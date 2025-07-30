@@ -6,8 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>paperet</title>
 
-    <?php include "includes.php"; ?>
+    <?php
+    // این خط رو اضافه کن تا مطمئن بشی config.php لود میشه
+    include "config.php";
+    include "includes.php";
+    ?>
 
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -29,20 +34,37 @@
                     <i class="fas fa-user-circle"></i> Your Profile
                 </a>
                 <br>
-                <button class="btn btn-outline-info rounded mb-3">
-                    <i class="fab fa-google"></i> Sign in/up With Google
-                </button>
+
+                <div id="g_id_onload"
+                    data-client_id="<?php echo GOOGLE_CLIENT_ID; ?>"
+                    data-context="signin"
+                    data-ux_mode="popup"
+                    data-login_uri="<?php echo GOOGLE_REDIRECT_URI; ?>"
+                    data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin"
+                    data-type="standard"
+                    data-shape="pill"
+                    data-theme="outline"
+                    data-text="signin_with"
+                    data-size="large"
+                    data-logo_alignment="left">
+                </div>
+
+
                 <br>
+
                 <a href="profile/send_email" class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-microphone"></i> Request To Present
                 </a>
+
                 <br>
-              
-              
-                <button class="btn btn-outline-info rounded mb-3">
+
+
+                <!-- <button class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-user-plus"></i> Invite
                 </button>
-                <br>
+                <br> -->
                 <button class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-trophy"></i> Host a Competition
                 </button>
