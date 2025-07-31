@@ -111,7 +111,7 @@ if (isset($_POST['action_type'])) {
                 $conn_del->set_charset("utf8mb4");
 
                 // Step 1: Verify ownership and retrieve the file path from the database (for security)
-                $sql_verify = "SELECT file_path FROM Presentations WHERE id = ? AND user_id = ?";
+                $sql_verify = "SELECT file_path FROM presentations WHERE id = ? AND user_id = ?";
                 $stmt_verify = $conn_del->prepare($sql_verify);
 
                 if ($stmt_verify) {
@@ -124,7 +124,7 @@ if (isset($_POST['action_type'])) {
                         $storedFilePath = $row_verify['file_path']; // Get the actual path from DB
 
                         // Step 2: Delete the record from the database
-                        $sql_delete = "DELETE FROM Presentations WHERE id = ? AND user_id = ?";
+                        $sql_delete = "DELETE FROM presentations WHERE id = ? AND user_id = ?";
                         $stmt_delete = $conn_del->prepare($sql_delete);
 
                         if ($stmt_delete) {
@@ -186,7 +186,7 @@ $conn_fetch->set_charset("utf8mb4");
 
 // Prepare the SQL query to select presentations belonging to the current user
 // Assumes 'Presentations' table has 'id', 'title', 'description', and 'file_path' columns
-$sql_fetch_presentations = "SELECT id, title, description, file_path FROM Presentations WHERE user_id = ?";
+$sql_fetch_presentations = "SELECT id, title, description, file_path FROM presentations WHERE user_id = ?";
 $stmt_fetch_presentations = $conn_fetch->prepare($sql_fetch_presentations);
 
 if ($stmt_fetch_presentations) {

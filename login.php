@@ -91,7 +91,7 @@
                 <div class="login-form-box">
                     <h3 class="mb-4 login-title">Sign In</h3>
                     <?php
-                    session_start();
+
                     if (isset($_SESSION['login_error'])) {
                         echo '<div class="alert alert-danger">' . $_SESSION['login_error'] . '</div>';
                         unset($_SESSION['login_error']);
