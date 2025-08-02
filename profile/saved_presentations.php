@@ -97,22 +97,38 @@ if ($stmt) {
                         </div>
                     <?php else: ?>
                         <div class="list-group">
+
+
                             <?php foreach ($savedPresentations as $presentation): ?>
-                                <a href="<?php echo $presentation['file_path']; ?>" class="list-group-item list-group-item-action flex-column align-items-start mb-2" target="_blank" rel="noopener noreferrer">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1"><?php echo safe($presentation['title']); ?></h5>
-                                        <small class="text-muted">
+                                <div class="list-group-item flex-column align-items-start mb-2 shadow-sm rounded">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <h5 class="mb-1">
+                                            <a href="<?php echo safe($presentation['file_path']); ?>" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-dark">
+                                                <?php echo safe($presentation['title']); ?>
+                                            </a>
+                                        </h5>
+                                        <small class="text-muted text-end">
                                             Saved on: <?php echo date('Y-m-d H:i', strtotime($presentation['saved_at'])); ?>
                                             <?php if (isset($presentation['created_at'])): ?>
                                                 <br> Uploaded on: <?php echo date('Y-m-d H:i', strtotime($presentation['created_at'])); ?>
                                             <?php endif; ?>
-
                                         </small>
                                     </div>
-                                    <p class="mb-1"><?php echo safe($presentation['description']); ?></p>
-                                    <small class="text-muted">File Path: <?php echo safe($presentation['file_path']); ?></small>
-                                </a>
+                                    <p class="mb-1 mt-2"><?php echo safe($presentation['description']); ?></p>
+
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <small class="text-muted">File Path: <?php echo safe($presentation['file_path']); ?></small>
+
+                                        <form action="unsave_presentation.php" method="POST" onsubmit="return confirm('Are you sure you want to remove this presentation from your saved list?');">
+                                            <input type="hidden" name="saved_id" value="<?php echo safe($presentation['saved_id']); ?>">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                <i class="fas fa-trash-alt me-1"></i> Unsave
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
                             <?php endforeach; ?>
+                            
                         </div>
                     <?php endif; ?>
 

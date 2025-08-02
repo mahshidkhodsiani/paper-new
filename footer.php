@@ -2,7 +2,7 @@
     <footer class="row row-cols-1 row-cols-sm-2 row-cols-md-5 border-top mt-5 pt-5">
         <div class="col-9 col-md-3 mb-3" >
             <a href="./" class="">
-                <img src="images/logo.jpeg" class="img-fluid" height="200px" width="200px">
+                <img src="images/logo.png" class="img-fluid" height="200px" width="200px">
             </a>
             <p>Build your academic profile, share your work, and connect with a global network of peers and experts. Join now and start showcasing your research.</p>
             <p class="text-body-secondary">© 2025</p>

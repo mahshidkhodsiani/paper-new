@@ -6,7 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
 
-    <?php include "includes.php"; ?>
+    <?php
+    // اضافه کردن config.php برای دسترسی به GOOGLE_CLIENT_ID
+    include "config.php";
+    include "includes.php";
+    ?>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <style>
         body {
@@ -80,23 +86,35 @@
     <div class="container login-container">
         <div class="row w-100 align-items-center justify-content-center">
 
-            <div class="col-lg-6 mb-4 mb-lg-0 text-center">
-                <!-- 2D animated image (GIF or SVG) -->
-                <h2 class="mt-3" style="color:#6366f1;font-weight:600;">Welcome Back!</h2>
-                <p style="color:#555;">Sign in to access your account and explore new features.</p>
-                <img src="images/7.png" alt="Animated Login" class="login-anim-img">
-            </div>
-
             <div class="col-lg-5">
                 <div class="login-form-box">
-                    <h3 class="mb-4 login-title">Sign In</h3>
+                    <h3 class="mb-4 login-title">Login</h3>
                     <?php
-
+                    session_start(); // اضافه کردن session_start
                     if (isset($_SESSION['login_error'])) {
                         echo '<div class="alert alert-danger">' . $_SESSION['login_error'] . '</div>';
                         unset($_SESSION['login_error']);
                     }
                     ?>
+
+                    <div class="text-center mb-3">
+                        <div id="g_id_onload"
+                            data-client_id="<?php echo GOOGLE_CLIENT_ID; ?>"
+                            data-context="signin"
+                            data-ux_mode="popup"
+                            data-login_uri="<?php echo GOOGLE_REDIRECT_URI; ?>"
+                            data-auto_prompt="false">
+                        </div>
+                        <div class="g_id_signin"
+                            data-type="standard"
+                            data-shape="pill"
+                            data-theme="outline"
+                            data-text="signin_with"
+                            data-size="large"
+                            data-logo_alignment="left">
+                        </div>
+                    </div>
+                    <hr class="my-4">
                     <form method="post" action="login_process.php">
                         <div class="mb-3 text-start">
                             <label for="email" class="form-label">Email</label>
@@ -113,6 +131,12 @@
                         </div>
                     </form>
                 </div>
+            </div>
+
+            <div class="col-lg-6 mb-4 mb-lg-0 text-center">
+                <h2 class="mt-3" style="color:#6366f1;font-weight:600;">Welcome Back!</h2>
+                <p style="color:#555;">Sign in to access your account and explore new features.</p>
+                <img src="images/Thesis-amico (1).png" alt="Animated Login" class="login-anim-img">
             </div>
 
         </div>

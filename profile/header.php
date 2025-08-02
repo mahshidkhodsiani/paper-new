@@ -52,7 +52,7 @@ if (isset($_SESSION['user_data']['id'])) {
     <div class="container">
         <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
             <a href="./" class="d-flex align-items-center mb-2 mb-lg-0 text-dark text-decoration-none">
-                <img src="../images/logo.jpeg" class="img-fluid" height="80" width="80" alt="Logo">
+                <img src="../images/logo.png" class="img-fluid" height="80" width="80" alt="Logo">
             </a>
 
             <form class="col-12 col-lg-5 mb-3 mb-lg-0 me-lg-3 mr-2" style="margin-left: 5px;">

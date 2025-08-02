@@ -2,7 +2,7 @@
     <ul class="nav nav-tabs">
         <li class="nav-item">
             <a class="nav-link" href="./">
-                <img src="images\logo.jpeg" alt="paperet" style="height: 30px;">
+                <img src="images\logo.png" alt="paperet" style="height: 30px;">
             </a>
         </li>
         <li class="nav-item ms-auto m-1">

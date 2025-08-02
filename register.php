@@ -6,7 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register</title>
 
-    <?php include "includes.php"; ?>
+    <?php
+    include "config.php";
+    include "includes.php";
+    ?>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <style>
         body {
@@ -78,16 +83,10 @@
 
     <?php include "header.php"; ?>
 
-
     <div class="container login-container">
         <div class="row w-100 align-items-center justify-content-center">
 
-            <div class="col-lg-6 mb-4 mb-lg-0 text-center">
-                <!-- 2D animated image (GIF or SVG) -->
-                <img src="images/7.png" alt="Animated Register" class="login-anim-img">
-                <h2 class="mt-3" style="color:#6366f1;font-weight:600;">Join Us!</h2>
-                <p style="color:#555;">Create your account and start your journey.</p>
-            </div>
+
 
             <div class="col-lg-5">
                 <div class="login-form-box">
@@ -103,6 +102,26 @@
                         unset($_SESSION['registration_success']);
                     }
                     ?>
+
+                    <div class="mt-4 mb-4 text-center">
+                        <div id="g_id_onload"
+                            data-client_id="<?php echo GOOGLE_CLIENT_ID; ?>"
+                            data-context="signin"
+                            data-ux_mode="popup"
+                            data-login_uri="<?php echo GOOGLE_REDIRECT_URI; ?>"
+                            data-auto_prompt="false">
+                        </div>
+                        <div class="g_id_signin"
+                            data-type="standard"
+                            data-shape="pill"
+                            data-theme="outline"
+                            data-text="signin_with"
+                            data-size="large"
+                            data-logo_alignment="left">
+                        </div>
+                        <hr class="my-4">
+                    </div>
+
                     <form method="post" action="register_process.php">
                         <div class="mb-3 text-start">
                             <label for="first_name" class="form-label">First Name</label>
@@ -131,6 +150,13 @@
                         </div>
                     </form>
                 </div>
+            </div>
+
+
+            <div class="col-lg-6 mb-4 mb-lg-0 text-center">
+                <img src="images/Thesis-pana.png" alt="Animated Register" class="login-anim-img">
+                <h2 class="mt-3" style="color:#6366f1;font-weight:600;">Join Us!</h2>
+                <p style="color:#555;">Create your account and start your journey.</p>
             </div>
 
         </div>

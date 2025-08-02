@@ -78,9 +78,13 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 } else {
     // Redirect logic if no ID is provided in the URL (e.g., redirect to home page or logged-in user's profile)
     if ($loggedInUserId) {
-        header("Location: ../../people/profile.php?id=" . $loggedInUserId);
+        // header("Location: profile.php?id=" . $loggedInUserId);
+        header("Location: /paper-new/people/profile.php?id=" . $loggedInUserId);
+
     } else {
-        header("Location: ../index.php");
+        // header("Location: ../index.php");
+        header("Location: /paper-new/index.php");
+
     }
     exit();
 }
