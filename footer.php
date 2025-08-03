@@ -1,6 +1,6 @@
 <div class="container">
     <footer class="row row-cols-1 row-cols-sm-2 row-cols-md-5 border-top mt-5 pt-5">
-        <div class="col-9 col-md-3 mb-3" >
+        <div class="col-9 col-md-3 mb-3">
             <a href="./" class="">
                 <img src="images/logo.png" class="img-fluid" height="200px" width="200px">
             </a>
@@ -20,22 +20,14 @@
             </ul>
         </div>
         <div class="col-4 col-md-2 mb-3">
-            <h5>Section</h5>
-            <ul class="nav flex-column">
-                <li class="nav-item mb-2"><a href="#" class="nav-link p-0 text-body-secondary">Home</a></li>
-                <li class="nav-item mb-2"><a href="#" class="nav-link p-0 text-body-secondary">Features</a></li>
-                <li class="nav-item mb-2"><a href="#" class="nav-link p-0 text-body-secondary">Pricing</a></li>
-                <li class="nav-item mb-2"><a href="#" class="nav-link p-0 text-body-secondary">FAQs</a></li>
-                <li class="nav-item mb-2"><a href="#" class="nav-link p-0 text-body-secondary">About</a></li>
-            </ul>
         </div>
         <div class="col-4 col-md-2 mb-3">
             <h5>Download App</h5>
             <div class="m-2">
                 <img src="images/5.png" class="img-fluid" height="50px" width="50px">
                 <img src="images/4.png" class="img-fluid" height="50px" width="50px">
+                <img src="images/9.png" class="img-fluid" height="50px" width="50px">
             </div>
-
         </div>
     </footer>
 </div>

@@ -76,6 +76,10 @@ if (isset($_SESSION['user_data']['id'])) {
 
                     </ul>
                 </li>
+
+
+                <li><a href="" class="nav-link px-2 link-dark"><i class="fas fa-flask"></i> Lab</a></li>
+
             </ul>
 
             <div class="dropdown text-end">

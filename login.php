@@ -7,12 +7,12 @@
     <title>Login</title>
 
     <?php
-    // اضافه کردن config.php برای دسترسی به GOOGLE_CLIENT_ID
     include "config.php";
     include "includes.php";
     ?>
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> -->
 
     <style>
         body {
@@ -77,6 +77,36 @@
         .register-link:hover {
             text-decoration: underline;
         }
+
+        .password-container {
+            position: relative;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #888;
+        }
+
+        .forgot-password {
+            font-size: 0.875rem;
+            text-align: right;
+            margin-top: -8px;
+            margin-bottom: 16px;
+        }
+
+        .forgot-password-link {
+            color: #6366f1;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .forgot-password-link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 
@@ -88,9 +118,8 @@
 
             <div class="col-lg-5">
                 <div class="login-form-box">
-                    <h3 class="mb-4 login-title">Login</h3>
+                    <h3 class="mb-4 login-title">Sign in</h3>
                     <?php
-                    session_start(); // اضافه کردن session_start
                     if (isset($_SESSION['login_error'])) {
                         echo '<div class="alert alert-danger">' . $_SESSION['login_error'] . '</div>';
                         unset($_SESSION['login_error']);
@@ -98,19 +127,13 @@
                     ?>
 
                     <div class="text-center mb-3">
-                        <div id="g_id_onload"
-                            data-client_id="<?php echo GOOGLE_CLIENT_ID; ?>"
-                            data-context="signin"
-                            data-ux_mode="popup"
+                        <div id="g_id_onload" data-client_id="<?php echo GOOGLE_CLIENT_ID; ?>"
+                            data-context="signin" data-ux_mode="popup"
                             data-login_uri="<?php echo GOOGLE_REDIRECT_URI; ?>"
                             data-auto_prompt="false">
                         </div>
-                        <div class="g_id_signin"
-                            data-type="standard"
-                            data-shape="pill"
-                            data-theme="outline"
-                            data-text="signin_with"
-                            data-size="large"
+                        <div class="g_id_signin" data-type="standard" data-shape="pill"
+                            data-theme="outline" data-text="signin_with" data-size="large"
                             data-logo_alignment="left">
                         </div>
                     </div>
@@ -118,13 +141,27 @@
                     <form method="post" action="login_process.php">
                         <div class="mb-3 text-start">
                             <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email" required autocomplete="username">
+                            <input type="email" class="form-control" id="email" name="email" required
+                                autocomplete="username">
                         </div>
-                        <div class="mb-3 text-start">
+
+                        <div class="mb-0 text-start">
                             <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
+                            <div class="password-container">
+                                <input type="password" class="form-control" id="password" name="password" required
+                                    autocomplete="current-password">
+                                <span class="password-toggle" onclick="togglePasswordVisibility()">
+                                    <i class="fa-solid fa-eye-slash" id="togglePasswordIcon"></i>
+                                </span>
+                            </div>
                         </div>
-                        <button type="submit" name="enter" class="btn btn-primary w-100" style="font-weight:600;">Login</button>
+
+                        <div class="forgot-password mt-2">
+                            <a href="forgot_password.php" class="forgot-password-link">Forgot Password?</a>
+                        </div>
+
+                        <button type="submit" name="enter" class="btn btn-primary w-100" style="font-weight:600;">Sign
+                            in</button>
                         <div class="mt-3 text-center">
                             <span>Don't have an account?</span>
                             <a href="register.php" class="register-link">Register now</a>
@@ -144,6 +181,22 @@
 
     <?php include "footer.php"; ?>
 
+    <script>
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('togglePasswordIcon');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            }
+        }
+    </script>
 </body>
 
 </html>

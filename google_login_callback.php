@@ -1,163 +1,217 @@
 <?php
+// این خط باید اولین خط فایل باشد
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+ob_start();
+
+use Google\Client;
+use Google\Service\Oauth2;
+
 session_start();
 
-// Display PHP errors for debugging in development environment.
-// In a production environment, disable or remove these lines.
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Ensure the Composer autoloader is included.
-// The path 'vendor/autoload.php' must be correct relative to this file.
 require_once __DIR__ . '/vendor/autoload.php';
-
-// Include your database and Google Client ID/Secret configuration file.
-// The path 'config.php' must be correct relative to this file.
 include_once __DIR__ . '/config.php';
 
-// Check if the database connection ($conn) is properly established.
-if (!isset($conn) || $conn->connect_error) {
-    $_SESSION['login_error'] = 'Database connection error.';
-    header('Location: login.php'); // Or an appropriate error page
+// بررسی اتصال به دیتابیس
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    ob_end_clean();
+    $_SESSION['login_error'] = 'خطا در اتصال به دیتابیس: ' . $conn->connect_error;
+    header('Location: login.php');
     exit();
 }
 
-// Create a new Google Client instance
-$client = new Google_Client();
+$client = new Client();
 $client->setClientId(GOOGLE_CLIENT_ID);
 $client->setClientSecret(GOOGLE_CLIENT_SECRET);
-$client->setRedirectUri(GOOGLE_REDIRECT_URI);
+$client->setRedirectUri(GOOGLE_REDIRECT_URI); // این خط در اینجا هم لازم است
 $client->addScope('email');
-$client->addScope('profile'); // To retrieve name, family name, and profile picture
+$client->addScope('profile');
 
-// Check if the authentication code has been received from Google
-if (isset($_GET['code'])) {
+// دریافت توکن از فرم مخفی
+if (isset($_POST['credential'])) {
     try {
-        // Exchange the authentication code for an access token
-        $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
+        $id_token = $_POST['credential'];
 
-        // Check for potential errors in token retrieval
-        if (isset($token['error'])) {
-            $_SESSION['login_error'] = 'Error fetching Google token: ' . $token['error_description'];
+        // **مهم‌ترین تغییر:** استفاده از payload برای دریافت اطلاعات
+        $payload = $client->verifyIdToken($id_token);
+
+        if (!$payload) {
+            ob_end_clean();
+            $_SESSION['login_error'] = 'خطا در تأیید توکن گوگل.';
             header('Location: login.php');
             exit();
         }
 
-        $client->setAccessToken($token);
+        // استخراج اطلاعات کاربر از payload
+        $google_id = $payload['sub'];
+        $email = $payload['email'];
+        $first_name = $payload['given_name'] ?? '';
+        $last_name = $payload['family_name'] ?? '';
+        $profile_pic = $payload['picture'] ?? '';
+        $is_google_user = 1;
 
-        // If the token has expired (unlikely for a newly exchanged token, but good practice), refresh it.
-        if ($client->isAccessTokenExpired()) {
-            // Ensure a refresh token exists
-            if ($client->getRefreshToken()) {
-                $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
-            } else {
-                // If no refresh token, the user must re-authenticate
-                $_SESSION['login_error'] = 'Access token expired and cannot be refreshed. Please log in again.';
-                header('Location: login.php');
-                exit();
-            }
-        }
-
-        // Retrieve user information from Google
-        $oauth2 = new Google_Service_Oauth2($client);
-        $userInfo = $oauth2->userinfo->get();
-
-        // Extract required information
-        $google_id = $userInfo->id;
-        $email = $userInfo->email;
-        $first_name = isset($userInfo->givenName) ? $userInfo->givenName : '';
-        $last_name = isset($userInfo->familyName) ? $userInfo->familyName : '';
-        $profile_pic = isset($userInfo->picture) ? $userInfo->picture : 'images/default_profile.png';
-
-        // ----------------------------------------------------------------------
-        // Logic for checking and storing the user in the database
-        // Prepared Statements are used to prevent SQL Injection.
-        // ----------------------------------------------------------------------
-
-        // Check if the user already exists in your database (based on email or google_id)
-        // Using OR to cover both traditional users who registered with email and users who came via Google.
-        $stmt = $conn->prepare("SELECT id, name, family, email, profile_pic, google_id, is_google_user FROM users WHERE email = ? OR google_id = ?");
-        if ($stmt === false) {
-            $_SESSION['login_error'] = "Error preparing SELECT query: " . $conn->error;
-            header('Location: login.php');
-            exit();
-        }
+        // بررسی وجود کاربر در دیتابیس
+        $stmt = $conn->prepare("SELECT id, name, family, email, profile_pic, google_id FROM users WHERE email = ? OR google_id = ?");
         $stmt->bind_param("ss", $email, $google_id);
         $stmt->execute();
         $result = $stmt->get_result();
 
+        $user_data = [];
+
         if ($result->num_rows > 0) {
-            // User exists, log them in
+            // کاربر وجود دارد
             $user = $result->fetch_assoc();
 
-            // If it was a traditional user (empty google_id) and now logged in with Google, update google_id
-            if (empty($user['google_id']) || $user['is_google_user'] == 0) {
-                $update_stmt = $conn->prepare("UPDATE users SET google_id = ?, is_google_user = 1, profile_pic = ?, name = ?, family = ? WHERE id = ?");
-                if ($update_stmt === false) {
-                    $_SESSION['login_error'] = "Error preparing UPDATE query: " . $conn->error;
-                    header('Location: login.php');
-                    exit();
-                }
-                $update_stmt->bind_param("ssssi", $google_id, $profile_pic, $first_name, $last_name, $user['id']);
+            if (empty($user['google_id'])) {
+                $update_stmt = $conn->prepare("UPDATE users SET google_id = ?, is_google_user = 1 WHERE id = ?");
+                $update_stmt->bind_param("si", $google_id, $user['id']);
                 $update_stmt->execute();
                 $update_stmt->close();
+                // اطلاعات کاربر را به‌روزرسانی می‌کنیم
+                $user['google_id'] = $google_id;
+                $user['is_google_user'] = 1;
             }
 
-            // Set user session variables
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_name'] = !empty($user['name']) ? $user['name'] : $first_name; // If no previous name in DB, take from Google
-            $_SESSION['user_family'] = !empty($user['family']) ? $user['family'] : $last_name;
-            $_SESSION['user_email'] = $user['email'];
-            $_SESSION['profile_pic'] = !empty($user['profile_pic']) ? $user['profile_pic'] : $profile_pic;
-            $_SESSION['logged_in'] = true;
-
-            $_SESSION['login_success'] = 'Welcome!';
-            header('Location: profile/index.php'); // Or to the main profile page
-            exit();
+            $user_data = $user;
         } else {
-            // User does not exist, register them
-            // For Google users, generate a random and secure password
-            // (Not strictly necessary for Google authentication, but for database field compatibility)
-            $generated_password = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
-            $is_google_user = 1; // Flag to indicate a Google user
-
+            // کاربر جدید است، ثبت‌نام می‌کنیم
+            $password_hash = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
             $stmt_insert = $conn->prepare("INSERT INTO users (google_id, name, family, email, password, profile_pic, is_google_user) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            if ($stmt_insert === false) {
-                $_SESSION['registration_error'] = "Error preparing INSERT query: " . $conn->error;
-                header('Location: register.php');
-                exit();
-            }
-            $stmt_insert->bind_param("ssssssi", $google_id, $first_name, $last_name, $email, $generated_password, $profile_pic, $is_google_user);
+            $stmt_insert->bind_param("ssssssi", $google_id, $first_name, $last_name, $email, $password_hash, $profile_pic, $is_google_user);
 
             if ($stmt_insert->execute()) {
-                // Successful registration, log the user in
-                $_SESSION['user_id'] = $conn->insert_id; // ID of the last inserted user
-                $_SESSION['user_name'] = $first_name;
-                $_SESSION['user_family'] = $last_name;
-                $_SESSION['user_email'] = $email;
-                $_SESSION['profile_pic'] = $profile_pic;
-                $_SESSION['logged_in'] = true;
-
-                $_SESSION['registration_success'] = 'Registered with Google successfully! Welcome!';
-                header('Location: profile/index.php'); // Or to the main profile page
-                exit();
+                // ثبت‌نام موفق، اطلاعات سشن را تنظیم می‌کنیم
+                $user_data = [
+                    'id' => $conn->insert_id,
+                    'google_id' => $google_id,
+                    'name' => $first_name,
+                    'family' => $last_name,
+                    'email' => $email,
+                    'profile_pic' => $profile_pic,
+                    'is_google_user' => 1
+                ];
             } else {
-                $_SESSION['registration_error'] = "Error registering with Google: " . $stmt_insert->error;
-                header('Location: register.php');
+                ob_end_clean();
+                $_SESSION['login_error'] = 'خطا در ثبت‌نام کاربر جدید: ' . $stmt_insert->error;
+                header('Location: login.php');
                 exit();
             }
             $stmt_insert->close();
         }
+
         $stmt->close();
+        $conn->close();
+
+        // تنظیم سشن به فرمت استاندارد کد لاگین معمولی شما
+        if (!empty($user_data)) {
+            unset($user_data['password']); // برای امنیت، رمز عبور را حذف کنید
+            $_SESSION['user_data'] = $user_data;
+            $_SESSION['logged_in'] = true;
+            ob_end_clean();
+            header('Location: profile');
+            exit();
+        } else {
+            ob_end_clean();
+            $_SESSION['login_error'] = 'خطای ناشناخته در ورود با گوگل.';
+            header('Location: login.php');
+            exit();
+        }
     } catch (Exception $e) {
-        // Handle errors during token verification, data retrieval, or other exceptions
-        $_SESSION['login_error'] = 'Google authentication error: ' . $e->getMessage();
+        ob_end_clean();
+        $_SESSION['login_error'] = 'خطا در احراز هویت گوگل: ' . $e->getMessage();
         header('Location: login.php');
         exit();
     }
 } else {
-    // If no authentication code was received from Google (e.g., user navigated directly or authentication was canceled)
-    // This message is passed to login.php.
-    $_SESSION['login_error'] = 'Google login operation cancelled or authentication code not received.';
-    header('Location: login.php');
-    exit();
+    // این بخش برای زمانی است که کاربر مستقیماً به این صفحه وارد می‌شود یا از طریق Google Redirect URI
+    if (isset($_GET['code'])) {
+        try {
+            $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
+            if (isset($token['error'])) {
+                ob_end_clean();
+                $_SESSION['login_error'] = 'خطا در دریافت توکن: ' . $token['error_description'];
+                header('Location: login.php');
+                exit();
+            }
+            $client->setAccessToken($token);
+            $oauth2 = new Oauth2($client);
+            $userInfo = $oauth2->userinfo->get();
+
+            $google_id = $userInfo->id;
+            $email = $userInfo->email;
+            $first_name = $userInfo->givenName ?? '';
+            $last_name = $userInfo->familyName ?? '';
+            $profile_pic = $userInfo->picture ?? '';
+            $is_google_user = 1;
+
+            // اینجا همان منطق ثبت نام یا ورود را دوباره قرار دهید
+            // ... (همان منطق بخش POST)
+            $stmt = $conn->prepare("SELECT id, name, family, email, profile_pic, google_id FROM users WHERE email = ? OR google_id = ?");
+            $stmt->bind_param("ss", $email, $google_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            $user_data = [];
+
+            if ($result->num_rows > 0) {
+                $user = $result->fetch_assoc();
+                if (empty($user['google_id'])) {
+                    $update_stmt = $conn->prepare("UPDATE users SET google_id = ?, is_google_user = 1 WHERE id = ?");
+                    $update_stmt->bind_param("si", $google_id, $user['id']);
+                    $update_stmt->execute();
+                    $update_stmt->close();
+                    $user['google_id'] = $google_id;
+                    $user['is_google_user'] = 1;
+                }
+                $user_data = $user;
+            } else {
+                $password_hash = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+                $stmt_insert = $conn->prepare("INSERT INTO users (google_id, name, family, email, password, profile_pic, is_google_user) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt_insert->bind_param("ssssssi", $google_id, $first_name, $last_name, $email, $password_hash, $profile_pic, $is_google_user);
+                if ($stmt_insert->execute()) {
+                    $user_data = [
+                        'id' => $conn->insert_id,
+                        'google_id' => $google_id,
+                        'name' => $first_name,
+                        'family' => $last_name,
+                        'email' => $email,
+                        'profile_pic' => $profile_pic,
+                        'is_google_user' => 1
+                    ];
+                } else {
+                    ob_end_clean();
+                    $_SESSION['login_error'] = 'خطا در ثبت‌نام کاربر جدید: ' . $stmt_insert->error;
+                    header('Location: login.php');
+                    exit();
+                }
+                $stmt_insert->close();
+            }
+            $stmt->close();
+            $conn->close();
+
+            if (!empty($user_data)) {
+                unset($user_data['password']);
+                $_SESSION['user_data'] = $user_data;
+                $_SESSION['logged_in'] = true;
+                ob_end_clean();
+                header('Location: profile');
+                exit();
+            } else {
+                ob_end_clean();
+                $_SESSION['login_error'] = 'خطای ناشناخته در ورود با گوگل.';
+                header('Location: login.php');
+                exit();
+            }
+        } catch (Exception $e) {
+            ob_end_clean();
+            $_SESSION['login_error'] = 'خطا در احراز هویت گوگل: ' . $e->getMessage();
+            header('Location: login.php');
+            exit();
+        }
+    } else {
+        ob_end_clean();
+        $_SESSION['login_error'] = 'عملیات ورود لغو شد.';
+        header('Location: login.php');
+        exit();
+    }
 }

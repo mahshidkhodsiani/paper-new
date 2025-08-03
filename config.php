@@ -1,4 +1,5 @@
 <?php
+
 $servername = "localhost";
 $username = "root";
 $password = "";
@@ -33,8 +34,8 @@ if ($conn->connect_error) {
 
 
 
-define('GOOGLE_CLIENT_ID', '420518057369-1v9f8r5vgad3nc9s8r686qckba3bb95i.apps.googleusercontent.com'); // مطمئن شو دقیقاً همین باشه
-define('GOOGLE_CLIENT_SECRET', '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'); // این رو هم چک کن
+define('GOOGLE_CLIENT_ID', '629465661814-hnhubojf35ee3clsj04tsatqpuuqiq69.apps.googleusercontent.com'); // مطمئن شو دقیقاً همین باشه
+define('GOOGLE_CLIENT_SECRET', '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'); // این رو هم چک کن
 define('GOOGLE_REDIRECT_URI', 'https://localhost/paper-new/google_login_callback.php'); // این باید دقیقاً با Authorized redirect URIs در کنسول گوگل یکی باشه
 
-// define('GOOGLE_REDIRECT_URI', 'https://yourdomain.com/google_login_callback.php');
+// define('GOOGLE_REDIRECT_URI', 'https://moonshid.ir/paper/google_login_callback.php');

@@ -61,7 +61,7 @@ if (isset($_SESSION['user_data']['id'])) {
 
             <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
 
-      
+
 
                 <li><a href="#" class="nav-link px-2 link-secondary"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
                 <li><a href="../people" class="nav-link px-2 link-dark"><i class="fas fa-users"></i> People</a></li>
@@ -81,6 +81,7 @@ if (isset($_SESSION['user_data']['id'])) {
                         <?php if ($unread_message_count > 0): ?>
                             <li><a class="dropdown-item" href="messages.php"><i class="fas fa-envelope me-2"></i> You have <?= safe($unread_message_count) ?> unread message(s)</a></li>
                         <?php endif; ?>
+
                         <?php if ($pending_requests_count > 0): ?>
                             <li><a class="dropdown-item" href="my_requests.php"><i class="fas fa-user-plus me-2"></i> You have <?= safe($pending_requests_count) ?> new connection request(s)</a></li>
                         <?php endif; ?>
@@ -89,6 +90,8 @@ if (isset($_SESSION['user_data']['id'])) {
                             <li><a class="dropdown-item" href="#"><i class="fas fa-check-circle me-2"></i> No new notifications</a></li>
                         <?php endif; ?>
 
+
+
                         <li>
                             <hr class="dropdown-divider">
                         </li>
@@ -96,6 +99,11 @@ if (isset($_SESSION['user_data']['id'])) {
                         <li><a class="dropdown-item" href="my_requests.php"><i class="fas fa-users me-2"></i> View all connection requests</a></li>
                     </ul>
                 </li>
+
+
+                <li><a href="" class="nav-link px-2 link-dark"><i class="fas fa-flask"></i> Lab</a></li>
+
+
             </ul>
             <!-- D:\project\xamp\htdocs\paper-new\images\2.png -->
 

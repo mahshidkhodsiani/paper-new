@@ -6,10 +6,10 @@
             </a>
         </li>
         <li class="nav-item ms-auto m-1">
-            <a class="btn btn-info" href="login">login</a>
+            <a class="btn btn-info" href="login">Sign in</a>
         </li>
         <li class="nav-item m-1">
-            <a class="btn btn-info" href="register">register</a>
+            <a class="btn btn-info" href="register">Sign up</a>
         </li>
     </ul>
 </nav>

@@ -3,31 +3,44 @@
 session_start();
 include "config.php";
 
-// این قسمت از کد که باعث ریدایرکت می‌شد، حذف شده است.
-// if (isset($_SESSION['user_data'])) {
-//     header("Location: profile");
-//     exit();
-// }
+// ایجاد یک اتصال جدید به پایگاه داده
+// فرض بر این است که متغیرهای اتصال ($servername, $username, $password, $dbname) در config.php تعریف شده‌اند.
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
 
 if (isset($_POST['enter'])) {
     $email = $_POST['email'];
     $password = $_POST['password'];
 
-    // Prevent SQL injection (basic) - توصیه می‌شود از Prepared Statements استفاده کنید
-    $email = $conn->real_escape_string($email);
-    $password = $conn->real_escape_string($password);
-
-    // توجه: استفاده از رمز عبور هش نشده (یا هش شده با MD5) بسیار ناامن است.
-    // به شدت توصیه می‌شود از password_hash() و password_verify() برای هش کردن و اعتبارسنجی رمز عبور استفاده کنید.
-    $sql = "SELECT * FROM users WHERE email = '$email' AND password = '$password'";
-    $result = $conn->query($sql);
+    // ۱. از Prepared Statement برای جلوگیری از SQL Injection استفاده کنید.
+    $sql = "SELECT * FROM users WHERE email = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
     if ($result && $result->num_rows > 0) {
         $row = $result->fetch_assoc();
-        $_SESSION['user_data'] = $row;
-        header("Location: profile");
-        exit();
+        $stored_hashed_password = $row['password'];
+
+        // ۲. از password_verify() برای تأیید رمز عبور هش شده استفاده کنید.
+        if (password_verify($password, $stored_hashed_password)) {
+            // رمز عبور صحیح است.
+            unset($row['password']); // برای امنیت، رمز عبور را از سشن حذف کنید.
+            $_SESSION['user_data'] = $row;
+            header("Location: profile");
+            exit();
+        } else {
+            // رمز عبور اشتباه است.
+            $_SESSION['login_error'] = "Incorrect email or password.";
+            header("Location: login.php");
+            exit();
+        }
     } else {
+        // ایمیل در پایگاه داده یافت نشد.
         $_SESSION['login_error'] = "Incorrect email or password.";
         header("Location: login.php");
         exit();
