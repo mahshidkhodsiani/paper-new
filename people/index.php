@@ -1,12 +1,5 @@
 <?php
 
-// خطوط زیر را برای نمایش خطاها فعال کنید
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-
-
 session_start(); // Start the session at the very beginning
 
 include(__DIR__ . '/../config.php');
@@ -25,10 +18,6 @@ if (isset($_SESSION['user_data']['id'])) {
     header("Location: ../login.php");
     exit();
 }
-
-
-
-
 
 ?>
 
@@ -53,12 +42,9 @@ if (isset($_SESSION['user_data']['id'])) {
             margin-bottom: 20px;
             overflow: hidden;
             text-align: center;
-        }
-
-        .cover-image {
-            width: 100%;
-            height: 120px;
-            object-fit: cover;
+            position: relative;
+            padding-top: 60px;
+            /* اضافه کردن این خط */
         }
 
         .profile-picture {
@@ -67,14 +53,18 @@ if (isset($_SESSION['user_data']['id'])) {
             border-radius: 50%;
             object-fit: cover;
             border: 3px solid #fff;
-            margin-top: -50px;
-            position: relative;
-            z-index: 1;
+            position: absolute;
+            top: 10px;
+            /* مقدار top را برای قرارگیری در بالای کارت تنظیم کنید */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
         }
 
         .card-body-custom {
             padding: 15px;
-            margin-top: -20px;
+            margin-top: 50px;
+            /* این خط را حذف کردیم، اما اگر نیاز بود از این استفاده کنید. */
         }
 
         .card-title-custom {
@@ -119,7 +109,6 @@ if (isset($_SESSION['user_data']['id'])) {
 
     <?php
     // Include header.php
-    // فرض بر این است که header.php خود به $conn نیاز ندارد یا آن را include نمی‌کند.
     include 'header.php';
     ?>
 
@@ -146,7 +135,7 @@ if (isset($_SESSION['user_data']['id'])) {
                         $education = htmlspecialchars($row["education"] ?? 'نامشخص');
                         $university = htmlspecialchars($row["university"] ?? 'نامشخص');
                         $profilePic = htmlspecialchars($row["profile_pic"] ?? 'https://via.placeholder.com/100');
-                        $coverPic = 'https://via.placeholder.com/800x450'; // Default cover image
+                        // عکس کاور حذف شده است
                         $profileLink = "profile.php?id=" . (int)$target_user_id;
 
                         // Determine connection status
@@ -169,9 +158,9 @@ if (isset($_SESSION['user_data']['id'])) {
                                     $button_class = 'btn-secondary';
                                     $button_disabled = 'disabled';
                                 } else {
-                                    $button_text = 'Pending Request'; // This user needs to accept/decline
+                                    $button_text = 'Pending Request';
                                     $button_class = 'btn-warning';
-                                    $button_disabled = 'disabled'; // For this page, disable. Acceptance happens elsewhere.
+                                    $button_disabled = 'disabled';
                                 }
                             } elseif ($connection_status == 'accepted') {
                                 $button_text = 'Connected';
@@ -183,8 +172,7 @@ if (isset($_SESSION['user_data']['id'])) {
             ?>
                         <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                             <div class="user-card">
-                                <img src="<?= $coverPic ?>" class="cover-image" alt="Cover Image">
-                                <img src="<?= $profilePic ?>" class="profile-picture" alt="Profile Picture">
+                                <img src="../<?= $profilePic ?>" class="profile-picture" alt="Profile Picture">
                                 <div class="card-body-custom">
                                     <h5 class="card-title-custom"><?= $fullName ?></h5>
                                     <div class="icon-text">
@@ -199,8 +187,7 @@ if (isset($_SESSION['user_data']['id'])) {
                                         </svg>
                                         <span>University: <?= $university ?></span>
                                     </div>
-                                    <?php if ($target_user_id != $current_user_id) : // Don't show connect button for self 
-                                    ?>
+                                    <?php if ($target_user_id != $current_user_id) : ?>
                                         <button type="button" class="btn <?= $button_class ?> btn-sm btn-custom connect-btn" data-user-id="<?= $target_user_id ?>" <?= $button_disabled ?>>
                                             <i class="fas fa-user-plus"></i> <?= $button_text ?>
                                         </button>
@@ -230,14 +217,12 @@ if (isset($_SESSION['user_data']['id'])) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Function to display messages (replaces alert)
             function showMessage(message, type = 'info') {
                 const msgContainer = document.getElementById('message-container');
                 const msgAlert = document.getElementById('message-alert');
                 msgAlert.textContent = message;
-                msgAlert.className = 'alert alert-' + type; // e.g., alert-info, alert-success, alert-danger
+                msgAlert.className = 'alert alert-' + type;
                 msgContainer.style.display = 'block';
-                // Optionally hide after a few seconds
                 setTimeout(() => {
                     msgContainer.style.display = 'none';
                 }, 5000);
@@ -248,18 +233,17 @@ if (isset($_SESSION['user_data']['id'])) {
             connectButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     const receiverId = this.dataset.userId;
-                    const clickedButton = this; // Reference to the clicked button
+                    const clickedButton = this;
 
                     if (clickedButton.disabled) {
-                        return; // Do nothing if button is disabled
+                        return;
                     }
 
-                    // Show a loading state or disable the button immediately
-                    const originalText = clickedButton.innerHTML; // Save original content
-                    clickedButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; // Loading spinner
+                    const originalText = clickedButton.innerHTML;
+                    clickedButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
                     clickedButton.disabled = true;
                     clickedButton.classList.remove('btn-outline-primary', 'btn-secondary', 'btn-success', 'btn-warning', 'btn-danger');
-                    clickedButton.classList.add('btn-info'); // Change color to indicate sending
+                    clickedButton.classList.add('btn-info');
 
                     fetch('../profile/handle_connection.php', {
                             method: 'POST',
@@ -275,22 +259,21 @@ if (isset($_SESSION['user_data']['id'])) {
                                 clickedButton.classList.remove('btn-info');
                                 clickedButton.classList.add('btn-secondary');
                                 showMessage(data.message, 'success');
-                                // Keep disabled as request is sent
                             } else {
-                                clickedButton.innerHTML = originalText; // Revert text
+                                clickedButton.innerHTML = originalText;
                                 clickedButton.classList.remove('btn-info');
-                                clickedButton.classList.add('btn-danger'); // Indicate error
-                                clickedButton.disabled = false; // Re-enable to allow retry
+                                clickedButton.classList.add('btn-danger');
+                                clickedButton.disabled = false;
                                 console.error('Error:', data.message);
                                 showMessage('Failed to send connection request: ' + data.message, 'danger');
                             }
                         })
                         .catch(error => {
                             console.error('Fetch error:', error);
-                            clickedButton.innerHTML = originalText; // Revert text
+                            clickedButton.innerHTML = originalText;
                             clickedButton.classList.remove('btn-info');
-                            clickedButton.classList.add('btn-danger'); // Indicate error
-                            clickedButton.disabled = false; // Re-enable on network error
+                            clickedButton.classList.add('btn-danger');
+                            clickedButton.disabled = false;
                             showMessage('Network error or server issue. Please try again.', 'danger');
                         });
                 });

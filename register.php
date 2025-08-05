@@ -188,7 +188,7 @@
                         <button type="submit" name="register" class="btn btn-primary w-100" style="font-weight:600;">Sign up</button>
                         <div class="mt-3 text-center">
                             <span>Already have an account?</span>
-                            <a href="login.php" class="register-link">Login now</a>
+                            <a href="login.php" class="register-link">Sign in now</a>
                         </div>
                     </form>
                 </div>

@@ -35,6 +35,25 @@ if (isset($_SESSION['user_data']['id'])) {
 }
 ?>
 
+<style>
+    .search-container {
+        position: relative;
+    }
+
+    .search-results-box {
+        position: absolute;
+        width: 100%;
+        top: 100%;
+        z-index: 1000;
+        background-color: white;
+        border: 1px solid #ccc;
+        border-top: none;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, .1);
+        max-height: 200px;
+        overflow-y: auto;
+    }
+</style>
+
 <header class="p-3 mb-3 border-bottom">
     <div class="container">
         <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
@@ -42,8 +61,10 @@ if (isset($_SESSION['user_data']['id'])) {
                 <img src="../images/logo.jpeg" class="img-fluid" height="80" width="80" alt="Logo">
             </a>
 
-            <form class="col-12 col-lg-5 mb-3 mb-lg-0 me-lg-3 mr-2" style="margin-left: 5px;">
-                <input type="search" class="form-control" placeholder="Search..." aria-label="Search">
+
+            <form class="col-12 col-lg-5 mb-3 mb-lg-0 me-lg-3 mr-2 search-container" style="margin-left: 5px;" role="search" method="GET" action="search.php">
+                <input class="form-control" type="search" name="query" placeholder="Search..." aria-label="Search">
+                <div id="suggestions" class="search-results-box" style="display: none;"></div>
             </form>
 
             <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
@@ -107,3 +128,52 @@ if (isset($_SESSION['user_data']['id'])) {
         </div>
     </div>
 </header>
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        const searchInput = $('input[name="query"]');
+        const suggestionsBox = $('#suggestions');
+        const searchForm = $('.search-container');
+        let timeout = null;
+
+        searchInput.on('keyup', function() {
+            clearTimeout(timeout);
+            const query = $(this).val();
+
+            if (query.length > 2) {
+                timeout = setTimeout(function() {
+                    $.ajax({
+                        url: 'search.php', // مسیردهی صحیح به فایل search.php
+                        type: 'GET',
+                        data: {
+                            query: query
+                        },
+                        success: function(data) {
+                            suggestionsBox.html(data).show();
+                        },
+                        error: function() {
+                            suggestionsBox.html('<div class="list-group-item">خطا در بارگذاری نتایج.</div>').show();
+                        }
+                    });
+                }, 300);
+            } else {
+                suggestionsBox.hide().empty();
+            }
+        });
+
+        $(document).on('click', function(e) {
+            if (!searchForm.is(e.target) && searchForm.has(e.target).length === 0) {
+                suggestionsBox.hide();
+            }
+        });
+
+        searchInput.on('focus', function() {
+            if (suggestionsBox.html().trim() !== '') {
+                suggestionsBox.show();
+            }
+        });
+    });
+</script>

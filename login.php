@@ -164,7 +164,7 @@
                             in</button>
                         <div class="mt-3 text-center">
                             <span>Don't have an account?</span>
-                            <a href="register.php" class="register-link">Register now</a>
+                            <a href="register.php" class="register-link">Sign up now</a>
                         </div>
                     </form>
                 </div>

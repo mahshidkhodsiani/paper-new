@@ -3,8 +3,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$unread_message_count = 0; // تغییر نام متغیر برای وضوح بیشتر
-$pending_requests_count = 0; // متغیر جدید برای شمارش درخواست‌های اتصال
+$unread_message_count = 0;
+$pending_requests_count = 0;
 
 $config_path = realpath(__DIR__ . '/../config.php');
 
@@ -26,7 +26,6 @@ function safe($value)
 if (isset($_SESSION['user_data']['id'])) {
     $user_id = $_SESSION['user_data']['id'];
 
-    // شمارش پیام‌های خوانده نشده
     $stmt_messages = $conn->prepare("SELECT COUNT(*) FROM messages WHERE receiver_id = ? AND is_read = FALSE");
     if ($stmt_messages) {
         $stmt_messages->bind_param("i", $user_id);
@@ -36,7 +35,6 @@ if (isset($_SESSION['user_data']['id'])) {
         $stmt_messages->close();
     }
 
-    // شمارش درخواست‌های اتصال در حال انتظار
     $stmt_connections = $conn->prepare("SELECT COUNT(*) FROM connections WHERE receiver_id = ? AND status = 'pending'");
     if ($stmt_connections) {
         $stmt_connections->bind_param("i", $user_id);
@@ -47,6 +45,24 @@ if (isset($_SESSION['user_data']['id'])) {
     }
 }
 ?>
+<style>
+    .search-container {
+        position: relative;
+    }
+
+    .search-results-box {
+        position: absolute;
+        width: 100%;
+        top: 100%;
+        z-index: 1000;
+        background-color: white;
+        border: 1px solid #ccc;
+        border-top: none;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, .1);
+        max-height: 200px;
+        overflow-y: auto;
+    }
+</style>
 
 <header class="p-3 mb-3 border-bottom">
     <div class="container">
@@ -55,23 +71,19 @@ if (isset($_SESSION['user_data']['id'])) {
                 <img src="../images/logo.png" class="img-fluid" height="80" width="80" alt="Logo">
             </a>
 
-            <form class="col-12 col-lg-5 mb-3 mb-lg-0 me-lg-3 mr-2" style="margin-left: 5px;">
-                <input type="search" class="form-control" placeholder="Search..." aria-label="Search">
+            <form class="col-12 col-lg-5 mb-3 mb-lg-0 me-lg-3 mr-2 search-container" style="margin-left: 5px;" role="search" method="GET" action="search.php">
+                <input class="form-control" type="search" name="query" placeholder="Search..." aria-label="Search">
+                <div id="suggestions" class="search-results-box" style="display: none;"></div>
             </form>
 
             <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
-
-
-
                 <li><a href="#" class="nav-link px-2 link-secondary"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
                 <li><a href="../people" class="nav-link px-2 link-dark"><i class="fas fa-users"></i> People</a></li>
-
 
                 <li class="nav-item dropdown">
                     <a class="nav-link px-2 link-dark dropdown-toggle" href="#" id="navbarDropdownNotification" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-bell"></i> Notification
-                        <?php if ($unread_message_count > 0 || $pending_requests_count > 0): // نمایش Badge فقط در صورت وجود اعلان 
-                        ?>
+                        <?php if ($unread_message_count > 0 || $pending_requests_count > 0): ?>
                             <span class="badge bg-danger rounded-pill">
                                 <?= safe($unread_message_count + $pending_requests_count) ?>
                             </span>
@@ -81,17 +93,12 @@ if (isset($_SESSION['user_data']['id'])) {
                         <?php if ($unread_message_count > 0): ?>
                             <li><a class="dropdown-item" href="messages.php"><i class="fas fa-envelope me-2"></i> You have <?= safe($unread_message_count) ?> unread message(s)</a></li>
                         <?php endif; ?>
-
                         <?php if ($pending_requests_count > 0): ?>
                             <li><a class="dropdown-item" href="my_requests.php"><i class="fas fa-user-plus me-2"></i> You have <?= safe($pending_requests_count) ?> new connection request(s)</a></li>
                         <?php endif; ?>
-
                         <?php if ($unread_message_count == 0 && $pending_requests_count == 0): ?>
                             <li><a class="dropdown-item" href="#"><i class="fas fa-check-circle me-2"></i> No new notifications</a></li>
                         <?php endif; ?>
-
-
-
                         <li>
                             <hr class="dropdown-divider">
                         </li>
@@ -99,13 +106,8 @@ if (isset($_SESSION['user_data']['id'])) {
                         <li><a class="dropdown-item" href="my_requests.php"><i class="fas fa-users me-2"></i> View all connection requests</a></li>
                     </ul>
                 </li>
-
-
                 <li><a href="" class="nav-link px-2 link-dark"><i class="fas fa-flask"></i> Lab</a></li>
-
-
             </ul>
-            <!-- D:\project\xamp\htdocs\paper-new\images\2.png -->
 
             <?php
             if ($_SESSION['user_data']['profile_pic'] == "images/2.png") {
@@ -113,8 +115,8 @@ if (isset($_SESSION['user_data']['id'])) {
             } else {
                 $pic = "../" . $_SESSION['user_data']['profile_pic'];
             }
-
             ?>
+
             <div class="dropdown text-end">
                 <a href="#" class="d-block link-dark text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
                     <img src="<?= $pic ?>" alt="profile" width="32" height="32" class="rounded-circle">
@@ -135,3 +137,51 @@ if (isset($_SESSION['user_data']['id'])) {
         </div>
     </div>
 </header>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        const searchInput = $('input[name="query"]');
+        const suggestionsBox = $('#suggestions');
+        const searchForm = $('.search-container');
+        let timeout = null;
+
+        searchInput.on('keyup', function() {
+            clearTimeout(timeout);
+            const query = $(this).val();
+
+            if (query.length > 2) {
+                timeout = setTimeout(function() {
+                    $.ajax({
+                        url: 'search.php', // مسیردهی صحیح به فایل search.php
+                        type: 'GET',
+                        data: {
+                            query: query
+                        },
+                        success: function(data) {
+                            suggestionsBox.html(data).show();
+                        },
+                        error: function() {
+                            suggestionsBox.html('<div class="list-group-item">خطا در بارگذاری نتایج.</div>').show();
+                        }
+                    });
+                }, 300);
+            } else {
+                suggestionsBox.hide().empty();
+            }
+        });
+
+        $(document).on('click', function(e) {
+            if (!searchForm.is(e.target) && searchForm.has(e.target).length === 0) {
+                suggestionsBox.hide();
+            }
+        });
+
+        searchInput.on('focus', function() {
+            if (suggestionsBox.html().trim() !== '') {
+                suggestionsBox.show();
+            }
+        });
+    });
+</script>

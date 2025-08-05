@@ -29,6 +29,24 @@
             background-color: #17a2b8;
             border-color: #17a2b8;
         }
+
+        /* استایل‌های مربوط به جستجو */
+        .search-container {
+            position: relative;
+        }
+
+        .search-results-box {
+            position: absolute;
+            width: 100%;
+            top: 100%;
+            z-index: 1000;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, .1);
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 
@@ -40,8 +58,6 @@
             <div class="col-md-6">
                 <img src="images/Metrics-pana.png" class="img-fluid">
             </div>
-
-
 
             <div class="col-md-6 text-center">
                 <h2>Your Journey Starts Right Here!</h2>
@@ -76,8 +92,6 @@
                     <i class="fas fa-flask"></i> Build your Lab Page
                 </a>
             </div>
-
-
         </div>
 
         <br />
@@ -96,7 +110,84 @@
 
     <?php include "footer.php"; ?>
 
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.querySelector('input[name="query"]');
+            const suggestionsBox = document.getElementById('suggestions');
+            const form = document.querySelector('form[role="search"]');
+
+            function showSuggestions(data) {
+                suggestionsBox.innerHTML = '';
+                if (data.length > 0) {
+                    const ul = document.createElement('ul');
+                    ul.classList.add('list-group');
+                    data.forEach(item => {
+                        const li = document.createElement('li');
+                        li.classList.add('list-group-item', 'list-group-item-action');
+                        li.innerHTML = `<strong>${item.title}</strong><br><small>${item.description}</small>`;
+                        li.onclick = function() {
+                            searchInput.value = item.title;
+                            suggestionsBox.style.display = 'none';
+                            window.location.href = item.file_path;
+                        };
+                        ul.appendChild(li);
+                    });
+                    suggestionsBox.appendChild(ul);
+                    suggestionsBox.style.display = 'block';
+                } else {
+                    suggestionsBox.style.display = 'none';
+                }
+            }
+
+            searchInput.addEventListener('keyup', function() {
+                const query = this.value;
+                if (query.length > 2) {
+                    // آدرس فایل PHP را به 'search_live.php' تغییر دهید
+                    fetch(`search_live.php?query=${encodeURIComponent(query)}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.text();
+                        })
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const suggestionItems = doc.querySelectorAll('.list-group-item');
+
+                            const suggestionsData = [];
+                            suggestionItems.forEach(item => {
+                                const titleElement = item.querySelector('h5 > a');
+                                const descriptionElement = item.querySelector('p');
+
+                                // بررسی وجود تگ‌ها قبل از دسترسی به خصوصیات
+                                if (titleElement && descriptionElement) {
+                                    suggestionsData.push({
+                                        title: titleElement.textContent,
+                                        description: descriptionElement.textContent,
+                                        file_path: titleElement.href
+                                    });
+                                }
+                            });
+                            showSuggestions(suggestionsData);
+                        })
+                        .catch(error => console.error('Error:', error));
+                } else {
+                    suggestionsBox.style.display = 'none';
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!form.contains(e.target)) {
+                    suggestionsBox.style.display = 'none';
+                }
+            });
+        });
+
+        // کدهای مربوط به Google Sign-in
         function handleCredentialResponse(response) {
             const form = document.createElement('form');
             form.method = 'POST';
@@ -125,8 +216,55 @@
         };
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            const searchInput = $('input[name="query"]');
+            const suggestionsBox = $('#suggestions');
+            const searchForm = $('.search-container');
+            let timeout = null;
+
+            searchInput.on('keyup', function() {
+                clearTimeout(timeout);
+                const query = $(this).val();
+
+                if (query.length > 2) { // جستجو با حداقل 3 کاراکتر
+                    timeout = setTimeout(function() {
+                        $.ajax({
+                            url: 'search.php',
+                            type: 'GET',
+                            data: {
+                                query: query
+                            },
+                            success: function(data) {
+                                suggestionsBox.html(data).show();
+                            },
+                            error: function() {
+                                suggestionsBox.html('<div class="list-group-item">خطا در بارگذاری نتایج.</div>').show();
+                            }
+                        });
+                    }, 300); // تأخیر 300 میلی‌ثانیه‌ای برای جلوگیری از ارسال درخواست‌های زیاد
+                } else {
+                    suggestionsBox.hide().empty();
+                }
+            });
+
+            // مخفی کردن باکس پیشنهادات هنگام کلیک در خارج از آن
+            $(document).on('click', function(e) {
+                if (!searchForm.is(e.target) && searchForm.has(e.target).length === 0) {
+                    suggestionsBox.hide();
+                }
+            });
+
+            // نمایش مجدد باکس پیشنهادات هنگام کلیک روی فیلد جستجو
+            searchInput.on('focus', function() {
+                if (suggestionsBox.html().trim() !== '') {
+                    suggestionsBox.show();
+                }
+            });
+
+        });
+    </script>
 </body>
 
 </html>
