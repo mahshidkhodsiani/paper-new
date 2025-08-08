@@ -1,17 +1,15 @@
 <?php
 
-// include "config.php";
+// این بخش رو قبلاً داشتید
+// include "config.php"; // مطمئن بشید که این خط uncomment شده و فایل config.php وجود داره و اطلاعات اتصال به دیتابیس رو شامل میشه.
 
 // منطق مربوط به تغییر عکس پروفایل
 if (isset($_POST['update_profile_pic'])) {
 
-    // بررسی اینکه آیا کاربر لاگین کرده است یا خیر
     if (!isset($_SESSION['user_data']['id'])) {
         echo json_encode(['message' => 'Unauthorized access.']);
         exit();
     }
-
-
 
     $newProfilePic = $_POST['update_profile_pic'];
     $userId = $_SESSION['user_data']['id'];
@@ -34,9 +32,19 @@ if (isset($_POST['update_profile_pic'])) {
 }
 ?>
 
+
+<!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"> -->
+
+
 <div class="col-md-3">
-    <div class="sidebar-content shadow p-3 mb-5 bg-white rounded">
-        <div class="text-center mb-4">
+    <div class="sidebar-content shadow p-3 mb-5 bg-white rounded position-relative">
+        <?php if (!empty($_SESSION['user_data']['intro_video_path'])): ?>
+            <div class="play-icon-overlay" data-video-path="<?= htmlspecialchars($_SESSION['user_data']['intro_video_path']); ?>">
+                <i class="fas fa-play play-icon"></i>
+            </div>
+        <?php endif; ?>
+
+        <div class="text-center mb-4 profile-container">
             <img decoding="async" width="150" height="150" id="main-profile-pic"
                 src="../<?= !empty($_SESSION['user_data']['profile_pic']) ? $_SESSION['user_data']['profile_pic'] : '../images/2.png'; ?>"
                 class="img-fluid rounded-circle" alt="profile-pic">
@@ -45,7 +53,7 @@ if (isset($_POST['update_profile_pic'])) {
         <div class="text-center mb-4">
             <span class="avatar-option">
                 <img decoding="async" width="50" height="50" src="../images/2.png"
-                    class="img-fluid rounded-circle clickable-avatar" alt="female-avatar" data-path="images/9.png">
+                    class="img-fluid rounded-circle clickable-avatar" alt="female-avatar" data-path="images/2.png">
             </span>
             <span class="avatar-option">
                 <img decoding="async" width="50" height="50" src="../images/10.png"
@@ -56,7 +64,7 @@ if (isset($_POST['update_profile_pic'])) {
         <div class="text-center mb-4">
             <p class="">
                 <i class="far fa-user-circle"></i>
-                <?= $_SESSION['user_data']['name'] . " " . $_SESSION['user_data']['family']; ?>
+                <?= htmlspecialchars($_SESSION['user_data']['name'] . " " . $_SESSION['user_data']['family']); ?>
             </p>
         </div>
 
@@ -73,7 +81,30 @@ if (isset($_POST['update_profile_pic'])) {
     </div>
 </div>
 
+<div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="videoModalLabel">Introduction Video</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <video id="introVideoPlayer" width="100%" controls>
+
+                    <source src="" type="video/mp4">
+                    مرورگر شما از تگ ویدیو پشتیبانی نمی‌کند.
+
+                </video>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     $(document).ready(function() {
         // کدهای قبلی شما برای فعال‌سازی لینک‌های سایدبار
@@ -98,11 +129,10 @@ if (isset($_POST['update_profile_pic'])) {
             $('#main-profile-pic').attr('src', fullPath);
 
             $.ajax({
-                // در اینجا، آدرس فایل فعلی (sidebar.php) را به عنوان URL مشخص می‌کنیم
-                url: 'sidebar.php',
+                url: 'sidebar.php', // آدرس فایل فعلی (sidebar.php) را به عنوان URL مشخص می‌کنیم
                 type: 'POST',
                 data: {
-                    update_profile_pic: newProfilePicPath // نام پارامتر تغییر کرد
+                    update_profile_pic: newProfilePicPath
                 },
                 success: function(response) {
                     console.log('Profile picture updated successfully!');
@@ -112,6 +142,39 @@ if (isset($_POST['update_profile_pic'])) {
                 }
             });
         });
+
+
+        // کد جدید برای پخش ویدیو با کلیک روی آیکون پلی
+        $('.play-icon-overlay').on('click', function() {
+            var videoPath = $(this).data('video-path');
+
+            if (videoPath) {
+                var fullPath =  videoPath;
+                var videoPlayer = $('#introVideoPlayer');
+
+                // مسیر ویدیو را مستقیماً به تگ <video> اضافه می‌کنیم
+                videoPlayer.attr('src', fullPath);
+
+                // بارگذاری مجدد ویدیو
+                videoPlayer[0].load();
+
+                // نمایش مودال
+                $('#videoModal').modal('show');
+
+                // بلافاصله بعد از نمایش مودال، پخش را شروع می‌کنیم
+                videoPlayer[0].play();
+            } else {
+                console.log('مسیر ویدیو یافت نشد!');
+            }
+        });
+
+        // وقتی مودال بسته شد، ویدیو رو متوقف می‌کنیم تا صدا ادامه پیدا نکنه
+        $('#videoModal').on('hidden.bs.modal', function() {
+            var videoPlayer = $('#introVideoPlayer');
+            videoPlayer[0].pause();
+            videoPlayer.attr('src', ''); // پاک کردن مسیر ویدیو
+        });
+
     });
 </script>
 
@@ -124,5 +187,37 @@ if (isset($_POST['update_profile_pic'])) {
 
     .clickable-avatar:hover {
         border-color: #007bff;
+    }
+
+    .sidebar-content {
+        position: relative;
+    }
+
+    .profile-container {
+        display: inline-block;
+    }
+
+    .play-icon-overlay {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        cursor: pointer;
+        color: #fff;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    .play-icon {
+        font-size: 20px;
+    }
+
+    .play-icon-overlay:hover {
+        background-color: rgba(0, 0, 0, 0.7);
     }
 </style>

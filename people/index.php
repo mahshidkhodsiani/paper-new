@@ -1,24 +1,18 @@
 <?php
-
-session_start(); // Start the session at the very beginning
-
+session_start();
 include(__DIR__ . '/../config.php');
 
-// Check for valid database connection
 if (!($conn instanceof mysqli) || $conn->connect_error) {
     die("<div class='alert alert-danger container mt-5'>System temporarily unavailable. Please try again later. (DB Connection Error)</div>");
 }
 
-// Check if user is logged in
 $current_user_id = null;
 if (isset($_SESSION['user_data']['id'])) {
     $current_user_id = $_SESSION['user_data']['id'];
 } else {
-    // If not logged in, redirect to login page
     header("Location: ../login.php");
     exit();
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -30,6 +24,7 @@ if (isset($_SESSION['user_data']['id'])) {
     <title>People - User List</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
     <style>
         body {
             background-color: #f0f2f5;
@@ -43,28 +38,39 @@ if (isset($_SESSION['user_data']['id'])) {
             overflow: hidden;
             text-align: center;
             position: relative;
-            padding-top: 60px;
-            /* اضافه کردن این خط */
         }
 
-        .profile-picture {
-            width: 100px;
+        .cover-photo {
+            width: 100%;
             height: 100px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #fff;
+            background-color: #ccc;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .profile-pic-container {
             position: absolute;
-            top: 10px;
-            /* مقدار top را برای قرارگیری در بالای کارت تنظیم کنید */
+            top: 50px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 2;
+            width: 100px;
+            height: 100px;
+        }
+
+        .profile-picture {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
         }
 
         .card-body-custom {
             padding: 15px;
-            margin-top: 50px;
-            /* این خط را حذف کردیم، اما اگر نیاز بود از این استفاده کنید. */
+            /* پدینگ بالای کارت را برای حذف فاصله کم کردیم */
+            padding-top: 55px;
         }
 
         .card-title-custom {
@@ -95,22 +101,36 @@ if (isset($_SESSION['user_data']['id'])) {
             margin-bottom: 10px;
         }
 
-        .search-box {
-            background-color: #fff;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        .play-icon-overlay {
+            position: absolute;
+            /* آیکون را نسبت به عکس پروفایل تنظیم می‌کنیم */
+            top: 0;
+            right: 0;
+            cursor: pointer;
+            color: #fff;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .play-icon {
+            font-size: 20px;
+        }
+
+        .play-icon-overlay:hover {
+            background-color: rgba(0, 0, 0, 0.7);
         }
     </style>
 </head>
 
 <body>
 
-    <?php
-    // Include header.php
-    include 'header.php';
-    ?>
+    <?php include 'header.php'; ?>
 
     <div class="container mt-3" id="message-container" style="display: none;">
         <div class="alert" role="alert" id="message-alert"></div>
@@ -120,30 +140,27 @@ if (isset($_SESSION['user_data']['id'])) {
         <div class="row">
             <?php
             try {
-                // Query to fetch all users from the database, excluding the current logged-in user
-                $sql = "SELECT id, name, family, education, university, profile_pic FROM users WHERE id != ?";
+                $sql = "SELECT id, name, family, education, university, profile_pic, cover_photo, intro_video_path FROM users WHERE id != ?";
                 $stmt = $conn->prepare($sql);
                 $stmt->bind_param("i", $current_user_id);
                 $stmt->execute();
                 $result = $stmt->get_result();
 
                 if ($result && $result->num_rows > 0) {
-                    // Display each user in a card
                     while ($row = $result->fetch_assoc()) {
                         $target_user_id = $row["id"];
                         $fullName = htmlspecialchars($row["name"] . " " . $row["family"]);
                         $education = htmlspecialchars($row["education"] ?? 'نامشخص');
                         $university = htmlspecialchars($row["university"] ?? 'نامشخص');
                         $profilePic = htmlspecialchars($row["profile_pic"] ?? 'https://via.placeholder.com/100');
-                        // عکس کاور حذف شده است
+                        $coverPhoto = htmlspecialchars($row["cover_photo"] ?? 'https://via.placeholder.com/400x150/f0f2f5?text=Cover+Photo');
+                        $introVideoPath = htmlspecialchars($row["intro_video_path"] ?? '');
                         $profileLink = "profile.php?id=" . (int)$target_user_id;
 
-                        // Determine connection status
                         $button_text = 'Connect';
                         $button_class = 'btn-outline-primary';
                         $button_disabled = '';
 
-                        // Check if a connection or pending request already exists
                         $conn_stmt = $conn->prepare("SELECT status, sender_id FROM connections WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)");
                         $conn_stmt->bind_param("iiii", $current_user_id, $target_user_id, $target_user_id, $current_user_id);
                         $conn_stmt->execute();
@@ -172,7 +189,17 @@ if (isset($_SESSION['user_data']['id'])) {
             ?>
                         <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                             <div class="user-card">
-                                <img src="../<?= $profilePic ?>" class="profile-picture" alt="Profile Picture">
+                                <div class="cover-photo" style="background-image: url('../<?= $coverPhoto ?>');"></div>
+
+                                <div class="profile-pic-container">
+                                    <img src="../<?= $profilePic ?>" class="profile-picture" alt="Profile Picture">
+                                    <?php if (!empty($introVideoPath)): ?>
+                                        <div class="play-icon-overlay" data-video-path="<?= $introVideoPath ?>" data-bs-toggle="modal" data-bs-target="#videoModal">
+                                            <i class="fas fa-play-circle play-icon"></i>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+
                                 <div class="card-body-custom">
                                     <h5 class="card-title-custom"><?= $fullName ?></h5>
                                     <div class="icon-text">
@@ -211,6 +238,25 @@ if (isset($_SESSION['user_data']['id'])) {
                 }
             }
             ?>
+        </div>
+    </div>
+
+    <div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="videoModalLabel">Introduction Video</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <video id="introVideoPlayer" width="100%" controls>
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -277,6 +323,29 @@ if (isset($_SESSION['user_data']['id'])) {
                             showMessage('Network error or server issue. Please try again.', 'danger');
                         });
                 });
+            });
+
+            // Video Modal Logic
+            const videoModal = document.getElementById('videoModal');
+            const videoPlayer = document.getElementById('introVideoPlayer');
+
+            document.querySelectorAll('.play-icon-overlay').forEach(item => {
+                item.addEventListener('click', function() {
+                    const videoPath = this.getAttribute('data-video-path');
+                    if (videoPath) {
+                        videoPlayer.src = videoPath;
+                        videoModal.addEventListener('shown.bs.modal', function() {
+                            videoPlayer.play();
+                        }, {
+                            once: true
+                        });
+                    }
+                });
+            });
+
+            videoModal.addEventListener('hide.bs.modal', function() {
+                videoPlayer.pause();
+                videoPlayer.src = ''; // Clear video source
             });
         });
     </script>

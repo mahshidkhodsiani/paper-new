@@ -80,11 +80,9 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     if ($loggedInUserId) {
         // header("Location: profile.php?id=" . $loggedInUserId);
         header("Location: /paper-new/people/profile.php?id=" . $loggedInUserId);
-
     } else {
         // header("Location: ../index.php");
         header("Location: /paper-new/index.php");
-
     }
     exit();
 }
@@ -334,6 +332,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
 <body>
     <?php include "header.php"; ?>
 
+    <div class="container mt-3" id="message-container"></div>
     <div class="container mt-4">
         <div class="row">
             <?php include "sidebar.php"; ?>
@@ -345,20 +344,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                     $introVideoPath = htmlspecialchars($user['intro_video_path'] ?? '');
                     $hasVideo = !empty($introVideoPath) && file_exists($introVideoPath);
                     ?>
-                    <div class="circular-video-container <?= !$hasVideo ? 'no-video' : '' ?>" id="introVideoContainer">
-                        <?php if ($hasVideo) : ?>
-                            <video id="introVideo" preload="metadata">
-                                <source src="<?= $introVideoPath ?>" type="video/mp4">
-                                Your browser does not support the video tag.
-                            </video>
-                            <div class="control-button-overlay" id="videoOverlay">
-                                <i class="fas fa-play" id="controlButtonIcon"></i>
-                            </div>
-                        <?php else : ?>
-                            <i class="fas fa-video-slash"></i>
-                            <p class="text-muted mt-3" style="position: absolute; bottom: 20px;">Intro video not uploaded</p>
-                        <?php endif; ?>
-                    </div>
+
 
                     <div class="mb-4">
                         <h5 class="profile-section-title"><i class="fas fa-briefcase me-2"></i>Education and Work Information</h5>
@@ -612,6 +598,32 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                 }, 3000); // Wait for 3 seconds
             }
         });
+
+
+
+
+        function showMessage(message, type = 'info') {
+            const msgContainer = document.getElementById('message-container');
+            if (!msgContainer) {
+                console.warn("Message container not found. Please add a div with id='message-container' to your page.");
+                return;
+            }
+
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.role = 'alert';
+            alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+
+            msgContainer.innerHTML = '';
+            msgContainer.appendChild(alertDiv);
+            msgContainer.style.display = 'block'; // این خط برای نمایش کانتینر اضافه شده است
+
+            setTimeout(() => {
+                $(alertDiv).alert('close');
+            }, 3000);
+        }
     </script>
 </body>
 

@@ -28,9 +28,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $google_scholar_url = filter_input(INPUT_POST, 'google_scholar_url', FILTER_SANITIZE_URL);
     $github_url = filter_input(INPUT_POST, 'github_url', FILTER_SANITIZE_URL);
     $website_url = filter_input(INPUT_POST, 'website_url', FILTER_SANITIZE_URL);
-    // --- اضافه کردن فیلد جدید: biography ---
     $biography = filter_input(INPUT_POST, 'biography', FILTER_SANITIZE_STRING);
-
 
     $password_new = filter_input(INPUT_POST, 'password', FILTER_SANITIZE_STRING);
     $password_confirm = filter_input(INPUT_POST, 'confirm_password', FILTER_SANITIZE_STRING);
@@ -40,7 +38,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $bindValues = [];
 
     // اضافه کردن فیلدهای متنی به لیست برای UPDATE
-    // از isset استفاده می‌کنیم تا اگر فیلد خالی هم ارسال شد، در دیتابیس خالی ذخیره شود.
     if (isset($_POST['first_name'])) {
         $updateFields[] = "name = ?";
         $bindParams .= "s";
@@ -101,13 +98,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $bindParams .= "s";
         $bindValues[] = $website_url;
     }
-    // --- اضافه کردن biography به لیست برای UPDATE ---
     if (isset($_POST['biography'])) {
         $updateFields[] = "biography = ?";
         $bindParams .= "s";
         $bindValues[] = $biography;
     }
-
 
     // --- مدیریت رمز عبور ---
     if (!empty($password_new) || !empty($password_confirm)) {
@@ -154,6 +149,37 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
     }
 
+    // --- مدیریت آپلود عکس کاور (جدید) ---
+    if (isset($_FILES['cover_photo']) && $_FILES['cover_photo']['error'] == UPLOAD_ERR_OK) {
+        $baseUploadDir = '../uploads/covers/';
+        $userUploadDir = $baseUploadDir . $userId . '/';
+
+        if (!is_dir($userUploadDir)) {
+            mkdir($userUploadDir, 0775, true);
+        }
+
+        $fileName = basename($_FILES['cover_photo']['name']);
+        $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        $allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
+
+        if (in_array($fileExt, $allowedTypes)) {
+            $newFileName = 'cover_photo_' . uniqid() . '.' . $fileExt;
+            $uploadFilePath = $userUploadDir . $newFileName;
+
+            if (move_uploaded_file($_FILES['cover_photo']['tmp_name'], $uploadFilePath)) {
+                $dbFilePath = 'uploads/covers/' . $userId . '/' . $newFileName;
+                $updateFields[] = "cover_photo = ?";
+                $bindParams .= "s";
+                $bindValues[] = $dbFilePath;
+            } else {
+                $message = 'خطا در آپلود عکس کاور. ';
+                $messageType = 'danger';
+            }
+        } else {
+            $message = 'نوع فایل عکس کاور نامعتبر است. فقط JPG, JPEG, PNG, GIF مجاز هستند. ';
+            $messageType = 'danger';
+        }
+    }
 
     if (!empty($updateFields) && $messageType !== 'danger') {
         $conn_update = new mysqli($servername, $username, $password, $dbname);
@@ -168,9 +194,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $stmt_update = $conn_update->prepare($sql_update);
         if ($stmt_update) {
-            // استفاده از array_merge برای ترکیب پارامترها با نوع و مقادیر
             $bind_names = array_merge([$bindParams], $bindValues);
-            // مرجع سازی مقادیر برای bind_param
             $refs = [];
             foreach ($bind_names as $key => $value) {
                 $refs[$key] = &$bind_names[$key];
@@ -182,15 +206,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $messageType = 'success';
 
                 // --- بخش حیاتی: به‌روزرسانی کامل $_SESSION['user_data'] از دیتابیس ---
-                // --- اضافه کردن biography به SELECT query ---
-                $sql_fetch_updated_user = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, created_at, updated_at FROM users WHERE id = ?";
+                $sql_fetch_updated_user = "SELECT id, name, family, email, profile_pic, cover_photo, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, created_at, updated_at FROM users WHERE id = ?";
                 $stmt_fetch = $conn_update->prepare($sql_fetch_updated_user);
                 if ($stmt_fetch) {
                     $stmt_fetch->bind_param("i", $userId);
                     $stmt_fetch->execute();
                     $result_fetch = $stmt_fetch->get_result();
                     if ($result_fetch->num_rows > 0) {
-                        $_SESSION['user_data'] = $result_fetch->fetch_assoc(); // اینجا سشن به‌طور کامل به‌روز می‌شود
+                        $_SESSION['user_data'] = $result_fetch->fetch_assoc();
                     }
                     $stmt_fetch->close();
                 }
@@ -229,8 +252,7 @@ if ($conn->connect_error) {
 $conn->set_charset("utf8mb4");
 
 $user = [];
-// --- اضافه کردن biography به SELECT query ---
-$sql = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography FROM users WHERE id = ?";
+$sql = "SELECT id, name, family, email, profile_pic, cover_photo, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography FROM users WHERE id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $userId);
 $stmt->execute();
@@ -244,6 +266,7 @@ if ($result->num_rows > 0) {
 }
 
 $stmt->close();
+
 
 ?>
 
@@ -259,6 +282,25 @@ $stmt->close();
     <link rel="stylesheet" href="styles.css">
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .cover-photo-container {
+            width: 100%;
+            height: 250px;
+            background-color: #eee;
+            background-size: cover;
+            background-position: center;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .cover-photo-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px 8px 0 0;
+        }
+    </style>
 
 </head>
 
@@ -273,6 +315,12 @@ $stmt->close();
 
             <div class="col-md-6">
                 <div class="main-content shadow-lg p-3 mb-5 bg-white rounded">
+                    <div class="cover-photo-container">
+                        <?php if (!empty($user['cover_photo'])): ?>
+                            <img src="../<?= htmlspecialchars($user['cover_photo']); ?>" alt="Cover Photo">
+                        <?php endif; ?>
+                    </div>
+
                     <h4 class="mb-4">Account Settings</h4>
 
                     <?php if (!empty($message)): ?>
@@ -288,9 +336,16 @@ $stmt->close();
                             <div class="d-flex align-items-center">
                                 <img src="../<?php echo htmlspecialchars($user['profile_pic'] ?? '../images/2.png'); ?>" alt="Profile Picture" class="img-thumbnail rounded-circle me-3" style="width: 100px; height: 100px; object-fit: cover;">
                                 <div>
-                                    <input type="file" class="form-control" id="profileImage" name="profile_image" accept="image/png, image/jpeg, image/gif"> <small class="form-text text-muted">PNG, JPG or GIF file (max 2MB)</small>
+                                    <input type="file" class="form-control" id="profileImage" name="profile_image" accept="image/png, image/jpeg, image/gif">
+                                    <small class="form-text text-muted">PNG, JPG or GIF file (max 2MB)</small>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="coverPhoto" class="form-label">Cover Photo</label>
+                            <input type="file" class="form-control" id="coverPhoto" name="cover_photo" accept="image/png, image/jpeg, image/gif">
+                            <small class="form-text text-muted">Choose a cover image for your profile (max 2MB)</small>
                         </div>
 
                         <div class="mb-3">

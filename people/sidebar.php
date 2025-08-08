@@ -1,48 +1,101 @@
+<?php
+// اطمینان از راه‌اندازی سشن
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// فرض بر این است که $conn و $user در فایل اصلی (مثلاً profile.php) تعریف شده‌اند.
+// بررسی وضعیت اتصال بین کاربر فعلی و کاربر پروفایل
+$button_text = 'Connect';
+$button_class = 'btn-success';
+$button_disabled = '';
+$show_connect_button = false;
+
+// فقط در صورتی که کاربر لاگین کرده و پروفایل متعلق به خودش نیست، دکمه‌ها نمایش داده می‌شوند
+if (isset($_SESSION['user_data']['id']) && isset($user['id']) && $_SESSION['user_data']['id'] != $user['id']) {
+    $loggedInUserId = $_SESSION['user_data']['id'];
+    $profileUserId = $user['id'];
+    $show_connect_button = true;
+
+    $stmt_check_connection = $conn->prepare("SELECT status, sender_id FROM connections WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)");
+    if ($stmt_check_connection) {
+        $stmt_check_connection->bind_param("iiii", $loggedInUserId, $profileUserId, $profileUserId, $loggedInUserId);
+        $stmt_check_connection->execute();
+        $result = $stmt_check_connection->get_result();
+
+        if ($result->num_rows > 0) {
+            $connection_row = $result->fetch_assoc();
+            if ($connection_row['status'] == 'pending') {
+                if ($connection_row['sender_id'] == $loggedInUserId) {
+                    $button_text = 'Request Sent';
+                    $button_class = 'btn-secondary';
+                } else {
+                    $button_text = 'Pending Request';
+                    $button_class = 'btn-warning';
+                }
+                $button_disabled = 'disabled';
+            } elseif ($connection_row['status'] == 'accepted') {
+                $button_text = 'Connected';
+                $button_class = 'btn-primary';
+                $button_disabled = 'disabled';
+            }
+        }
+        $stmt_check_connection->close();
+    }
+}
+?>
+
 <div class="col-md-3">
     <div class="sidebar-content shadow p-3 mb-5 bg-white rounded">
         <div class="text-center mb-4">
-            <img decoding="async" width="150" height="150"
-                src="../<?= !empty($user['profile_pic']) ? $user['profile_pic'] : '../images/2.png'; ?>"
-                class="img-fluid rounded-circle" alt="profile-pic">
+            <div class="profile-pic-container-sidebar">
+                <img decoding="async" width="150" height="150"
+                    src="../<?= !empty($user['profile_pic']) ? $user['profile_pic'] : '../images/2.png'; ?>"
+                    class="img-fluid rounded-circle" alt="profile-pic">
+
+                <?php if (!empty($user['intro_video_path'])): ?>
+                    <div class="play-icon-overlay-sidebar" data-video-path="../<?= safe($user['intro_video_path']) ?>" data-bs-toggle="modal" data-bs-target="#videoModal">
+                        <i class="fas fa-play-circle play-icon"></i>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
 
         <div class="text-center mb-4">
             <p class="">
                 <i class="far fa-user-circle"></i>
-                <?= $user['name'] . " " . $user['family']; ?>
+                <?= safe($user['name'] . " " . $user['family']); ?>
             </p>
         </div>
 
         <div class="list-group">
+            <?php if ($show_connect_button): ?>
+                <button type="button" class="btn <?= safe($button_class) ?> w-100 mt-3 connect-btn" data-user-id="<?= safe($profileUserId) ?>" <?= safe($button_disabled) ?>>
+                    <i class="fas fa-user-plus me-2"></i> <?= safe($button_text) ?>
+                </button>
+            <?php endif; ?>
+
             <?php
-            // بررسی می‌کنیم که آیا کاربر لاگین کرده و ID سشن موجود است
-            if (isset($_SESSION['user_data']['id'])) {
-                $loggedInUserId = $_SESSION['user_data']['id'];
-                // فقط در صورتی دکمه نمایش داده شود که ID کاربر لاگین کرده با ID پروفایل یکی نباشد
-                if ($loggedInUserId != $user['id']) {
+            if (isset($_SESSION['user_data']['id']) && $_SESSION['user_data']['id'] != $user['id']):
             ?>
-                    <button type="button" class="btn btn-primary w-100 mt-3" data-bs-toggle="modal" data-bs-target="#messageModal">
-                        <i class="fas fa-paper-plane me-2"></i>Send Message
-                    </button>
-            <?php
-                }
-            }
-            ?>
+                <button type="button" class="btn btn-primary w-100 mt-3" data-bs-toggle="modal" data-bs-target="#messageModal">
+                    <i class="fas fa-paper-plane me-2"></i> Send Message
+                </button>
+            <?php endif; ?>
         </div>
     </div>
 </div>
 
-<!-- Modal ارسال پیام -->
 <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="messageModalLabel">New Message to <?= $user['name'] . ' ' . $user['family'] ?></h5>
+                <h5 class="modal-title" id="messageModalLabel">New Message to <?= safe($user['name'] . ' ' . $user['family']) ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="messageForm">
-                    <input type="hidden" name="receiver_id" value="<?= $user['id'] ?>">
+                    <input type="hidden" name="receiver_id" value="<?= safe($user['id']) ?>">
                     <div class="mb-3">
                         <label for="messageSubject" class="form-label">Subject</label>
                         <input type="text" class="form-control" id="messageSubject" name="subject" required>
@@ -61,13 +114,92 @@
     </div>
 </div>
 
+<div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="videoModalLabel">Introduction Video</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <video id="introVideoPlayer" width="100%" controls>
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sidebar-content {
+        /* استایل‌های موجود */
+    }
+
+    .profile-pic-container-sidebar {
+        position: relative;
+        display: inline-block;
+    }
+
+    .play-icon-overlay-sidebar {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        cursor: pointer;
+        color: #fff;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 50%;
+        width: 35px;
+        height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    .play-icon {
+        font-size: 20px;
+    }
+
+    .play-icon-overlay-sidebar:hover {
+        background-color: rgba(0, 0, 0, 0.7);
+    }
+</style>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // تابع نمایش پیام پاپ‌آپ که در فایل اصلی تعریف شده است
+    function showMessage(message, type = 'info') {
+        const msgContainer = document.getElementById('message-container');
+        if (!msgContainer) {
+            console.warn("Message container not found. Please add a div with id='message-container' to your page.");
+            return;
+        }
+
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+
+        msgContainer.innerHTML = '';
+        msgContainer.appendChild(alertDiv);
+        msgContainer.style.display = 'block';
+
+        setTimeout(() => {
+            $(alertDiv).alert('close');
+        }, 5000);
+    }
+
     $(document).ready(function() {
+        // جاوااسکریپت برای دکمه ارسال پیام
         $('#sendMessageBtn').click(function() {
             const formData = $('#messageForm').serialize();
-
             $.ajax({
                 url: 'send_message.php',
                 type: 'POST',
@@ -79,19 +211,95 @@
                 success: function(response) {
                     if (response.success) {
                         $('#messageModal').modal('hide');
-                        alert('Message sent successfully!');
+                        showMessage(response.message, 'success');
                         $('#messageForm')[0].reset();
                     } else {
-                        alert('Error: ' + response.message);
+                        showMessage('Error: ' + response.message, 'danger');
                     }
                 },
                 error: function() {
-                    alert('An error occurred while sending the message.');
+                    showMessage('An error occurred while sending the message.', 'danger');
                 },
                 complete: function() {
                     $('#sendMessageBtn').prop('disabled', false).text('Send');
                 }
             });
+        });
+    });
+
+    // جاوااسکریپت برای دکمه ارسال درخواست اتصال
+    document.addEventListener('DOMContentLoaded', function() {
+        const connectButtons = document.querySelectorAll('.connect-btn');
+        connectButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const receiverId = this.dataset.userId;
+                const clickedButton = this;
+
+                if (clickedButton.disabled) {
+                    return;
+                }
+
+                const originalText = clickedButton.innerHTML;
+                const originalClass = clickedButton.className;
+
+                clickedButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+                clickedButton.disabled = true;
+                clickedButton.classList.remove('btn-success', 'btn-secondary', 'btn-warning');
+                clickedButton.classList.add('btn-info');
+
+                fetch('../profile/handle_connection.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'receiver_id=' + receiverId
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            clickedButton.innerHTML = '<i class="fas fa-check"></i> Request Sent';
+                            clickedButton.classList.remove('btn-info');
+                            clickedButton.classList.add('btn-secondary');
+                            showMessage(data.message, 'success');
+                        } else {
+                            clickedButton.innerHTML = originalText;
+                            clickedButton.className = originalClass;
+                            clickedButton.disabled = false;
+                            console.error('Error:', data.message);
+                            showMessage('Failed to send connection request: ' + data.message, 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        clickedButton.innerHTML = originalText;
+                        clickedButton.className = originalClass;
+                        clickedButton.disabled = false;
+                        showMessage('Network error or server issue. Please try again.', 'danger');
+                    });
+            });
+        });
+
+        // جاوااسکریپت برای مودال ویدیو
+        const videoModal = document.getElementById('videoModal');
+        const videoPlayer = document.getElementById('introVideoPlayer');
+
+        document.querySelectorAll('.play-icon-overlay-sidebar').forEach(item => {
+            item.addEventListener('click', function() {
+                const videoPath = this.getAttribute('data-video-path');
+                if (videoPath) {
+                    videoPlayer.src = videoPath;
+                    videoModal.addEventListener('shown.bs.modal', function() {
+                        videoPlayer.play();
+                    }, {
+                        once: true
+                    });
+                }
+            });
+        });
+
+        videoModal.addEventListener('hide.bs.modal', function() {
+            videoPlayer.pause();
+            videoPlayer.src = '';
         });
     });
 </script>
