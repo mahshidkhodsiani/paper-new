@@ -131,6 +131,9 @@ $user_id = $_SESSION['user_data']['id']; // Get the logged-in user's ID
             });
         });
     </script>
+
+    <?php include "footer.php"; ?>
+
 </body>
 
 </html>

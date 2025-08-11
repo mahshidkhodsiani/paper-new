@@ -229,6 +229,10 @@ if (isset($_SESSION['user_data']['id'])) {
             });
         });
     </script>
+
+
+    <?php include "footer.php"; ?>
+
 </body>
 
 </html>

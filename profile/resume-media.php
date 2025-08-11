@@ -371,6 +371,9 @@ $user = $_SESSION['user_data'];
             }
         });
     </script>
+
+    <?php include "footer.php"; ?>
+
 </body>
 
 </html>

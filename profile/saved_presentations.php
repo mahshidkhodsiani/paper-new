@@ -128,7 +128,7 @@ if ($stmt) {
                                     </div>
                                 </div>
                             <?php endforeach; ?>
-                            
+
                         </div>
                     <?php endif; ?>
 
@@ -164,6 +164,9 @@ if ($stmt) {
             });
         });
     </script>
+
+    <?php include "footer.php"; ?>
+
 </body>
 
 </html>

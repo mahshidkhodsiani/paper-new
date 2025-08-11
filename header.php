@@ -34,6 +34,16 @@
                 </button>
                 <div id="suggestions" class="search-results-box" style="display: none;"></div>
             </form>
+
+
+            <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+                <li><a href="#" class="nav-link px-2 link-secondary"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
+                <li><a href="people" class="nav-link px-2 link-dark"><i class="fas fa-users"></i> People</a></li>
+                <li>
+                    <a href="" class="nav-link px-2 link-dark"><i class="fas fa-flask"></i> Labs</a>
+                </li>
+            </ul>
+
         </li>
         <li class="nav-item m-1">
             <a class="btn btn-info" href="login">Sign in</a>

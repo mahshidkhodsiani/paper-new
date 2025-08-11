@@ -73,10 +73,10 @@
                 </button>
                 <br>
 
-                <a href="" class="btn btn-outline-info rounded mb-3">
+                <!-- <a href="" class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-file-contract"></i> Term and Conditions
-                </a>
-                <br>
+                </a> -->
+
 
                 <a href="profile/send_email" class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-microphone"></i> Request To Present
@@ -91,6 +91,14 @@
                 <a href="" class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-flask"></i> Build your Lab Page
                 </a>
+
+                <p class="mt-3 small text-muted">
+                    By using this site, you agree to our
+                    <a href="terms" class="text-decoration-none">Terms and Conditions</a>.
+                </p>
+
+
+
             </div>
         </div>
 

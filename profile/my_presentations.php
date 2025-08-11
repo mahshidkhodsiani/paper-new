@@ -399,6 +399,9 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
             }
         });
     </script>
+
+    <?php include "footer.php"; ?>
+
 </body>
 
 </html>

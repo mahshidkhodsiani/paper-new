@@ -454,6 +454,8 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
         });
     </script>
 
+    <?php include "footer.php"; ?>
+
 </body>
 
 </html>

@@ -9,9 +9,6 @@ if (!($conn instanceof mysqli) || $conn->connect_error) {
 $current_user_id = null;
 if (isset($_SESSION['user_data']['id'])) {
     $current_user_id = $_SESSION['user_data']['id'];
-} else {
-    header("Location: ../login.php");
-    exit();
 }
 ?>
 
@@ -69,7 +66,6 @@ if (isset($_SESSION['user_data']['id'])) {
 
         .card-body-custom {
             padding: 15px;
-            /* پدینگ بالای کارت را برای حذف فاصله کم کردیم */
             padding-top: 55px;
         }
 
@@ -103,7 +99,6 @@ if (isset($_SESSION['user_data']['id'])) {
 
         .play-icon-overlay {
             position: absolute;
-            /* آیکون را نسبت به عکس پروفایل تنظیم می‌کنیم */
             top: 0;
             right: 0;
             cursor: pointer;
@@ -140,9 +135,17 @@ if (isset($_SESSION['user_data']['id'])) {
         <div class="row">
             <?php
             try {
-                $sql = "SELECT id, name, family, education, university, profile_pic, cover_photo, intro_video_path FROM users WHERE id != ?";
+                // اگر کاربر وارد نشده است، فقط لیست کاربران را نمایش می‌دهیم.
+                // اگر وارد شده است، کاربران را به جز خودش نمایش می‌دهیم.
+                $sql = "SELECT id, name, family, education, university, profile_pic, cover_photo, intro_video_path FROM users";
+                if ($current_user_id !== null) {
+                    $sql .= " WHERE id != ?";
+                }
+
                 $stmt = $conn->prepare($sql);
-                $stmt->bind_param("i", $current_user_id);
+                if ($current_user_id !== null) {
+                    $stmt->bind_param("i", $current_user_id);
+                }
                 $stmt->execute();
                 $result = $stmt->get_result();
 
@@ -157,35 +160,40 @@ if (isset($_SESSION['user_data']['id'])) {
                         $introVideoPath = htmlspecialchars($row["intro_video_path"] ?? '');
                         $profileLink = "profile.php?id=" . (int)$target_user_id;
 
+                        // برای کاربران مهمان، دکمه همیشه "Connect" است و disabled نیست.
                         $button_text = 'Connect';
                         $button_class = 'btn-outline-primary';
                         $button_disabled = '';
+                        $show_connect_button = true;
 
-                        $conn_stmt = $conn->prepare("SELECT status, sender_id FROM connections WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)");
-                        $conn_stmt->bind_param("iiii", $current_user_id, $target_user_id, $target_user_id, $current_user_id);
-                        $conn_stmt->execute();
-                        $conn_result = $conn_stmt->get_result();
+                        // فقط برای کاربران وارد شده وضعیت اتصال را بررسی می‌کنیم.
+                        if ($current_user_id !== null) {
+                            $conn_stmt = $conn->prepare("SELECT status, sender_id FROM connections WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)");
+                            $conn_stmt->bind_param("iiii", $current_user_id, $target_user_id, $target_user_id, $current_user_id);
+                            $conn_stmt->execute();
+                            $conn_result = $conn_stmt->get_result();
 
-                        if ($conn_result->num_rows > 0) {
-                            $conn_row = $conn_result->fetch_assoc();
-                            $connection_status = $conn_row['status'];
-                            if ($connection_status == 'pending') {
-                                if ($conn_row['sender_id'] == $current_user_id) {
-                                    $button_text = 'Request Sent';
-                                    $button_class = 'btn-secondary';
-                                    $button_disabled = 'disabled';
-                                } else {
-                                    $button_text = 'Pending Request';
-                                    $button_class = 'btn-warning';
+                            if ($conn_result->num_rows > 0) {
+                                $conn_row = $conn_result->fetch_assoc();
+                                $connection_status = $conn_row['status'];
+                                if ($connection_status == 'pending') {
+                                    if ($conn_row['sender_id'] == $current_user_id) {
+                                        $button_text = 'Request Sent';
+                                        $button_class = 'btn-secondary';
+                                        $button_disabled = 'disabled';
+                                    } else {
+                                        $button_text = 'Pending Request';
+                                        $button_class = 'btn-warning';
+                                        $button_disabled = 'disabled';
+                                    }
+                                } elseif ($connection_status == 'accepted') {
+                                    $button_text = 'Connected';
+                                    $button_class = 'btn-success';
                                     $button_disabled = 'disabled';
                                 }
-                            } elseif ($connection_status == 'accepted') {
-                                $button_text = 'Connected';
-                                $button_class = 'btn-success';
-                                $button_disabled = 'disabled';
                             }
+                            $conn_stmt->close();
                         }
-                        $conn_stmt->close();
             ?>
                         <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
                             <div class="user-card">
@@ -193,7 +201,7 @@ if (isset($_SESSION['user_data']['id'])) {
 
                                 <div class="profile-pic-container">
                                     <img src="../<?= $profilePic ?>" class="profile-picture" alt="Profile Picture">
-                                    <?php if (!empty($introVideoPath)): ?>
+                                    <?php if (!empty($introVideoPath)) : ?>
                                         <div class="play-icon-overlay" data-video-path="<?= $introVideoPath ?>" data-bs-toggle="modal" data-bs-target="#videoModal">
                                             <i class="fas fa-play-circle play-icon"></i>
                                         </div>
@@ -214,11 +222,9 @@ if (isset($_SESSION['user_data']['id'])) {
                                         </svg>
                                         <span>University: <?= $university ?></span>
                                     </div>
-                                    <?php if ($target_user_id != $current_user_id) : ?>
-                                        <button type="button" class="btn <?= $button_class ?> btn-sm btn-custom connect-btn" data-user-id="<?= $target_user_id ?>" <?= $button_disabled ?>>
-                                            <i class="fas fa-user-plus"></i> <?= $button_text ?>
-                                        </button>
-                                    <?php endif; ?>
+                                    <button type="button" class="btn <?= $button_class ?> btn-sm btn-custom connect-btn" data-user-id="<?= $target_user_id ?>" <?= $button_disabled ?>>
+                                        <i class="fas fa-user-plus"></i> <?= $button_text ?>
+                                    </button>
                                     <a href="<?= $profileLink ?>" class="btn btn-primary btn-sm btn-custom"><i class="fas fa-user-graduate"></i> View Profile</a>
                                 </div>
                             </div>
@@ -275,9 +281,18 @@ if (isset($_SESSION['user_data']['id'])) {
             }
 
             const connectButtons = document.querySelectorAll('.connect-btn');
+            const currentUserId = <?= json_encode($current_user_id); ?>;
 
             connectButtons.forEach(button => {
                 button.addEventListener('click', function() {
+                    if (currentUserId === null) {
+                        showMessage('Please log in to send a connection request.', 'warning');
+                        setTimeout(() => {
+                            window.location.href = '../login.php';
+                        }, 1500);
+                        return;
+                    }
+
                     const receiverId = this.dataset.userId;
                     const clickedButton = this;
 
@@ -345,10 +360,13 @@ if (isset($_SESSION['user_data']['id'])) {
 
             videoModal.addEventListener('hide.bs.modal', function() {
                 videoPlayer.pause();
-                videoPlayer.src = ''; // Clear video source
+                videoPlayer.src = '';
             });
         });
     </script>
+
+    <?php include "footer.php"; ?>
+
 </body>
 
 </html>
