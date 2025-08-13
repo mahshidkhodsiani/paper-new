@@ -23,7 +23,8 @@ $loggedInUserId = $_SESSION['user_id'] ?? ($_SESSION['user_data']['id'] ?? null)
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $profileId = intval($_GET['id']);
 
-    $sql = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, custom_profile_link, availability_status, meeting_link, google_calendar, last_resume_update, intro_video_path 
+    $sql = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url,
+            website_url, biography, custom_profile_link, availability_status, meeting_link, google_calendar, last_resume_update, intro_video_path , resume_pdf_path, hide_resume, cover_photo
             FROM users 
             WHERE id = ?";
 
@@ -340,6 +341,15 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             <div class="col-md-6">
                 <div class="main-content shadow-lg p-3 mb-5 bg-white rounded">
 
+
+                    <div class="cover-photo-container">
+                        <?php if (!empty($user['cover_photo'])): ?>
+                            <img src="../<?= htmlspecialchars($user['cover_photo']); ?>" alt="Cover Photo" style="height: 400px; width: 100%;">
+                        <?php else: ?>
+                            <img src="../images/11.jpg" alt="Default Cover Photo" style="height: 400px; width: 100%;">
+                        <?php endif; ?>
+                    </div>
+
                     <?php
                     $introVideoPath = htmlspecialchars($user['intro_video_path'] ?? '');
                     $hasVideo = !empty($introVideoPath) && file_exists($introVideoPath);
@@ -367,12 +377,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                         <?php if (!empty($user['workplace'])) : ?>
                             <p><i class="fas fa-building me-2 text-primary"></i>Workplace: <?= htmlspecialchars($user['workplace']) ?></p>
                         <?php endif; ?>
-                        <?php if (!empty($user['birthdate'])) : ?>
-                            <p><i class="fas fa-birthday-cake me-2 text-primary"></i>Birthdate: <?= htmlspecialchars($user['birthdate']) ?></p>
-                        <?php endif; ?>
-                        <?php if (!empty($user['last_resume_update'])) : ?>
-                            <p><i class="fas fa-calendar-alt me-2 text-primary"></i>Last Resume Update: <?= date('Y-m-d H:i', strtotime($user['last_resume_update'])) ?></p>
-                        <?php endif; ?>
+
                     </div>
 
                     <?php if (!empty($user['biography'])) : ?>
@@ -537,6 +542,22 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                         <small class="text-muted mb-4 d-block">Click to copy my unique profile link.</small>
                     <?php endif; ?>
                 </div>
+
+                <hr>
+
+                <?php
+                if ($user['hide_resume'] == 0) {
+                ?>
+                    <p>Resume of <?= $user['name'] . " " . $user['family'] ?> :</p>
+
+
+                    <iframe src="<?= htmlspecialchars($user['resume_pdf_path']) ?>" style="border:0;" allow="fullscreen"></iframe>
+
+
+                    <a href="<?= $user['resume_pdf_path'] ?>" class="btn btn-outline-info" target="_blank">Download resume</a>
+                <?php
+                }
+                ?>
             </div>
         </div>
     </div>

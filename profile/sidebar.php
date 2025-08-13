@@ -50,16 +50,7 @@ if (isset($_POST['update_profile_pic'])) {
                 class="img-fluid rounded-circle" alt="profile-pic">
         </div>
 
-        <div class="text-center mb-4">
-            <span class="avatar-option">
-                <img decoding="async" width="50" height="50" src="../images/2.png"
-                    class="img-fluid rounded-circle clickable-avatar" alt="female-avatar" data-path="images/2.png">
-            </span>
-            <span class="avatar-option">
-                <img decoding="async" width="50" height="50" src="../images/10.png"
-                    class="img-fluid rounded-circle clickable-avatar" alt="male-avatar" data-path="images/10.png">
-            </span>
-        </div>
+
 
         <div class="text-center mb-4">
             <p class="">
@@ -77,6 +68,7 @@ if (isset($_POST['update_profile_pic'])) {
             <a class="list-group-item list-group-item-action" href="saved_peoples.php">Connections</a>
             <a class="list-group-item list-group-item-action" href="messages.php">Messages</a>
             <a class="list-group-item list-group-item-action" href="my_requests.php">My requests</a>
+            <a class="list-group-item list-group-item-action" href="#">My Labs</a>
         </div>
     </div>
 </div>
@@ -121,27 +113,6 @@ if (isset($_POST['update_profile_pic'])) {
             }
         });
 
-        // کد جدید برای تغییر آواتار با AJAX
-        $('.clickable-avatar').on('click', function() {
-            var newProfilePicPath = $(this).data('path');
-            var fullPath = '../' + newProfilePicPath;
-
-            $('#main-profile-pic').attr('src', fullPath);
-
-            $.ajax({
-                url: 'sidebar.php', // آدرس فایل فعلی (sidebar.php) را به عنوان URL مشخص می‌کنیم
-                type: 'POST',
-                data: {
-                    update_profile_pic: newProfilePicPath
-                },
-                success: function(response) {
-                    console.log('Profile picture updated successfully!');
-                },
-                error: function(xhr, status, error) {
-                    console.error('An error occurred:', error);
-                }
-            });
-        });
 
 
         // کد جدید برای پخش ویدیو با کلیک روی آیکون پلی

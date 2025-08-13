@@ -324,7 +324,6 @@ $user = $_SESSION['user_data'];
                             <div class="mb-3">
                                 <label for="introVideo" class="form-label">Choose Video File (MP4, WebM, OGG)</label>
                                 <input class="form-control" type="file" id="introVideo" name="intro_video" accept="video/mp4,video/webm,video/ogg">
-                                <small class="text-muted">No strict size limit on server-side, but very large files may fail due to PHP or web server configurations.</small>
                             </div>
                             <button type="submit" name="upload_intro_video" class="btn btn-primary btn-sm">Upload Video</button>
                         </form>

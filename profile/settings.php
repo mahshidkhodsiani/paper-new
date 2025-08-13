@@ -13,9 +13,9 @@ include "../config.php";
 $message = '';
 $messageType = '';
 
-// --- شروع بخش پردازش فرم POST ---
+// --- Start of POST form processing section ---
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // گرفتن و فیلتر کردن داده های ورودی
+    // Get and filter input data
     $name = filter_input(INPUT_POST, 'first_name', FILTER_SANITIZE_STRING);
     $family = filter_input(INPUT_POST, 'last_name', FILTER_SANITIZE_STRING);
     $university = filter_input(INPUT_POST, 'university', FILTER_SANITIZE_STRING);
@@ -37,7 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $bindParams = '';
     $bindValues = [];
 
-    // اضافه کردن فیلدهای متنی به لیست برای UPDATE
+    // Add text fields to the list for UPDATE
     if (isset($_POST['first_name'])) {
         $updateFields[] = "name = ?";
         $bindParams .= "s";
@@ -104,20 +104,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $bindValues[] = $biography;
     }
 
-    // --- مدیریت رمز عبور ---
-    if (!empty($password_new) || !empty($password_confirm)) {
-        if ($password_new === $password_confirm && !empty($password_new)) {
+    // --- Password management ---
+    if (!empty($password_new) && !empty($password_confirm)) {
+        if ($password_new === $password_confirm) {
             $hashed_password = password_hash($password_new, PASSWORD_DEFAULT);
             $updateFields[] = "password = ?";
             $bindParams .= "s";
             $bindValues[] = $hashed_password;
         } else {
-            $message = 'رمزهای عبور با یکدیگر مطابقت ندارند یا خالی هستند.';
+            $message = 'Passwords do not match.';
             $messageType = 'danger';
         }
+    } elseif ((!empty($password_new) && empty($password_confirm)) || (empty($password_new) && !empty($password_confirm))) {
+        $message = 'Both password fields must be filled to change your password.';
+        $messageType = 'danger';
     }
 
-    // --- مدیریت آپلود تصویر پروفایل ---
+
+    // --- Profile picture upload management ---
     if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] == UPLOAD_ERR_OK) {
         $baseUploadDir = '../uploads/pics/';
         $userUploadDir = $baseUploadDir . $userId . '/';
@@ -140,16 +144,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $bindParams .= "s";
                 $bindValues[] = $dbFilePath;
             } else {
-                $message = 'خطا در آپلود تصویر پروفایل. ';
+                $message = 'Error uploading profile picture.';
                 $messageType = 'danger';
             }
         } else {
-            $message = 'نوع فایل تصویر پروفایل نامعتبر است. فقط JPG, JPEG, PNG, GIF مجاز هستند. ';
+            $message = 'Invalid profile picture file type. Only JPG, JPEG, PNG, GIF are allowed.';
             $messageType = 'danger';
         }
     }
 
-    // --- مدیریت آپلود عکس کاور (جدید) ---
+    // --- Cover photo upload management (new) ---
     if (isset($_FILES['cover_photo']) && $_FILES['cover_photo']['error'] == UPLOAD_ERR_OK) {
         $baseUploadDir = '../uploads/covers/';
         $userUploadDir = $baseUploadDir . $userId . '/';
@@ -172,11 +176,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $bindParams .= "s";
                 $bindValues[] = $dbFilePath;
             } else {
-                $message = 'خطا در آپلود عکس کاور. ';
+                $message = 'Error uploading cover photo.';
                 $messageType = 'danger';
             }
         } else {
-            $message = 'نوع فایل عکس کاور نامعتبر است. فقط JPG, JPEG, PNG, GIF مجاز هستند. ';
+            $message = 'Invalid cover photo file type. Only JPG, JPEG, PNG, GIF are allowed.';
             $messageType = 'danger';
         }
     }
@@ -202,10 +206,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             call_user_func_array([$stmt_update, 'bind_param'], $refs);
 
             if ($stmt_update->execute()) {
-                $message = 'Information updated successfully.!';
+                $message = 'Information updated successfully!';
                 $messageType = 'success';
 
-                // --- بخش حیاتی: به‌روزرسانی کامل $_SESSION['user_data'] از دیتابیس ---
+                // --- Crucial section: full update of $_SESSION['user_data'] from the database ---
                 $sql_fetch_updated_user = "SELECT id, name, family, email, profile_pic, cover_photo, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, created_at, updated_at FROM users WHERE id = ?";
                 $stmt_fetch = $conn_update->prepare($sql_fetch_updated_user);
                 if ($stmt_fetch) {
@@ -217,34 +221,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     }
                     $stmt_fetch->close();
                 }
-                // --- پایان بخش حیاتی ---
+                // --- End of crucial section ---
 
                 header("Location: settings.php?status=" . urlencode($messageType) . "&msg=" . urlencode($message));
                 exit();
             } else {
-                $message = 'خطا در به روزرسانی اطلاعات: ' . $stmt_update->error;
+                $message = 'Error in updating information: ' . $stmt_update->error;
                 $messageType = 'danger';
             }
             $stmt_update->close();
         } else {
-            $message = 'خطا در آماده سازی کوئری به روزرسانی: ' . $conn_update->error;
+            $message = 'Error in preparing update query: ' . $conn_update->error;
             $messageType = 'danger';
         }
         $conn_update->close();
     } elseif (empty($updateFields) && $messageType !== 'danger') {
-        $message = 'هیچ اطلاعاتی برای به روزرسانی وجود نداشت.';
+        $message = 'No information was available for update.';
         $messageType = 'info';
     }
 }
 
-// --- مدیریت پیام ها پس از ریدایرکت (GET) ---
+// --- Message handling after redirect (GET) ---
 if (isset($_GET['status']) && isset($_GET['msg'])) {
     $messageType = $_GET['status'];
     $message = urldecode($_GET['msg']);
 }
 
 
-// --- لود کردن اطلاعات کاربر برای نمایش در فرم (در صورت عدم ارسال POST یا پس از ریدایرکت) ---
+// --- Load user data for display in the form (if no POST request or after redirect) ---
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
@@ -279,9 +283,9 @@ $stmt->close();
     <title>Settings</title>
 
     <?php include "../includes.php"; ?>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="styles.css">
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         .cover-photo-container {
             width: 100%;
@@ -315,9 +319,12 @@ $stmt->close();
 
             <div class="col-md-6">
                 <div class="main-content shadow-lg p-3 mb-5 bg-white rounded">
+
                     <div class="cover-photo-container">
                         <?php if (!empty($user['cover_photo'])): ?>
                             <img src="../<?= htmlspecialchars($user['cover_photo']); ?>" alt="Cover Photo">
+                        <?php else: ?>
+                            <img src="../images/11.jpg" alt="Default Cover Photo">
                         <?php endif; ?>
                     </div>
 
@@ -331,6 +338,13 @@ $stmt->close();
                     <?php endif; ?>
 
                     <form action="" method="post" enctype="multipart/form-data">
+
+                        <div class="mb-4">
+                            <label for="coverPhoto" class="form-label">Cover Photo</label>
+                            <input type="file" class="form-control" id="coverPhoto" name="cover_photo" accept="image/png, image/jpeg, image/gif">
+                            <small class="form-text text-muted">Choose a cover image for your profile (max 2MB)</small>
+                        </div>
+
                         <div class="mb-4">
                             <label for="profileImage" class="form-label">Profile Image</label>
                             <div class="d-flex align-items-center">
@@ -340,12 +354,6 @@ $stmt->close();
                                     <small class="form-text text-muted">PNG, JPG or GIF file (max 2MB)</small>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="coverPhoto" class="form-label">Cover Photo</label>
-                            <input type="file" class="form-control" id="coverPhoto" name="cover_photo" accept="image/png, image/jpeg, image/gif">
-                            <small class="form-text text-muted">Choose a cover image for your profile (max 2MB)</small>
                         </div>
 
                         <div class="mb-3">
@@ -358,20 +366,25 @@ $stmt->close();
                             <input type="text" class="form-control" id="lastName" name="last_name" value="<?php echo htmlspecialchars($_POST['last_name'] ?? $user['family'] ?? ''); ?>">
                         </div>
 
-                        <div class="mb-3" id="passwordGroup">
-                            <label for="password" class="form-label">Password</label>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">New Password</label>
                             <div class="input-group">
-                                <input type="password" class="form-control" id="password" name="password" disabled>
-                                <button class="btn btn-outline-secondary" type="button" id="editPasswordBtn">Reset Password</button>
+                                <input type="password" class="form-control" id="password" name="password">
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                    <i class="bi bi-eye-slash" id="toggleIcon"></i>
+                                </button>
                             </div>
-                            <small class="form-text text-muted" id="passwordStrength">Password strength: Weak</small>
+                            <small class="form-text text-muted">Leave blank if you don't want to change it.</small>
                         </div>
 
-                        <div class="mb-3" id="confirmPasswordGroup" style="display: none;">
+                        <div class="mb-3">
                             <label for="confirmPassword" class="form-label">Confirm Password</label>
-                            <input type="password" class="form-control" id="confirmPassword" name="confirm_password">
-                            <small class="form-text text-muted">Please re-enter your password.</small>
-                            <button class="btn btn-outline-secondary mt-2" type="button" id="cancelPasswordEditBtn">Cancel</button>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="confirmPassword" name="confirm_password">
+                                <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                    <i class="bi bi-eye-slash" id="toggleConfirmIcon"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -443,7 +456,6 @@ $stmt->close();
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Sidebar menu highlight logic
@@ -460,31 +472,59 @@ $stmt->close();
                 }
             });
 
-            // Password field show/hide logic
+            // منطق نمایش/پنهان کردن پسورد
             const passwordInput = document.getElementById('password');
+            const togglePasswordButton = document.getElementById('togglePassword');
+            const togglePasswordIcon = document.getElementById('toggleIcon');
+
+            if (togglePasswordButton) {
+                togglePasswordButton.addEventListener('click', function() {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    togglePasswordIcon.classList.toggle('bi-eye');
+                    togglePasswordIcon.classList.toggle('bi-eye-slash');
+                });
+            }
+
             const confirmPasswordInput = document.getElementById('confirmPassword');
-            const editPasswordBtn = document.getElementById('editPasswordBtn');
-            const cancelPasswordEditBtn = document.getElementById('cancelPasswordEditBtn');
-            const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
+            const toggleConfirmPasswordButton = document.getElementById('toggleConfirmPassword');
+            const toggleConfirmPasswordIcon = document.getElementById('toggleConfirmIcon');
 
-            editPasswordBtn.addEventListener('click', function() {
-                passwordInput.removeAttribute('disabled');
-                passwordInput.focus();
-                confirmPasswordGroup.style.display = 'block';
-                editPasswordBtn.style.display = 'none';
-                passwordInput.value = '';
-                confirmPasswordInput.value = '';
-            });
+            if (toggleConfirmPasswordButton) {
+                toggleConfirmPasswordButton.addEventListener('click', function() {
+                    const type = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    confirmPasswordInput.setAttribute('type', type);
+                    toggleConfirmPasswordIcon.classList.toggle('bi-eye');
+                    toggleConfirmPasswordIcon.classList.toggle('bi-eye-slash');
+                });
+            }
 
-            cancelPasswordEditBtn.addEventListener('click', function() {
-                passwordInput.setAttribute('disabled', 'disabled');
-                confirmPasswordGroup.style.display = 'none';
-                editPasswordBtn.style.display = 'inline-block';
-                passwordInput.value = '';
-                confirmPasswordInput.value = '';
-            });
+
+            // --- Unified Logic for Handling Alerts and Cleaning URL ---
+            const allAlerts = document.querySelectorAll('.alert');
+            if (allAlerts.length > 0) {
+                setTimeout(() => {
+                    allAlerts.forEach(alert => {
+                        const bootstrapAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                        if (bootstrapAlert) {
+                            bootstrapAlert.close();
+                        } else {
+                            // Fallback if Bootstrap's JS isn't fully loaded or instance not found
+                            alert.remove();
+                        }
+                    });
+
+                    // Clean the URL if it contained status/msg parameters
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.has('status') || urlParams.has('msg')) {
+                        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                        window.history.replaceState({}, document.title, cleanUrl);
+                    }
+                }, 3000); // 3000 milliseconds = 3 seconds
+            }
         });
     </script>
+
 
     <?php include "footer.php"; ?>
 

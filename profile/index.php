@@ -11,10 +11,139 @@ $userId = $_SESSION['user_data']['id']; // For updating current user's data
 
 include "../config.php"; // Database connection file
 
+// --- Unified Message Handling ---
 $message = ''; // For success/error messages
 $messageType = '';
 
-// --- POST form processing for status, meeting link and Google Calendar embed updates ---
+if (isset($_SESSION['message']) && isset($_SESSION['messageType'])) {
+    $message = $_SESSION['message'];
+    $messageType = $_SESSION['messageType'];
+    // Clear message from session to prevent re-display on refresh
+    unset($_SESSION['message']);
+    unset($_SESSION['messageType']);
+} elseif (isset($_GET['status']) && isset($_GET['msg'])) {
+    $messageType = $_GET['status'];
+    $message = urldecode($_GET['msg']);
+}
+// -------------------------------------
+
+// --- Helper function for file uploads ---
+// This function will now return an array with 'success', 'message', and 'messageType'
+function uploadFile($fileInputName, $baseTargetDir, $allowedExtensions, $maxFileSize, $conn, $userId, $columnName, $oldFilePath, $hideFile = null)
+{
+    $success = false;
+    $msg = '';
+    $type = '';
+    $targetFilePath = '';
+
+    // Handle file upload if file was selected
+    if (isset($_FILES[$fileInputName]) && $_FILES[$fileInputName]['error'] == UPLOAD_ERR_OK) {
+        $fileName = $_FILES[$fileInputName]['name'];
+        $fileTmpName = $_FILES[$fileInputName]['tmp_name'];
+        $fileSize = $_FILES[$fileInputName]['size'];
+        $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+        // Check file extension
+        if (!in_array($fileExt, $allowedExtensions)) {
+            $msg = "Invalid file type. Only " . implode(', ', $allowedExtensions) . " files are allowed.";
+            $type = 'danger';
+            return ['success' => false, 'message' => $msg, 'messageType' => $type];
+        }
+
+        // Check file size - if maxFileSize is 0, no limit is enforced by PHP.
+        if ($maxFileSize > 0 && $fileSize > $maxFileSize) {
+            $msg = "File is too large. Max size allowed is " . ($maxFileSize / (1024 * 1024)) . " MB.";
+            $type = 'danger';
+            return ['success' => false, 'message' => $msg, 'messageType' => $type];
+        }
+
+        // Construct the file storage path based on User ID
+        $targetUserDir = $baseTargetDir . $userId . "/";
+        // Create the user's directory if it doesn't exist
+        if (!is_dir($targetUserDir)) {
+            mkdir($targetUserDir, 0777, true);
+        }
+
+        // Generate a unique file name
+        $newFileName = uniqid('user_' . $userId . '_') . '.' . $fileExt;
+        $targetFilePath = $targetUserDir . $newFileName;
+
+        // Move the uploaded file from temporary to final destination
+        if (move_uploaded_file($fileTmpName, $targetFilePath)) {
+            // Delete the old file if it exists and is not a default file
+            if (
+                !empty($oldFilePath) && file_exists($oldFilePath) &&
+                !in_array($oldFilePath, ['../images/default_resume.pdf', '../videos/default_video.mp4'])
+            ) {
+                unlink($oldFilePath);
+            }
+            $success = true;
+        } else {
+            $msg = "Error uploading file. Please check directory permissions.";
+            $type = 'danger';
+            return ['success' => false, 'message' => $msg, 'messageType' => $type];
+        }
+    } elseif (isset($_FILES[$fileInputName]) && $_FILES[$fileInputName]['error'] != UPLOAD_ERR_NO_FILE) {
+        // Handle PHP upload errors
+        $phpFileUploadErrors = [
+            UPLOAD_ERR_INI_SIZE   => 'The uploaded file exceeds the upload_max_filesize directive in php.ini.',
+            UPLOAD_ERR_FORM_SIZE  => 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form.',
+            UPLOAD_ERR_PARTIAL    => 'The uploaded file was only partially uploaded.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing a temporary folder.',
+            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
+            UPLOAD_ERR_EXTENSION => 'A PHP extension stopped the file upload.',
+        ];
+        $msg = "File upload error: " . ($phpFileUploadErrors[$_FILES[$fileInputName]['error']] ?? 'Unknown upload error.');
+        $type = 'danger';
+        return ['success' => false, 'message' => $msg, 'messageType' => $type];
+    }
+
+    // Prepare the SQL query based on whether file was uploaded
+    if ($success) {
+        $sql = "UPDATE users SET " . $columnName . " = ?, hide_resume = ? WHERE id = ?";
+        $params = [$targetFilePath, $hideFile, $userId];
+        $types = "sii";
+    } else {
+        // Only update hide_resume if no file was uploaded
+        $sql = "UPDATE users SET hide_resume = ? WHERE id = ?";
+        $params = [$hideFile, $userId];
+        $types = "ii";
+    }
+
+    // Execute the database update
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        $stmt->bind_param($types, ...$params);
+
+        if ($stmt->execute()) {
+            // Update session data
+            if ($success) {
+                $_SESSION['user_data'][$columnName] = $targetFilePath;
+            }
+            $_SESSION['user_data']['hide_resume'] = $hideFile;
+
+            $msg = $success ? "File uploaded and settings updated successfully." : "Settings updated successfully.";
+            $type = 'success';
+            $stmt->close();
+            return ['success' => true, 'message' => $msg, 'messageType' => $type];
+        } else {
+            // If database update fails and file was uploaded, delete the uploaded file
+            if ($success && isset($targetFilePath) && file_exists($targetFilePath)) {
+                unlink($targetFilePath);
+            }
+            $msg = "Database update failed: " . $stmt->error;
+            $type = 'danger';
+            $stmt->close();
+            return ['success' => false, 'message' => $msg, 'messageType' => $type];
+        }
+    } else {
+        $msg = "Database query preparation failed: " . $conn->error;
+        $type = 'danger';
+        return ['success' => false, 'message' => $msg, 'messageType' => $type];
+    }
+}
+
+// --- Process Availability Update Form ---
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_availability'])) {
     $availability_status = filter_input(INPUT_POST, 'availability_status', FILTER_SANITIZE_STRING);
     $meeting_link = filter_input(INPUT_POST, 'meeting_link', FILTER_SANITIZE_URL);
@@ -22,14 +151,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_availability'])
 
     // Validation
     if (empty($availability_status)) {
-        $message = 'Please select your availability status.';
-        $messageType = 'danger';
+        $_SESSION['message'] = 'Please select your availability status.';
+        $_SESSION['messageType'] = 'danger';
     } elseif ($availability_status === 'meeting_link' && empty($meeting_link)) {
-        $message = 'For "Share Meeting Link" status, a meeting link is required.';
-        $messageType = 'danger';
+        $_SESSION['message'] = 'For "Share Meeting Link" status, a meeting link is required.';
+        $_SESSION['messageType'] = 'danger';
     } elseif ($availability_status === 'google_calendar_embed' && empty($google_calendar)) {
-        $message = 'For "Display Google Calendar" status, a Google Calendar embed link is required.';
-        $messageType = 'danger';
+        $_SESSION['message'] = 'For "Display Google Calendar" status, a Google Calendar embed link is required.';
+        $_SESSION['messageType'] = 'danger';
     } else {
         $conn_update = new mysqli($servername, $username, $password, $dbname);
         if ($conn_update->connect_error) {
@@ -44,12 +173,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_availability'])
         if ($stmt_update) {
             $stmt_update->bind_param("sssi", $availability_status, $meeting_link, $google_calendar, $userId);
             if ($stmt_update->execute()) {
-                $message = 'Availability status updated successfully.';
-                $messageType = 'success';
+                $_SESSION['message'] = 'Availability status updated successfully.';
+                $_SESSION['messageType'] = 'success';
 
                 // --- Update $_SESSION['user_data'] after successful save ---
                 // Fetch all relevant fields including new ones to keep session data current
-                $sql_fetch_updated_user = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, custom_profile_link, availability_status, meeting_link, google_calendar, last_resume_update, intro_video_path FROM users WHERE id = ?"; // Added intro_video_path
+                $sql_fetch_updated_user = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, custom_profile_link, availability_status, meeting_link, google_calendar, last_resume_update, intro_video_path, resume_pdf_path, hide_resume FROM users WHERE id = ?"; // Added resume_pdf_path, hide_resume
                 $stmt_fetch = $conn_update->prepare($sql_fetch_updated_user);
                 if ($stmt_fetch) {
                     $stmt_fetch->bind_param("i", $userId);
@@ -63,26 +192,57 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_availability'])
                 // --- End session update ---
 
             } else {
-                $message = 'Error updating status: ' . $stmt_update->error;
-                $messageType = 'danger';
+                $_SESSION['message'] = 'Error updating status: ' . $stmt_update->error;
+                $_SESSION['messageType'] = 'danger';
             }
             $stmt_update->close();
         } else {
-            $message = 'Query preparation error: ' . $conn_update->error;
-            $messageType = 'danger';
+            $_SESSION['message'] = 'Query preparation error: ' . $conn_update->error;
+            $_SESSION['messageType'] = 'danger';
         }
         $conn_update->close();
     }
 
     // Redirect to prevent form resubmission (Post/Redirect/Get pattern)
-    header("Location: index.php?status=" . urlencode($messageType) . "&msg=" . urlencode($message));
+    header("Location: index.php"); // No need for GET params here, as messages are in SESSION
     exit();
 }
 
-// --- Message handling after redirect (GET) ---
-if (isset($_GET['status']) && isset($_GET['msg'])) {
-    $messageType = $_GET['status'];
-    $message = urldecode($_GET['msg']);
+// --- Process Resume PDF Upload Form ---
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_resume_pdf'])) {
+    $conn = new mysqli($servername, $username, $password, $dbname);
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+    $conn->set_charset("utf8mb4");
+
+    $baseTargetDir = "../uploads/pdfs/";
+    $allowedExtensions = ['pdf'];
+    $maxFileSize = 0; // No size limit
+
+    // Get hide_resume value (0 or 1)
+    $hideResume = isset($_POST['hide_resume']) ? (int)$_POST['hide_resume'] : 0;
+
+    // Call the unified uploadFile function
+    $uploadResult = uploadFile(
+        'resume_pdf',
+        $baseTargetDir,
+        $allowedExtensions,
+        $maxFileSize,
+        $conn,
+        $userId,
+        'resume_pdf_path',
+        $_SESSION['user_data']['resume_pdf_path'] ?? '',
+        $hideResume
+    );
+
+    // Store the result in session for display after redirect
+    $_SESSION['message'] = $uploadResult['message'];
+    $_SESSION['messageType'] = $uploadResult['messageType'];
+
+    $conn->close();
+    header("Location: ./"); // Redirect without GET parameters
+    exit();
 }
 
 // Load user data from session (already updated if a POST request just happened)
@@ -361,6 +521,36 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                         <small class="text-muted mb-4 d-block">Click to copy your unique profile link.</small>
                     <?php endif; ?>
 
+                    <hr>
+                    <p>Upload Your Resume:</p>
+
+                    <?php
+                    if (isset($user['resume_pdf_path']) && $user['resume_pdf_path'] !== NULL) {
+                    ?>
+                        <iframe src="<?= htmlspecialchars($user['resume_pdf_path']) ?>" style="border:0;" allow="fullscreen"></iframe>
+
+                    <?php
+                    }
+                    ?>
+
+
+                    <form action="" method="POST" enctype="multipart/form-data" class="mt-3">
+                        <div class="mb-3">
+                            <label for="resumePdf" class="form-label">Choose PDF File</label>
+                            <input class="form-control" type="file" id="resumePdf" name="resume_pdf" accept=".pdf">
+                        </div>
+
+                        <div class="mb-3">
+                            <label>Hide from others</label>
+                            <input type="hidden" name="hide_resume" value="0">
+                            <input type="checkbox" name="hide_resume" value="1" <?= (($user['hide_resume'] ?? 0) == 1) ? 'checked' : ''; ?>>
+
+                        </div>
+
+
+                        <button type="submit" name="upload_resume_pdf" class="btn btn-primary btn-sm">Upload Resume</button>
+                    </form>
+
                 </div>
             </div>
         </div>
@@ -432,27 +622,32 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             }
 
 
-            // Logic for URL cleanup and alert dismissal
-            const urlParams = new URLSearchParams(window.location.search);
-            const statusParam = urlParams.get('status');
-            const msgParam = urlParams.get('msg');
-
-            if (statusParam && msgParam) {
+            // --- Unified Logic for Handling Alerts and Cleaning URL ---
+            // This targets ALL .alert elements on the page after load.
+            const allAlerts = document.querySelectorAll('.alert');
+            if (allAlerts.length > 0) {
                 setTimeout(() => {
-                    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-                    window.history.replaceState({}, document.title, cleanUrl);
-                }, 3000);
+                    allAlerts.forEach(alert => {
+                        const bootstrapAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                        if (bootstrapAlert) {
+                            bootstrapAlert.close();
+                        } else {
+                            // Fallback if Bootstrap's JS isn't fully loaded or instance not found
+                            alert.remove();
+                        }
+                    });
 
-                const alertElement = document.querySelector('.alert');
-                if (alertElement) {
-                    setTimeout(() => {
-                        const bsAlert = new bootstrap.Alert(alertElement);
-                        bsAlert.close();
-                    }, 3000);
-                }
+                    // Clean the URL if it contained status/msg parameters
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.has('status') || urlParams.has('msg')) {
+                        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                        window.history.replaceState({}, document.title, cleanUrl);
+                    }
+                }, 3000); // 3000 milliseconds = 3 seconds
             }
         });
     </script>
+
 
     <?php include "footer.php"; ?>
 

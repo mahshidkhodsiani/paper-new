@@ -16,6 +16,7 @@ if (isset($_POST['register'])) {
     $name = $_POST['first_name'];
     $family = $_POST['last_name'];
     $profile_img = "images/2.png";
+    $cover_img = "images/11.jpg";
 
     if ($password !== $confirm_password) {
         $_SESSION['registration_error'] = 'Your passwords do not match!';
@@ -40,9 +41,9 @@ if (isset($_POST['register'])) {
     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
     // درج کاربر جدید با استفاده از Prepared Statement
-    $insert_sql = "INSERT INTO users (name, family, email, password, profile_pic) VALUES (?, ?, ?, ?, ?)";
+    $insert_sql = "INSERT INTO users (name, family, email, password, profile_pic, cover_photo) VALUES (?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($insert_sql);
-    $stmt->bind_param("sssss", $name, $family, $email, $hashed_password, $profile_img);
+    $stmt->bind_param("ssssss", $name, $family, $email, $hashed_password, $profile_img, $cover_img);
 
     if ($stmt->execute()) {
         // --- کد ریدایرکت تأخیری اصلاح شده ---
