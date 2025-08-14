@@ -11,15 +11,13 @@ $userId = $_SESSION['user_data']['id'];
 // config.php includes database connection and helpers.php
 include "../config.php";
 
-// The safe function no longer needs to be redefined here, as it's included from config.php.
-
 $savedPresentations = []; // Array to store saved presentations (full information)
 
-// Database connection (connection is already done in config.php, but if you need a separate connection, you can do it here too)
 // To ensure $conn is accessible:
 global $conn; // If $conn is defined globally in config.php
 
 // Query to retrieve saved presentations for the current user
+// The SQL query has been updated to select 'pdf_path' and 'video_path' instead of the old 'file_path'
 $sql = "
     SELECT
         sp.id AS saved_id,
@@ -27,8 +25,9 @@ $sql = "
         p.id AS presentation_id,
         p.title,
         p.description,
-        p.file_path,
-        p.created_at -- 'created_at' column name is used from the presentations table
+        p.pdf_path,
+        p.video_path,
+        p.created_at
     FROM
         saved_presentations sp
     JOIN
@@ -103,9 +102,21 @@ if ($stmt) {
                                 <div class="list-group-item flex-column align-items-start mb-2 shadow-sm rounded">
                                     <div class="d-flex w-100 justify-content-between align-items-center">
                                         <h5 class="mb-1">
-                                            <a href="<?php echo safe($presentation['file_path']); ?>" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-dark">
+                                            <?php
+                                            $filePath = '';
+                                            if (!empty($presentation['pdf_path']) && file_exists(realpath($presentation['pdf_path']))) {
+                                                $filePath = $presentation['pdf_path'];
+                                            } elseif (!empty($presentation['video_path']) && file_exists(realpath($presentation['video_path']))) {
+                                                $filePath = $presentation['video_path'];
+                                            }
+                                            ?>
+                                            <?php if (!empty($filePath)): ?>
+                                                <a href="<?php echo safe($filePath); ?>" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-dark">
+                                                    <?php echo safe($presentation['title']); ?>
+                                                </a>
+                                            <?php else: ?>
                                                 <?php echo safe($presentation['title']); ?>
-                                            </a>
+                                            <?php endif; ?>
                                         </h5>
                                         <small class="text-muted text-end">
                                             Saved on: <?php echo date('Y-m-d H:i', strtotime($presentation['saved_at'])); ?>
@@ -117,7 +128,21 @@ if ($stmt) {
                                     <p class="mb-1 mt-2"><?php echo safe($presentation['description']); ?></p>
 
                                     <div class="d-flex justify-content-between align-items-center mt-3">
-                                        <small class="text-muted">File Path: <?php echo safe($presentation['file_path']); ?></small>
+                                        <small class="text-muted">
+                                            File:
+                                            <?php $isPdfAvailable = !empty($presentation['pdf_path']) && file_exists(realpath($presentation['pdf_path'])); ?>
+                                            <?php $isVideoAvailable = !empty($presentation['video_path']) && file_exists(realpath($presentation['video_path'])); ?>
+                                            <?php if ($isPdfAvailable): ?>
+                                                <a href="<?php echo safe($presentation['pdf_path']); ?>" target="_blank">PDF</a>
+                                            <?php endif; ?>
+                                            <?php if ($isVideoAvailable): ?>
+                                                <?php if ($isPdfAvailable): ?> | <?php endif; ?>
+                                                <a href="<?php echo safe($presentation['video_path']); ?>" target="_blank">Video</a>
+                                            <?php endif; ?>
+                                            <?php if (!$isPdfAvailable && !$isVideoAvailable): ?>
+                                                Not Available
+                                            <?php endif; ?>
+                                        </small>
 
                                         <form action="unsave_presentation.php" method="POST" onsubmit="return confirm('Are you sure you want to remove this presentation from your saved list?');">
                                             <input type="hidden" name="saved_id" value="<?php echo safe($presentation['saved_id']); ?>">

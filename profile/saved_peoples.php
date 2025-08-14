@@ -43,28 +43,40 @@ if (isset($_SESSION['user_data']['id'])) {
             margin-bottom: 20px;
             overflow: hidden;
             text-align: center;
+            position: relative;
         }
 
-        .cover-image {
+        .cover-photo {
             width: 100%;
             height: 120px;
-            object-fit: cover;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .profile-pic-container {
+            position: absolute;
+            top: 60px;
+            /* Half of cover height */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+            width: 100px;
+            height: 100px;
         }
 
         .profile-picture {
-            width: 100px;
-            height: 100px;
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
             object-fit: cover;
             border: 3px solid #fff;
-            margin-top: -50px;
-            position: relative;
-            z-index: 1;
         }
 
         .card-body-custom {
             padding: 15px;
-            margin-top: -20px;
+            padding-top: 55px;
+            /* Adjust top padding to account for the profile picture */
         }
 
         .card-title-custom {
@@ -114,15 +126,11 @@ if (isset($_SESSION['user_data']['id'])) {
             ?>
 
             <div class="col-md-9">
-                <!-- <div class="main-content shadow-lg p-3 mb-5 bg-white rounded"> -->
-
                 <h3 class="mb-4">My Connections</h3>
                 <div class="row">
                     <?php
                     try {
                         // Query to fetch accepted connections for the current user
-                        // Fetch users where current user is sender AND status is accepted
-                        // OR current user is receiver AND status is accepted
                         $sql = "SELECT 
                                     CASE 
                                         WHEN c.sender_id = ? THEN c.receiver_id 
@@ -148,7 +156,7 @@ if (isset($_SESSION['user_data']['id'])) {
                             $ids_string = implode(',', array_map('intval', $connected_user_ids));
 
                             // Fetch details of connected users
-                            $sql_users = "SELECT id, name, family, education, university, profile_pic FROM users WHERE id IN ($ids_string)";
+                            $sql_users = "SELECT id, name, family, education, university, profile_pic, cover_photo FROM users WHERE id IN ($ids_string)";
                             $result_users = $conn->query($sql_users);
 
                             if ($result_users && $result_users->num_rows > 0) {
@@ -158,13 +166,16 @@ if (isset($_SESSION['user_data']['id'])) {
                                     $education = htmlspecialchars($row_user["education"] ?? 'نامشخص');
                                     $university = htmlspecialchars($row_user["university"] ?? 'نامشخص');
                                     $profilePic = htmlspecialchars($row_user["profile_pic"] ?? 'https://via.placeholder.com/100');
-                                    $coverPic = 'https://via.placeholder.com/800x450'; // Default cover image
+                                    $coverPic = htmlspecialchars($row_user["cover_photo"]);
                                     $profileLink = "../people/profile.php?id=" . (int)$target_user_id;
                     ?>
                                     <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
                                         <div class="user-card">
-                                            <img src="<?= $coverPic ?>" class="cover-image" alt="Cover Image">
-                                            <img src="<?= $profilePic ?>" class="profile-picture" alt="Profile Picture">
+                                            <div class="cover-photo" style="background-image: url('../<?= $coverPic ?>');"></div>
+
+                                            <div class="profile-pic-container">
+                                                <img src="../<?= $profilePic ?>" class="profile-picture" alt="Profile Picture">
+                                            </div>
                                             <div class="card-body-custom">
                                                 <h5 class="card-title-custom"><?= $fullName ?></h5>
                                                 <div class="icon-text">
@@ -179,7 +190,6 @@ if (isset($_SESSION['user_data']['id'])) {
                                                     </svg>
                                                     <span>University: <?= $university ?></span>
                                                 </div>
-                                                <!-- Add a button to view profile or other actions for connected users -->
                                                 <a href="<?= $profileLink ?>" class="btn btn-primary btn-sm btn-custom"><i class="fas fa-user-graduate"></i> View Profile</a>
                                             </div>
                                         </div>
@@ -202,7 +212,6 @@ if (isset($_SESSION['user_data']['id'])) {
                     }
                     ?>
                 </div>
-                <!-- </div> -->
             </div>
         </div>
     </div>

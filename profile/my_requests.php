@@ -146,9 +146,11 @@ if (isset($_SESSION['user_data']['id'])) {
                     ?>
                                 <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
                                     <div class="user-card">
-                                        <img src="<?= $coverPic ?>" class="cover-image" alt="Cover Image">
-                                        <img src="<?= $profilePic ?>" class="profile-picture" alt="Profile Picture">
+
                                         <div class="card-body-custom">
+                                            <div class="profile-pic-container" style="margin-top: 60px;">
+                                                <img src="../<?= $profilePic ?>" class="profile-picture" alt="Profile Picture">
+                                            </div>
                                             <h5 class="card-title-custom"><?= $fullName ?></h5>
                                             <div class="icon-text">
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="#54595F" viewBox="0 0 50 50" overflow="inherit">

@@ -445,6 +445,20 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                         </div>
                     <?php endif; ?>
 
+
+
+                    <div class="mb-4">
+                        <h5 class="profile-section-title"><i class="fas fa-share-alt me-2"></i>Share My Profile</h5>
+                        <button class="btn btn-primary btn-lg w-100" onclick="shareProfile('<?= htmlspecialchars($user['name'] . ' ' . $user['family']) ?>')">
+                            <i class="fas fa-share-alt me-2"></i> Share
+                        </button>
+                    </div>
+
+
+
+
+
+                    <hr>
                     <h5 class="profile-section-title"><i class="fas fa-calendar-check me-2"></i>Set Your Availability</h5>
                     <form action="" method="post">
                         <div class="mb-3">
@@ -646,6 +660,33 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                 }, 3000); // 3000 milliseconds = 3 seconds
             }
         });
+
+
+
+
+        function shareProfile(userName) {
+            // Checks if the browser supports the Web Share API.
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Profile of ' + userName + ' on Paperet',
+                    text: 'Check out ' + userName + '\'s profile on our website and get in touch.',
+                    url: window.location.href
+                }).then(() => {
+                    console.log('Sharing was successful!');
+                }).catch((error) => {
+                    console.error('Error during sharing:', error);
+                });
+            } else {
+                // Fallback for older browsers or desktop
+                const currentUrl = window.location.href;
+                navigator.clipboard.writeText(currentUrl).then(() => {
+                    alert('Profile link has been copied to the clipboard.');
+                }).catch(err => {
+                    console.error('Failed to copy the link:', err);
+                    alert('Failed to copy the link. Please copy it manually: ' + currentUrl);
+                });
+            }
+        }
     </script>
 
 

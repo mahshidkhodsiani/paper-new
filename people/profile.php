@@ -2,32 +2,22 @@
 session_start();
 include "../config.php"; // Database connection file
 
-$user = null; // Variable to hold user information
-$profileId = null; // ID of the user whose profile is being displayed
-$presentations = []; // Variable to hold presentation information
-$savedPresentationIds = []; // To hold IDs of presentations saved by the currently logged-in user
+$user = null;
+$profileId = null;
+$presentations = [];
+$savedPresentationIds = [];
 
-// Handle potential database connection errors at the very beginning
 if (!($conn instanceof mysqli) || $conn->connect_error) {
     error_log("Database connection failed in profile.php: " . $conn->connect_error);
     header("Location: ../error.php?code=db_conn_failed");
     exit();
 }
 
-// Check if a user is logged in to determine if the "Save" button should be displayed
-// This assumes $_SESSION['user_id'] is set after login
-// If you are using $_SESSION['user_data']['id'], change it as follows:
 $loggedInUserId = $_SESSION['user_id'] ?? ($_SESSION['user_data']['id'] ?? null);
 
-// Get user ID from GET parameter (to view other users' profiles)
 if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $profileId = intval($_GET['id']);
-
-    $sql = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url,
-            website_url, biography, custom_profile_link, availability_status, meeting_link, google_calendar, last_resume_update, intro_video_path , resume_pdf_path, hide_resume, cover_photo
-            FROM users 
-            WHERE id = ?";
-
+    $sql = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, custom_profile_link, availability_status, meeting_link, google_calendar, last_resume_update, intro_video_path , resume_pdf_path, hide_resume, cover_photo FROM users WHERE id = ?";
     $stmt = $conn->prepare($sql);
     if ($stmt) {
         $stmt->bind_param("i", $profileId);
@@ -35,31 +25,68 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
         $result = $stmt->get_result();
         if ($result->num_rows > 0) {
             $user = $result->fetch_assoc();
-        } else {
-            error_log("User not found for profileId: " . $profileId);
         }
         $stmt->close();
-    } else {
-        error_log("Failed to prepare statement in profile.php: " . $conn->error);
     }
 
-    // Fetch presentations for profileId
     if ($user) {
-        $presentations_sql = "SELECT id, title, description, file_path, created_at FROM presentations WHERE user_id = ? ORDER BY created_at DESC";
+        $presentations_sql = "SELECT id, title, description, pdf_path, video_path, role, created_at, keywords FROM presentations WHERE user_id = ? ORDER BY created_at DESC";
         $presentations_stmt = $conn->prepare($presentations_sql);
         if ($presentations_stmt) {
             $presentations_stmt->bind_param("i", $profileId);
             $presentations_stmt->execute();
             $presentations_result = $presentations_stmt->get_result();
+
             while ($row = $presentations_result->fetch_assoc()) {
+                $presentationId = $row['id'];
+                $sql_avg_rating = "SELECT AVG(rating_value) AS avg_rating, COUNT(id) AS rating_count FROM ratings WHERE presentation_id = ?";
+                $stmt_avg_rating = $conn->prepare($sql_avg_rating);
+                if ($stmt_avg_rating) {
+                    $stmt_avg_rating->bind_param("i", $presentationId);
+                    $stmt_avg_rating->execute();
+                    $result_avg = $stmt_avg_rating->get_result()->fetch_assoc();
+                    $row['avg_rating'] = round($result_avg['avg_rating'] ?? 0, 1);
+                    $row['rating_count'] = $result_avg['rating_count'] ?? 0;
+                    $stmt_avg_rating->close();
+                }
+
+                $row['has_user_rated'] = false;
+                $row['user_rating'] = 0;
+                $row['user_comment'] = '';
+
+                if ($loggedInUserId) {
+                    $sql_check_rating = "SELECT rating_value, comment FROM ratings WHERE rater_user_id = ? AND presentation_id = ?";
+                    $stmt_check_rating = $conn->prepare($sql_check_rating);
+                    if ($stmt_check_rating) {
+                        $stmt_check_rating->bind_param("ii", $loggedInUserId, $presentationId);
+                        $stmt_check_rating->execute();
+                        $result_check = $stmt_check_rating->get_result();
+                        if ($result_check->num_rows > 0) {
+                            $ratedData = $result_check->fetch_assoc();
+                            $row['has_user_rated'] = true;
+                            $row['user_rating'] = $ratedData['rating_value'];
+                            $row['user_comment'] = $ratedData['comment'];
+                        }
+                        $stmt_check_rating->close();
+                    }
+                }
+
+                $comments_sql = "SELECT u.name, u.family, r.comment, r.created_at FROM ratings r JOIN users u ON r.rater_user_id = u.id WHERE r.presentation_id = ? AND r.comment IS NOT NULL AND r.comment != '' ORDER BY r.created_at DESC";
+                $comments_stmt = $conn->prepare($comments_sql);
+                $comments_stmt->bind_param("i", $presentationId);
+                $comments_stmt->execute();
+                $comments_result = $comments_stmt->get_result();
+                $row['comments'] = [];
+                while ($comment_row = $comments_result->fetch_assoc()) {
+                    $row['comments'][] = $comment_row;
+                }
+                $comments_stmt->close();
+
                 $presentations[] = $row;
             }
             $presentations_stmt->close();
-        } else {
-            error_log("Failed to prepare presentations statement in profile.php: " . $conn->error);
         }
 
-        // New: Fetch saved presentations for the logged-in user if available
         if ($loggedInUserId) {
             $saved_sql = "SELECT presentation_id FROM saved_presentations WHERE user_id = ?";
             $saved_stmt = $conn->prepare($saved_sql);
@@ -71,39 +98,30 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                     $savedPresentationIds[] = $row['presentation_id'];
                 }
                 $saved_stmt->close();
-            } else {
-                error_log("Failed to prepare saved presentations statement: " . $conn->error);
             }
         }
     }
 } else {
-    // Redirect logic if no ID is provided in the URL (e.g., redirect to home page or logged-in user's profile)
     if ($loggedInUserId) {
-        // header("Location: profile.php?id=" . $loggedInUserId);
         header("Location: /paper-new/people/profile.php?id=" . $loggedInUserId);
     } else {
-        // header("Location: ../index.php");
         header("Location: /paper-new/index.php");
     }
     exit();
 }
 
-// If user information could not be fetched (e.g., invalid ID)
 if (!$user) {
-    header("Location: ../index.php"); // Redirect to home page or an error page
+    header("Location: ../index.php");
     exit();
 }
 
-// --- Message handling (if redirected from another page with status/msg in URL) ---
-// This section remains for receiving status/msg, but JS will clean the URL
 $message = '';
 $messageType = '';
 if (isset($_GET['status']) && isset($_GET['msg'])) {
-    $messageType = htmlspecialchars($_GET['status']); // Sanitize input
-    $message = htmlspecialchars(urldecode($_GET['msg'])); // Sanitize and decode URL message
+    $messageType = htmlspecialchars($_GET['status']);
+    $message = htmlspecialchars(urldecode($_GET['msg']));
 }
 
-// --- Handle multiple universities/educations (assuming separated by semicolon) ---
 $user_universities_array = !empty($user['university']) ? explode(';', $user['university']) : [];
 $user_educations_array = !empty($user['education']) ? explode(';', $user['education']) : [];
 ?>
@@ -115,233 +133,37 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile of <?php echo htmlspecialchars($user['name'] . ' ' . $user['family']); ?></title>
-
     <?php include "../includes.php"; ?>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        /* CSS for circular video container */
-        .circular-video-container {
-            position: relative;
-            width: 250px;
-            height: 250px;
-            border-radius: 50%;
-            overflow: hidden;
-            margin: 0 auto 30px auto;
-            background-color: #eee;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 3px solid #007bff;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .circular-video-container video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .circular-video-container .control-button-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-
-        .circular-video-container .control-button-overlay:hover {
-            background: rgba(0, 0, 0, 0.6);
-        }
-
-        .circular-video-container .control-button-overlay i {
-            color: white;
-            font-size: 3em;
-            pointer-events: none;
-        }
-
-        /* If no video uploaded */
-        .circular-video-container.no-video {
-            background-color: #f0f0f0;
-            border: 1px dashed #ccc;
-        }
-
-        .circular-video-container.no-video i.fa-video-slash {
-            color: #aaa;
-            font-size: 3em;
-        }
-
-        /* CSS for availability status box */
-        .availability-status-box {
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            margin-top: 20px;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .availability-status-box .status-icon {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .availability-status-box .status-text {
-            font-weight: bold;
-            font-size: 1.1em;
-            margin-bottom: 5px;
-        }
-
-        /* Colors for different statuses */
-        .availability-status-box.status-available {
-            background-color: #e6ffe6;
-            border: 1px solid #4CAF50;
-            color: #388E3C;
-        }
-
-        .availability-status-box.status-available .status-icon {
-            color: #4CAF50;
-        }
-
-        .availability-status-box.status-busy {
-            background-color: #ffe6e6;
-            border: 1px solid #f44336;
-            color: #D32F2F;
-        }
-
-        .availability-status-box.status-busy .status-icon {
-            color: #f44336;
-        }
-
-        .availability-status-box.status-meeting-link {
-            background-color: #e6f7ff;
-            border: 1px solid #2196F3;
-            color: #1976D2;
-        }
-
-        .availability-status-box.status-meeting-link .status-icon {
-            color: #2196F3;
-        }
-
-        .availability-status-box.status-google-calendar {
-            background-color: #fffde7;
-            border: 1px solid #FFC107;
-            color: #FFA000;
-        }
-
-        .availability-status-box.status-google-calendar .status-icon {
-            color: #FFC107;
-        }
-
-        /* Style for section titles */
-        .profile-section-title {
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 5px;
-            margin-bottom: 20px;
-            color: #007bff;
-            font-weight: bold;
-        }
-
-        .social-links a {
-            font-size: 2em;
-            margin-right: 15px;
-            color: #007bff;
-            transition: color 0.3s ease;
-        }
-
-        .social-links a:hover {
-            color: #0056b3;
-        }
-
-        .calendar-container {
-            position: relative;
-            padding-bottom: 75%;
-            /* Aspect ratio for calendar */
-            height: 0;
-            overflow: hidden;
-        }
-
-        .calendar-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Style for presentation items */
-        .presentation-item {
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
+        .comment-section {
             background-color: #f8f9fa;
+            border-left: 3px solid #007bff;
+            padding: 10px;
+            margin-top: 15px;
         }
 
-        .presentation-item h6 {
-            color: #343a40;
-            margin-bottom: 5px;
+        .comment-item {
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
         }
 
-        .presentation-item p {
-            font-size: 0.9em;
-            color: #6c757d;
-        }
-
-        .presentation-item .actions {
-            margin-top: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            /* To push button to the right */
-        }
-
-        .presentation-item a.view-link {
-            color: #007bff;
-            font-weight: bold;
-        }
-
-        .presentation-item a.view-link:hover {
-            text-decoration: none;
-            color: #0056b3;
-        }
-
-        .presentation-item .btn-save-presentation {
-            font-size: 0.85em;
-            padding: 5px 10px;
-        }
-
-        .presentation-item .btn-saved {
-            background-color: #28a745;
-            color: white;
-            cursor: default;
-        }
-
-        .presentation-item .btn-saved:hover {
-            background-color: #28a745;
-            color: white;
+        .comment-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
         }
     </style>
 </head>
 
 <body>
     <?php include "header.php"; ?>
-
     <div class="container mt-3" id="message-container"></div>
     <div class="container mt-4">
         <div class="row">
             <?php include "sidebar.php"; ?>
-
             <div class="col-md-6">
                 <div class="main-content shadow-lg p-3 mb-5 bg-white rounded">
-
-
                     <div class="cover-photo-container">
                         <?php if (!empty($user['cover_photo'])): ?>
                             <img src="../<?= htmlspecialchars($user['cover_photo']); ?>" alt="Cover Photo" style="height: 400px; width: 100%;">
@@ -349,13 +171,10 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                             <img src="../images/11.jpg" alt="Default Cover Photo" style="height: 400px; width: 100%;">
                         <?php endif; ?>
                     </div>
-
                     <?php
                     $introVideoPath = htmlspecialchars($user['intro_video_path'] ?? '');
                     $hasVideo = !empty($introVideoPath) && file_exists($introVideoPath);
                     ?>
-
-
                     <div class="mb-4">
                         <h5 class="profile-section-title"><i class="fas fa-briefcase me-2"></i>Education and Work Information</h5>
                         <?php if (!empty($user_universities_array)) : ?>
@@ -377,16 +196,13 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                         <?php if (!empty($user['workplace'])) : ?>
                             <p><i class="fas fa-building me-2 text-primary"></i>Workplace: <?= htmlspecialchars($user['workplace']) ?></p>
                         <?php endif; ?>
-
                     </div>
-
                     <?php if (!empty($user['biography'])) : ?>
                         <div class="mb-4">
                             <h5 class="profile-section-title"><i class="fas fa-info-circle me-2"></i>About Me</h5>
                             <p class="text-justify"><?= nl2br(htmlspecialchars($user['biography'])) ?></p>
                         </div>
                     <?php endif; ?>
-
                     <?php if (!empty($user['linkedin_url']) || !empty($user['x_url']) || !empty($user['google_scholar_url']) || !empty($user['github_url']) || !empty($user['website_url'])) : ?>
                         <div class="mb-4">
                             <h5 class="profile-section-title"><i class="fas fa-link me-2"></i>Social and Web Links</h5>
@@ -409,30 +225,35 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                             </div>
                         </div>
                     <?php endif; ?>
-
                     <?php if (!empty($presentations)) : ?>
                         <div class="mb-4">
                             <h5 class="profile-section-title"><i class="fas fa-chalkboard-teacher me-2"></i>Presentations</h5>
                             <?php foreach ($presentations as $presentation) : ?>
                                 <div class="presentation-item">
                                     <h6><?= htmlspecialchars($presentation['title']) ?></h6>
+                                    <p class="text-muted"><small>Role: <?= htmlspecialchars($presentation['role']) ?></small></p>
                                     <?php if (!empty($presentation['description'])) : ?>
                                         <p><?= nl2br(htmlspecialchars($presentation['description'])) ?></p>
                                     <?php endif; ?>
                                     <div class="actions">
-                                        <?php if (!empty($presentation['file_path'])) : ?>
+                                        <?php if (!empty($presentation['pdf_path'])) : ?>
                                             <p class="mb-0">
-                                                <a href="<?= htmlspecialchars($presentation['file_path']) ?>" target="_blank" class="view-link">
-                                                    <i class="fas fa-file-pdf me-1"></i> View Presentation
+                                                <a href="<?= htmlspecialchars($presentation['pdf_path']) ?>" target="_blank" class="view-link me-3">
+                                                    <i class="fas fa-file-pdf me-1"></i> View PDF
+                                                </a>
+                                            </p>
+                                        <?php endif; ?>
+                                        <?php if (!empty($presentation['video_path'])) : ?>
+                                            <p class="mb-0">
+                                                <a href="<?= htmlspecialchars($presentation['video_path']) ?>" target="_blank" class="view-link">
+                                                    <i class="fas fa-video me-1"></i> View Video
                                                 </a>
                                             </p>
                                         <?php endif; ?>
                                         <?php
-                                        // Check if the user is logged in, if this presentation is not their own, and if they haven't already saved it
                                         $isLoggedIn = !empty($loggedInUserId);
-                                        $isOwnPresentation = ($loggedInUserId == $profileId); // profileId is the ID of the user whose profile is being viewed
-                                        $isAlreadySaved = in_array($presentation['id'], $savedPresentationIds); // Check if already saved
-
+                                        $isOwnPresentation = ($loggedInUserId == $profileId);
+                                        $isAlreadySaved = in_array($presentation['id'], $savedPresentationIds);
                                         if ($isLoggedIn && !$isOwnPresentation) :
                                             if ($isAlreadySaved) : ?>
                                                 <button class="btn btn-success btn-sm btn-saved" disabled>
@@ -450,6 +271,64 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                         endif; ?>
                                     </div>
                                     <small class="text-muted mt-2 d-block">Uploaded on: <?= date('Y-m-d', strtotime($presentation['created_at'])) ?></small>
+
+                                    <div class="rating-section mt-3">
+                                        <h6 class="mb-1"><i class="fas fa-star me-1 text-warning"></i>Rating</h6>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div class="rating-stars me-2" data-rating="<?= htmlspecialchars($presentation['avg_rating']) ?>">
+                                                <?php
+                                                $avgRating = $presentation['avg_rating'];
+                                                for ($i = 1; $i <= 5; $i++) {
+                                                    if ($i <= $avgRating) {
+                                                        echo '<i class="fas fa-star text-warning"></i>';
+                                                    } else {
+                                                        echo '<i class="far fa-star text-muted"></i>';
+                                                    }
+                                                }
+                                                ?>
+                                            </div>
+                                            <p class="mb-0 fw-bold"><?= htmlspecialchars($avgRating) ?> / 5</p>
+                                            <small class="text-muted ms-2">(<?= htmlspecialchars($presentation['rating_count']) ?> votes)</small>
+                                        </div>
+
+                                        <?php if ($loggedInUserId && $loggedInUserId != $profileId && !$presentation['has_user_rated']) : ?>
+                                            <div class="rating-form" data-presentation-id="<?= htmlspecialchars($presentation['id']) ?>">
+                                                <?php for ($i = 1; $i <= 5; $i++) : ?>
+                                                    <i class="far fa-star rating-star" data-rating="<?= $i ?>"></i>
+                                                <?php endfor; ?>
+                                                <div class="mt-2" style="display:none;" id="comment-box-<?= htmlspecialchars($presentation['id']) ?>">
+                                                    <textarea class="form-control" rows="2" placeholder="Leave a comment..."></textarea>
+                                                </div>
+                                                <button class="btn btn-primary btn-sm mt-2 submit-rating-btn" style="display:none;">Submit Rating</button>
+                                            </div>
+                                        <?php elseif ($loggedInUserId && $presentation['has_user_rated']) : ?>
+                                            <div class="alert alert-info py-2 px-3 d-inline-block">
+                                                You have rated this:
+                                                <span class="text-warning">
+                                                    <?php for ($i = 1; $i <= $presentation['user_rating']; $i++) {
+                                                        echo '<i class="fas fa-star"></i>';
+                                                    } ?>
+                                                </span>
+                                                <?php if (!empty($presentation['user_comment'])) : ?>
+                                                    <p class="mt-2 mb-0">Your comment: "<?= htmlspecialchars($presentation['user_comment']) ?>"</p>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <?php if (!empty($presentation['comments'])) : ?>
+                                        <div class="comment-section mt-4">
+                                            <h6><i class="fas fa-comments me-1"></i> User Comments</h6>
+                                            <?php foreach ($presentation['comments'] as $comment) : ?>
+                                                <div class="comment-item">
+                                                    <p class="mb-1"><strong><?= htmlspecialchars($comment['name'] . ' ' . $comment['family']) ?></strong> <small class="text-muted ms-2"><?= date('M d, Y', strtotime($comment['created_at'])) ?></small></p>
+                                                    <p class="mb-0"><?= nl2br(htmlspecialchars($comment['comment'])) ?></p>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <hr>
                                 </div>
                             <?php endforeach; ?>
                         </div>
@@ -461,13 +340,18 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                     <?php endif; ?>
                 </div>
             </div>
-
             <div class="col-md-3">
                 <div class="optional-sidebar shadow-sm p-3 mb-5 bg-white rounded">
-                    <h5 class="profile-section-title mt-4">
-                        <i class="fas fa-clock me-2"></i>Current Availability Status
-                    </h5>
 
+
+                    <div class="mb-4">
+                        <h5 class="profile-section-title"><i class="fas fa-share-alt me-2"></i>Share This Profile</h5>
+                        <button class="btn btn-primary btn-lg w-100" onclick="shareProfile('<?= htmlspecialchars($user['name'] . ' ' . $user['family']) ?>')">
+                            <i class="fas fa-share-alt me-2"></i> Share
+                        </button>
+                    </div>
+
+                    <h5 class="profile-section-title mt-4"><i class="fas fa-clock me-2"></i>Current Availability Status</h5>
                     <div class="availability-status-box
                         <?php
                         switch ($user['availability_status'] ?? '') {
@@ -484,55 +368,39 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                 echo 'status-google-calendar';
                                 break;
                             default:
-                                echo 'status-available'; // Default to "available" if not set
+                                echo 'status-available';
                                 break;
                         }
-                        ?>
-                    ">
+                        ?>">
                         <?php if (($user['availability_status'] ?? '') == 'available') : ?>
                             <i class="fas fa-circle-check status-icon"></i>
                             <p class="status-text">Currently Available</p>
-                            <?php if (!empty($user['meeting_info'])) : ?>
-                                <p class="small"><?= htmlspecialchars($user['meeting_info']) ?></p>
-                            <?php endif; ?>
-
+                            <?php if (!empty($user['meeting_info'])) : ?><p class="small"><?= htmlspecialchars($user['meeting_info']) ?></p><?php endif; ?>
                         <?php elseif (($user['availability_status'] ?? '') == 'busy') : ?>
                             <i class="fas fa-circle-xmark status-icon"></i>
                             <p class="status-text">Currently Busy</p>
-                            <?php if (!empty($user['meeting_info'])) : ?>
-                                <p class="small"><?= htmlspecialchars($user['meeting_info']) ?></p>
-                            <?php endif; ?>
-
+                            <?php if (!empty($user['meeting_info'])) : ?><p class="small"><?= htmlspecialchars($user['meeting_info']) ?></p><?php endif; ?>
                         <?php elseif (($user['availability_status'] ?? '') == 'meeting_link' && !empty($user['meeting_link'])) : ?>
                             <i class="fas fa-handshake status-icon"></i>
                             <p class="status-text">Available for Meetings</p>
-                            <a href="<?= htmlspecialchars($user['meeting_link']) ?>" target="_blank" class="btn btn-primary btn-sm mt-2">
-                                <i class="fas fa-video me-1"></i> Join Meeting
-                            </a>
-                            <?php if (!empty($user['meeting_info'])) : ?>
-                                <p class="small mt-2"><?= htmlspecialchars($user['meeting_info']) ?></p>
-                            <?php endif; ?>
-
+                            <a href="<?= htmlspecialchars($user['meeting_link']) ?>" target="_blank" class="btn btn-primary btn-sm mt-2"><i class="fas fa-video me-1"></i> Join Meeting</a>
+                            <?php if (!empty($user['meeting_info'])) : ?><p class="small mt-2"><?= htmlspecialchars($user['meeting_info']) ?></p><?php endif; ?>
                         <?php elseif (($user['availability_status'] ?? '') == 'google_calendar_embed' && !empty($user['google_calendar'])) : ?>
                             <i class="fas fa-calendar-alt status-icon"></i>
                             <p class="status-text">Check My Schedule</p>
                             <div class="calendar-container mt-3">
-                                <?php
-                                if (strpos($user['google_calendar'], '<iframe') !== false) {
+                                <?php if (strpos($user['google_calendar'], '<iframe') !== false) {
                                     echo $user['google_calendar'];
                                 } else {
                                     echo '<iframe src="' . htmlspecialchars($user['google_calendar']) . '" style="border: 0" width="100%" height="300" frameborder="0" scrolling="no"></iframe>';
-                                }
-                                ?>
+                                } ?>
                             </div>
                             <small class="form-text text-muted mt-2 d-block">Check my available times on the calendar above.</small>
-
                         <?php else : ?>
                             <i class="fas fa-question-circle status-icon"></i>
                             <p class="status-text">Availability status not set</p>
                         <?php endif; ?>
                     </div>
-
                     <?php if (!empty($user['custom_profile_link'])) : ?>
                         <h5 class="profile-section-title mt-4"><i class="fas fa-share-alt me-2"></i>Share My Profile</h5>
                         <div class="input-group mb-3">
@@ -542,33 +410,23 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                         <small class="text-muted mb-4 d-block">Click to copy my unique profile link.</small>
                     <?php endif; ?>
                 </div>
-
                 <hr>
-
-                <?php
-                if ($user['hide_resume'] == 0) {
-                ?>
-                    <p>Resume of <?= $user['name'] . " " . $user['family'] ?> :</p>
-
-
+                <?php if ($user['hide_resume'] == 0 && !empty($user['resume_pdf_path'])) : ?>
+                    <p>Resume of <?= htmlspecialchars($user['name'] . ' ' . $user['family']) ?> :</p>
                     <iframe src="<?= htmlspecialchars($user['resume_pdf_path']) ?>" style="border:0;" allow="fullscreen"></iframe>
-
-
-                    <a href="<?= $user['resume_pdf_path'] ?>" class="btn btn-outline-info" target="_blank">Download resume</a>
-                <?php
-                }
-                ?>
+                    <a href="<?= htmlspecialchars($user['resume_pdf_path']) ?>" class="btn btn-outline-info" target="_blank">Download resume</a>
+                <?php endif; ?>
             </div>
         </div>
     </div>
-
+    <script src="rate_presentation.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Logic for circular video play/pause button
             const introVideo = document.getElementById('introVideo');
             const videoOverlay = document.getElementById('videoOverlay');
             const controlButtonIcon = document.getElementById('controlButtonIcon');
 
+            // Handles the intro video
             if (introVideo && videoOverlay && controlButtonIcon) {
                 videoOverlay.addEventListener('click', function() {
                     if (introVideo.paused) {
@@ -583,19 +441,16 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                         videoOverlay.style.background = 'rgba(0, 0, 0, 0.4)';
                     }
                 });
-
                 introVideo.addEventListener('play', function() {
                     controlButtonIcon.classList.remove('fa-play');
                     controlButtonIcon.classList.add('fa-pause');
                     videoOverlay.style.background = 'rgba(0, 0, 0, 0.2)';
                 });
-
                 introVideo.addEventListener('pause', function() {
                     controlButtonIcon.classList.remove('fa-pause');
                     controlButtonIcon.classList.add('fa-play');
                     videoOverlay.style.background = 'rgba(0, 0, 0, 0.4)';
                 });
-
                 introVideo.addEventListener('ended', function() {
                     controlButtonIcon.classList.remove('fa-pause');
                     controlButtonIcon.classList.add('fa-play');
@@ -604,47 +459,98 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                 });
             }
 
-            // --- IMPORTANT: Logic to clean URL (without displaying any alerts) ---
+            // Displays messages and refreshes the page
             const urlParams = new URLSearchParams(window.location.search);
             const statusParam = urlParams.get('status');
             const msgParam = urlParams.get('msg');
-
             if (statusParam && msgParam) {
-                // If status and msg parameters exist, clear them from the URL after 3 seconds
-                setTimeout(function() {
-                    const url = new URL(window.location.href);
-                    url.searchParams.delete('status');
-                    url.searchParams.delete('msg');
-                    window.history.replaceState({}, document.title, url.toString());
-                }, 3000); // Wait for 3 seconds
+                showMessage(decodeURIComponent(msgParam), statusParam);
             }
         });
 
-
-
-
+        /**
+         * displays a message and then reloads the page
+         * @param {string} message - the message to display
+         * @param {string} type - The type of the alert (e.g., 'success', 'danger', 'info')
+         */
         function showMessage(message, type = 'info') {
             const msgContainer = document.getElementById('message-container');
             if (!msgContainer) {
-                console.warn("Message container not found. Please add a div with id='message-container' to your page.");
+                console.warn("Message container not found.");
                 return;
             }
 
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
             alertDiv.role = 'alert';
-            alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+            alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
 
+            // Clears previous messages and adds the new one
             msgContainer.innerHTML = '';
             msgContainer.appendChild(alertDiv);
-            msgContainer.style.display = 'block'; // این خط برای نمایش کانتینر اضافه شده است
+            msgContainer.style.display = 'block';
 
+            // Fades the message out after 3 seconds and then refreshes the page after 1 second
             setTimeout(() => {
-                $(alertDiv).alert('close');
-            }, 3000);
+                const bsAlert = new bootstrap.Alert(alertDiv);
+                bsAlert.close();
+
+                // Refreshes the page after the message fades out
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+
+            }, 1000);
         }
+
+        /**
+         * Handles sharing the user profile using the Web Share API.
+         * @param {string} userName - The name of the user to be shared.
+         */
+        function shareProfile(userName) {
+            // Checks if the browser supports the Web Share API.
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Profile of ' + userName + ' on Paperet',
+                    text: 'Check out ' + userName + '\'s profile on our website and get in touch.',
+                    url: window.location.href
+                }).then(() => {
+                    console.log('Sharing was successful!');
+                }).catch((error) => {
+                    console.error('Error during sharing:', error);
+                });
+            } else {
+                // Fallback for older browsers or desktop
+                const currentUrl = window.location.href;
+                navigator.clipboard.writeText(currentUrl).then(() => {
+                    alert('Profile link has been copied to the clipboard.');
+                }).catch(err => {
+                    console.error('Failed to copy the link:', err);
+                    alert('Failed to copy the link. Please copy it manually: ' + currentUrl);
+                });
+            }
+        } // The missing closing brace '}' was added here
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var videoModal = document.getElementById('videoModal');
+            var videoPlayer = document.getElementById('introVideoPlayer');
+
+            videoModal.addEventListener('show.bs.modal', function(event) {
+                var button = event.relatedTarget;
+                var videoPath = button.getAttribute('data-video-path');
+                if (videoPath) {
+                    videoPlayer.src = videoPath;
+                    videoPlayer.load();
+                }
+            });
+
+            videoModal.addEventListener('hidden.bs.modal', function() {
+                videoPlayer.pause();
+                videoPlayer.removeAttribute('src');
+                videoPlayer.load();
+            });
+        });
     </script>
 
     <?php include "footer.php"; ?>

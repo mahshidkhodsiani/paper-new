@@ -22,6 +22,8 @@ if (isset($_SESSION['user_data']['id'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
+    <?php include "../includes.php"; ?>
+
     <style>
         body {
             background-color: #f0f2f5;
@@ -269,95 +271,21 @@ if (isset($_SESSION['user_data']['id'])) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            function showMessage(message, type = 'info') {
-                const msgContainer = document.getElementById('message-container');
-                const msgAlert = document.getElementById('message-alert');
-                msgAlert.textContent = message;
-                msgAlert.className = 'alert alert-' + type;
-                msgContainer.style.display = 'block';
-                setTimeout(() => {
-                    msgContainer.style.display = 'none';
-                }, 5000);
-            }
-
-            const connectButtons = document.querySelectorAll('.connect-btn');
-            const currentUserId = <?= json_encode($current_user_id); ?>;
-
-            connectButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    if (currentUserId === null) {
-                        showMessage('Please log in to send a connection request.', 'warning');
-                        setTimeout(() => {
-                            window.location.href = '../login.php';
-                        }, 1500);
-                        return;
-                    }
-
-                    const receiverId = this.dataset.userId;
-                    const clickedButton = this;
-
-                    if (clickedButton.disabled) {
-                        return;
-                    }
-
-                    const originalText = clickedButton.innerHTML;
-                    clickedButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-                    clickedButton.disabled = true;
-                    clickedButton.classList.remove('btn-outline-primary', 'btn-secondary', 'btn-success', 'btn-warning', 'btn-danger');
-                    clickedButton.classList.add('btn-info');
-
-                    fetch('../profile/handle_connection.php', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                            },
-                            body: 'receiver_id=' + receiverId
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                clickedButton.innerHTML = '<i class="fas fa-check"></i> Request Sent';
-                                clickedButton.classList.remove('btn-info');
-                                clickedButton.classList.add('btn-secondary');
-                                showMessage(data.message, 'success');
-                            } else {
-                                clickedButton.innerHTML = originalText;
-                                clickedButton.classList.remove('btn-info');
-                                clickedButton.classList.add('btn-danger');
-                                clickedButton.disabled = false;
-                                console.error('Error:', data.message);
-                                showMessage('Failed to send connection request: ' + data.message, 'danger');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Fetch error:', error);
-                            clickedButton.innerHTML = originalText;
-                            clickedButton.classList.remove('btn-info');
-                            clickedButton.classList.add('btn-danger');
-                            clickedButton.disabled = false;
-                            showMessage('Network error or server issue. Please try again.', 'danger');
-                        });
-                });
-            });
-
-            // Video Modal Logic
             const videoModal = document.getElementById('videoModal');
             const videoPlayer = document.getElementById('introVideoPlayer');
 
-            document.querySelectorAll('.play-icon-overlay').forEach(item => {
-                item.addEventListener('click', function() {
-                    const videoPath = this.getAttribute('data-video-path');
-                    if (videoPath) {
-                        videoPlayer.src = videoPath;
-                        videoModal.addEventListener('shown.bs.modal', function() {
-                            videoPlayer.play();
-                        }, {
-                            once: true
-                        });
-                    }
-                });
+            // Logic to handle playing the video when the modal is shown
+            videoModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const videoPath = button.getAttribute('data-video-path');
+                if (videoPath) {
+                    videoPlayer.src = videoPath;
+                    videoPlayer.load();
+                    videoPlayer.play();
+                }
             });
 
+            // Logic to stop the video when the modal is hidden
             videoModal.addEventListener('hide.bs.modal', function() {
                 videoPlayer.pause();
                 videoPlayer.src = '';
