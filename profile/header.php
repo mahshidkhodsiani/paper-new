@@ -106,7 +106,7 @@ if (isset($_SESSION['user_data']['id'])) {
                         <li><a class="dropdown-item" href="my_requests.php"><i class="fas fa-users me-2"></i> View all connection requests</a></li>
                     </ul>
                 </li>
-                <li><a href="" class="nav-link px-2 link-dark"><i class="fas fa-flask"></i> Lab</a></li>
+                <li><a href="" class="nav-link px-2 link-dark"><i class="fas fa-flask"></i> Labs</a></li>
             </ul>
 
             <?php

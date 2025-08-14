@@ -129,11 +129,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_resume_pdf'])) 
 
     $baseTargetDir = "../uploads/pdfs/"; // Base path for PDF storage
     $allowedExtensions = ['pdf'];
-    // **No size limit for PDF (set to 0 as requested)**
     $maxFileSize = 0; // 0 means no PHP-side limit
 
     uploadFile('resume_pdf', $baseTargetDir, $allowedExtensions, $maxFileSize, $conn, $userId, 'resume_pdf_path', $_SESSION['user_data']['resume_pdf_path'] ?? '');
-
 
     // Redirect to prevent form resubmission
     header("Location: resume-media.php?status=" . urlencode($messageType) . "&msg=" . urlencode($message));
@@ -150,7 +148,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_intro_video']))
 
     $baseTargetDir = "../uploads/videos/"; // Base path for video storage
     $allowedExtensions = ['mp4', 'webm', 'ogg'];
-    // **No size limit for video (set to 0 as requested)**
     $maxFileSize = 0; // 0 means no PHP-side limit
 
     uploadFile('intro_video', $baseTargetDir, $allowedExtensions, $maxFileSize, $conn, $userId, 'intro_video_path', $_SESSION['user_data']['intro_video_path'] ?? '');
@@ -160,6 +157,71 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['upload_intro_video']))
     header("Location: resume-media.php?status=" . urlencode($messageType) . "&msg=" . urlencode($message));
     exit();
 }
+
+// --- Process Delete File Request ---
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_file'])) {
+    $conn = new mysqli($servername, $username, $password, $dbname);
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+    $conn->set_charset("utf8mb4");
+
+    $fileType = $_POST['file_type'];
+    $filePath = $_POST['file_path'];
+
+    // Security check: Ensure the file path belongs to the logged-in user
+    // This is a CRITICAL step to prevent users from deleting other users' files!
+    // It also prevents deleting default files
+    if (
+        strpos($filePath, "../uploads/") === 0 &&
+        strpos($filePath, "/" . $userId . "/") !== false &&
+        !in_array($filePath, ['../images/default_resume.pdf', '../videos/default_video.mp4'])
+    ) {
+        $columnName = '';
+        if ($fileType === 'resume_pdf') {
+            $columnName = 'resume_pdf_path';
+        } elseif ($fileType === 'intro_video') {
+            $columnName = 'intro_video_path';
+        }
+
+        if ($columnName && file_exists($filePath)) {
+            if (unlink($filePath)) {
+                $sql_update = "UPDATE users SET $columnName = NULL WHERE id = ?";
+                $stmt_update = $conn->prepare($sql_update);
+                if ($stmt_update) {
+                    $stmt_update->bind_param("i", $userId);
+                    if ($stmt_update->execute()) {
+                        $_SESSION['user_data'][$columnName] = NULL;
+                        $message = "File deleted successfully.";
+                        $messageType = 'success';
+                    } else {
+                        $message = "Database update failed: " . $stmt_update->error;
+                        $messageType = 'danger';
+                    }
+                    $stmt_update->close();
+                } else {
+                    $message = "Database query preparation failed: " . $conn->error;
+                    $messageType = 'danger';
+                }
+            } else {
+                $message = "Error deleting file from server. Please check permissions.";
+                $messageType = 'danger';
+            }
+        } else {
+            $message = "File not found or invalid file type.";
+            $messageType = 'danger';
+        }
+    } else {
+        $message = "Invalid file path or trying to delete a default file. Deletion aborted.";
+        $messageType = 'danger';
+    }
+
+    $conn->close();
+
+    header("Location: resume-media.php?status=" . urlencode($messageType) . "&msg=" . urlencode($message));
+    exit();
+}
+
 
 // --- Load latest user data from database (only if needed) ---
 // This section ensures that displayed information is always up-to-date
@@ -280,10 +342,10 @@ $user = $_SESSION['user_data'];
                             <iframe src="<?= htmlspecialchars($user['resume_pdf_path']) ?>" style="border:0;" allow="fullscreen"></iframe>
                             <div class="file-actions">
                                 <a href="<?= htmlspecialchars($user['resume_pdf_path']) ?>" target="_blank" class="btn btn-info btn-sm">View Current PDF</a>
-                                <form action="delete_file.php" method="post" onsubmit="return confirm('Are you sure you want to delete your resume PDF? This action cannot be undone.');">
+                                <form action="" method="post" onsubmit="return confirm('Are you sure you want to delete your resume PDF? This action cannot be undone.');">
                                     <input type="hidden" name="file_type" value="resume_pdf">
                                     <input type="hidden" name="file_path" value="<?= htmlspecialchars($user['resume_pdf_path']) ?>">
-                                    <button type="submit" class="btn btn-danger btn-sm delete-btn">Delete PDF</button>
+                                    <button type="submit" name="delete_file" class="btn btn-danger btn-sm delete-btn">Delete PDF</button>
                                 </form>
                             </div>
                         <?php else: ?>
@@ -309,10 +371,10 @@ $user = $_SESSION['user_data'];
                             </video>
                             <div class="file-actions">
                                 <a href="<?= htmlspecialchars($user['intro_video_path']) ?>" target="_blank" class="btn btn-info btn-sm">Download/View Video</a>
-                                <form action="delete_file.php" method="post" onsubmit="return confirm('Are you sure you want to delete your introduction video? This action cannot be undone.');">
+                                <form action="" method="post" onsubmit="return confirm('Are you sure you want to delete your introduction video? This action cannot be undone.');">
                                     <input type="hidden" name="file_type" value="intro_video">
                                     <input type="hidden" name="file_path" value="<?= htmlspecialchars($user['intro_video_path']) ?>">
-                                    <button type="submit" class="btn btn-danger btn-sm delete-btn">Delete Video</button>
+                                    <button type="submit" name="delete_file" class="btn btn-danger btn-sm delete-btn">Delete Video</button>
                                 </form>
                             </div>
                         <?php else: ?>
@@ -324,7 +386,6 @@ $user = $_SESSION['user_data'];
                             <div class="mb-3">
                                 <label for="introVideo" class="form-label">Choose Video File (MP4, WebM, OGG)</label>
                                 <input class="form-control" type="file" id="introVideo" name="intro_video" accept="video/mp4,video/webm,video/ogg">
-                                <small class="text-muted">No strict size limit on server-side, but very large files may fail due to PHP or web server configurations.</small>
                             </div>
                             <button type="submit" name="upload_intro_video" class="btn btn-primary btn-sm">Upload Video</button>
                         </form>
@@ -371,6 +432,9 @@ $user = $_SESSION['user_data'];
             }
         });
     </script>
+
+    <?php include "footer.php"; ?>
+
 </body>
 
 </html>

@@ -146,9 +146,11 @@ if (isset($_SESSION['user_data']['id'])) {
                     ?>
                                 <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
                                     <div class="user-card">
-                                        <img src="<?= $coverPic ?>" class="cover-image" alt="Cover Image">
-                                        <img src="<?= $profilePic ?>" class="profile-picture" alt="Profile Picture">
+
                                         <div class="card-body-custom">
+                                            <div class="profile-pic-container" style="margin-top: 60px;">
+                                                <img src="../<?= $profilePic ?>" class="profile-picture" alt="Profile Picture">
+                                            </div>
                                             <h5 class="card-title-custom"><?= $fullName ?></h5>
                                             <div class="icon-text">
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="#54595F" viewBox="0 0 50 50" overflow="inherit">
@@ -190,83 +192,88 @@ if (isset($_SESSION['user_data']['id'])) {
                 </div>
             </div>
         </div>
+    </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-        <script>
-            $(document).ready(function() {
-                // Function to display messages (replaces alert)
-                function showMessage(message, type = 'info') {
-                    const msgContainer = document.getElementById('message-container');
-                    const msgAlert = document.getElementById('message-alert');
-                    msgAlert.textContent = message;
-                    msgAlert.className = 'alert alert-' + type; // e.g., alert-info, alert-success, alert-danger
-                    msgContainer.style.display = 'block';
-                    // Optionally hide after a few seconds
-                    setTimeout(() => {
-                        msgContainer.style.display = 'none';
-                    }, 5000);
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Function to display messages (replaces alert)
+            function showMessage(message, type = 'info') {
+                const msgContainer = document.getElementById('message-container');
+                const msgAlert = document.getElementById('message-alert');
+                msgAlert.textContent = message;
+                msgAlert.className = 'alert alert-' + type; // e.g., alert-info, alert-success, alert-danger
+                msgContainer.style.display = 'block';
+                // Optionally hide after a few seconds
+                setTimeout(() => {
+                    msgContainer.style.display = 'none';
+                }, 5000);
+            }
+
+            // Sidebar active link logic
+            var currentPath = window.location.pathname;
+            var fileName = currentPath.split('/').pop();
+            $('.list-group-item-action').removeClass('active');
+            $('.list-group-item-action').each(function() {
+                var linkHref = $(this).attr('href');
+                var linkFileName = linkHref.split('/').pop();
+                if (linkFileName === fileName) {
+                    $(this).addClass('active');
                 }
+            });
 
-                // Sidebar active link logic
-                var currentPath = window.location.pathname;
-                var fileName = currentPath.split('/').pop();
-                $('.list-group-item-action').removeClass('active');
-                $('.list-group-item-action').each(function() {
-                    var linkHref = $(this).attr('href');
-                    var linkFileName = linkHref.split('/').pop();
-                    if (linkFileName === fileName) {
-                        $(this).addClass('active');
-                    }
-                });
+            // Handle Accept/Decline button clicks
+            $('.action-btn').on('click', function() {
+                const connectionId = $(this).data('connection-id');
+                const action = $(this).data('action'); // 'accept' or 'decline'
+                const clickedButton = $(this);
+                const cardElement = clickedButton.closest('.user-card'); // Get the parent card to remove it
 
-                // Handle Accept/Decline button clicks
-                $('.action-btn').on('click', function() {
-                    const connectionId = $(this).data('connection-id');
-                    const action = $(this).data('action'); // 'accept' or 'decline'
-                    const clickedButton = $(this);
-                    const cardElement = clickedButton.closest('.user-card'); // Get the parent card to remove it
+                // Disable buttons to prevent multiple clicks
+                cardElement.find('.action-btn').prop('disabled', true);
+                clickedButton.html('<i class="fas fa-spinner fa-spin"></i> Processing...');
 
-                    // Disable buttons to prevent multiple clicks
-                    cardElement.find('.action-btn').prop('disabled', true);
-                    clickedButton.html('<i class="fas fa-spinner fa-spin"></i> Processing...');
-
-                    fetch('handle_request_action.php', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                            },
-                            body: 'connection_id=' + connectionId + '&action=' + action
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                showMessage(data.message, 'success');
-                                // Remove the card from display after successful action
-                                cardElement.fadeOut(500, function() {
-                                    $(this).remove();
-                                    // If no more requests, show "No pending requests" message
-                                    if ($('.user-card').length === 0) {
-                                        $('.row').append('<div class="col-12 text-center"><p>You have no pending connection requests.</p></div>');
-                                    }
-                                });
-                            } else {
-                                showMessage('Error: ' + data.message, 'danger');
-                                // Re-enable buttons on error
-                                cardElement.find('.action-btn').prop('disabled', false);
-                                clickedButton.html('<i class="fas fa-times"></i> Try Again'); // Or original text
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Fetch error:', error);
-                            showMessage('Network error or server issue. Please try again.', 'danger');
-                            // Re-enable buttons on network error
+                fetch('handle_request_action.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'connection_id=' + connectionId + '&action=' + action
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showMessage(data.message, 'success');
+                            // Remove the card from display after successful action
+                            cardElement.fadeOut(500, function() {
+                                $(this).remove();
+                                // If no more requests, show "No pending requests" message
+                                if ($('.user-card').length === 0) {
+                                    $('.row').append('<div class="col-12 text-center"><p>You have no pending connection requests.</p></div>');
+                                }
+                            });
+                        } else {
+                            showMessage('Error: ' + data.message, 'danger');
+                            // Re-enable buttons on error
                             cardElement.find('.action-btn').prop('disabled', false);
                             clickedButton.html('<i class="fas fa-times"></i> Try Again'); // Or original text
-                        });
-                });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        showMessage('Network error or server issue. Please try again.', 'danger');
+                        // Re-enable buttons on network error
+                        cardElement.find('.action-btn').prop('disabled', false);
+                        clickedButton.html('<i class="fas fa-times"></i> Try Again'); // Or original text
+                    });
             });
-        </script>
+        });
+    </script>
+
+
+    <?php include "footer.php"; ?>
+
 </body>
 
 </html>

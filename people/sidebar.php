@@ -69,19 +69,15 @@ if (isset($_SESSION['user_data']['id']) && isset($user['id']) && $_SESSION['user
         </div>
 
         <div class="list-group">
-            <?php if ($show_connect_button): ?>
-                <button type="button" class="btn <?= safe($button_class) ?> w-100 mt-3 connect-btn" data-user-id="<?= safe($profileUserId) ?>" <?= safe($button_disabled) ?>>
-                    <i class="fas fa-user-plus me-2"></i> <?= safe($button_text) ?>
-                </button>
-            <?php endif; ?>
 
-            <?php
-            if (isset($_SESSION['user_data']['id']) && $_SESSION['user_data']['id'] != $user['id']):
-            ?>
-                <button type="button" class="btn btn-primary w-100 mt-3" data-bs-toggle="modal" data-bs-target="#messageModal">
-                    <i class="fas fa-paper-plane me-2"></i> Send Message
-                </button>
-            <?php endif; ?>
+            <button type="button" class="btn <?= safe($button_class) ?> w-100 mt-3 connect-btn" data-user-id="<?= safe($profileUserId) ?>" <?= safe($button_disabled) ?>>
+                <i class="fas fa-user-plus me-2"></i> <?= safe($button_text) ?>
+            </button>
+
+            <button type="button" class="btn btn-primary w-100 mt-3" data-bs-toggle="modal" data-bs-target="#messageModal">
+                <i class="fas fa-paper-plane me-2"></i> Send Message
+            </button>
+
         </div>
     </div>
 </div>

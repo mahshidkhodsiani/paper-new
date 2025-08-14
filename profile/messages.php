@@ -370,7 +370,7 @@ try {
                                                                 ])) ?>)"
                                         style="cursor: pointer;">
                                         <div class="d-flex">
-                                            <img src="<?= $other_user_profile_pic ?>"
+                                            <img src="../<?= $other_user_profile_pic ?>" height="40px" width="40px"
                                                 class="message-sender-img rounded-circle me-3" alt="User Profile">
                                             <div class="flex-grow-1">
                                                 <div class="d-flex justify-content-between">
@@ -563,6 +563,9 @@ try {
             }
         });
     </script>
+
+    <?php include "footer.php"; ?>
+
 </body>
 
 </html>
