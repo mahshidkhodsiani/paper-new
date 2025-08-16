@@ -71,7 +71,7 @@ if (isset($_SESSION['user_data']['id'])) {
                 <img src="../images/logo.png" class="img-fluid" height="80" width="80" alt="Logo">
             </a>
 
-            <form class="col-12 col-lg-5 mb-3 mb-lg-0 me-lg-3 mr-2 search-container" style="margin-left: 5px;" role="search" method="GET" action="search.php">
+            <form id="search-form" class="col-12 col-lg-5 mb-3 mb-lg-0 me-lg-3 mr-2 search-container" style="margin-left: 5px;" role="search" method="GET" action="search.php">
                 <input class="form-control" type="search" name="query" placeholder="Search..." aria-label="Search">
                 <div id="suggestions" class="search-results-box" style="display: none;"></div>
             </form>
@@ -139,44 +139,49 @@ if (isset($_SESSION['user_data']['id'])) {
 </header>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 
 <script>
     $(document).ready(function() {
         const searchInput = $('input[name="query"]');
         const suggestionsBox = $('#suggestions');
-        const searchForm = $('.search-container');
+        const searchForm = $('form[role="search"]'); // استفاده از انتخابگر attribute برای پیدا کردن فرم
         let timeout = null;
 
-        searchInput.on('keyup', function() {
-            clearTimeout(timeout);
-            const query = $(this).val();
-
-            if (query.length > 2) {
-                timeout = setTimeout(function() {
-                    $.ajax({
-                        url: 'search.php', // مسیردهی صحیح به فایل search.php
-                        type: 'GET',
-                        data: {
-                            query: query
-                        },
-                        success: function(data) {
-                            suggestionsBox.html(data).show();
-                        },
-                        error: function() {
-                            suggestionsBox.html('<div class="list-group-item">خطا در بارگذاری نتایج.</div>').show();
-                        }
-                    });
-                }, 300);
-            } else {
+        function fetchResults(query) {
+            if (query.length < 3) {
                 suggestionsBox.hide().empty();
+                return;
+            }
+
+            clearTimeout(timeout);
+            timeout = setTimeout(function() {
+                $.ajax({
+                    url: 'search_live.php', // مسیردهی صحیح به فایل search_live.php
+                    type: 'GET',
+                    data: {
+                        query: query
+                    },
+                    success: function(data) {
+                        suggestionsBox.html(data).show();
+                    },
+                    error: function() {
+                        suggestionsBox.html('<div class="list-group-item">خطا در بارگذاری نتایج.</div>').show();
+                    }
+                });
+            }, 300);
+        }
+
+        searchInput.on('keyup', function(e) {
+            if (e.key === "Enter" || e.keyCode === 13) {
+                searchForm.submit();
+            } else {
+                fetchResults($(this).val());
             }
         });
 
         $(document).on('click', function(e) {
-            if (!searchForm.is(e.target) && searchForm.has(e.target).length === 0) {
+            if (!$(e.target).closest('.search-container').length) {
                 suggestionsBox.hide();
             }
         });

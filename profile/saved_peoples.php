@@ -155,8 +155,8 @@ if (isset($_SESSION['user_data']['id'])) {
                             // Convert array of IDs to a comma-separated string for IN clause
                             $ids_string = implode(',', array_map('intval', $connected_user_ids));
 
-                            // Fetch details of connected users
-                            $sql_users = "SELECT id, name, family, education, university, profile_pic, cover_photo FROM users WHERE id IN ($ids_string)";
+                            // Fetch details of connected users, but only if their status is 1
+                            $sql_users = "SELECT id, name, family, education, university, profile_pic, cover_photo FROM users WHERE id IN ($ids_string) AND status = 1";
                             $result_users = $conn->query($sql_users);
 
                             if ($result_users && $result_users->num_rows > 0) {
@@ -197,7 +197,7 @@ if (isset($_SESSION['user_data']['id'])) {
                     <?php
                                 }
                             } else {
-                                echo "<div class='col-12 text-center'><p>No user details found for your connections.</p></div>";
+                                echo "<div class='col-12 text-center'><p>No active connections found.</p></div>";
                             }
                         } else {
                             echo "<div class='col-12 text-center'><p>You don't have any accepted connections yet.</p></div>";

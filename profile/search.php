@@ -1,202 +1,125 @@
 <?php
-// این کد را در search.php قرار دهید
+// search.php
+session_start();
+// اصلاح مسیردهی به فایل config.php و includes.php
 include '../config.php';
 include '../includes.php';
-session_start();
 
-// تابع برای بررسی ذخیره‌سازی ارائه
-function isPresentationSaved($conn, $user_id, $presentation_id)
-{
-    if (!$user_id || !$presentation_id) {
-        return false;
-    }
-    $sql = "SELECT 1 FROM `saved_presentations` WHERE `user_id` = ? AND `presentation_id` = ?";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        return false;
-    }
-    $stmt->bind_param("ii", $user_id, $presentation_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $is_saved = $result->num_rows > 0;
-    $stmt->close();
-    return $is_saved;
-}
-
-
-// --- بخش مدیریت درخواست‌های AJAX ---
-$user_id = isset($_SESSION['user_data']['id']) ? $_SESSION['user_data']['id'] : null;
-$is_ajax_request = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
-$is_post_request = $_SERVER['REQUEST_METHOD'] === 'POST';
-
-// اگر درخواست از نوع POST و AJAX بود (برای ذخیره/حذف)
-if ($is_post_request && $is_ajax_request) {
-    ob_end_clean();
-    header('Content-Type: application/json');
-
-    if (!$user_id) {
-        echo json_encode(['status' => 'error', 'message' => 'User not logged in.']);
-        exit;
-    }
-
-    try {
-        $presentation_id = isset($_POST['presentation_id']) ? intval($_POST['presentation_id']) : 0;
-        $action = isset($_POST['action']) ? $_POST['action'] : '';
-
-        if ($presentation_id <= 0 || !in_array($action, ['save', 'unsave'])) {
-            throw new Exception('Invalid request.');
-        }
-
-        if ($action === 'save') {
-            $sql = "INSERT INTO `saved_presentations` (`user_id`, `presentation_id`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `saved_at` = CURRENT_TIMESTAMP";
-            $stmt = $conn->prepare($sql);
-            if (!$stmt) {
-                throw new Exception("Prepare failed: " . $conn->error);
-            }
-            $stmt->bind_param("ii", $user_id, $presentation_id);
-            $stmt->execute();
-            echo json_encode(['status' => 'success', 'message' => 'Presentation saved.']);
-            $stmt->close();
-        } elseif ($action === 'unsave') {
-            $sql = "DELETE FROM `saved_presentations` WHERE `user_id` = ? AND `presentation_id` = ?";
-            $stmt = $conn->prepare($sql);
-            if (!$stmt) {
-                throw new Exception("Prepare failed: " . $conn->error);
-            }
-            $stmt->bind_param("ii", $user_id, $presentation_id);
-            $stmt->execute();
-            echo json_encode(['status' => 'success', 'message' => 'Presentation unsaved.']);
-            $stmt->close();
-        }
-    } catch (Exception $e) {
-        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-    }
-    exit;
-}
-
-// اگر درخواست AJAX از نوع GET بود (برای جستجوی زنده)
-if ($is_ajax_request && !$is_post_request) {
-    ob_end_clean();
-    header('Content-Type: text/html');
-
-    $search_query = isset($_GET['query']) ? $_GET['query'] : '';
-    if (!empty($search_query)) {
-        $sql = "SELECT `id`, `title`, `file_path`, `description` FROM `presentations` WHERE `title` LIKE ? OR `keywords` LIKE ? ORDER BY `created_at` DESC";
-        $stmt = $conn->prepare($sql);
-        $search_param = "%" . $search_query . "%";
-        $stmt->bind_param("ss", $search_param, $search_param);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result->num_rows > 0) {
-            echo '<ul class="list-group">';
-            while ($row = $result->fetch_assoc()) {
-                echo '<a href="..//' . htmlspecialchars($row['file_path']) . '" class="list-group-item list-group-item-action" target="_blank">';
-                echo '<h5>' . htmlspecialchars($row['title']) . '</h5>';
-                echo '<p>' . htmlspecialchars($row['description']) . '</p>';
-                echo '</a>';
-            }
-            echo '</ul>';
-        } else {
-            echo '<div class="list-group-item">No results found</div>';
-        }
-        $stmt->close();
-    }
-    exit;
-}
-
-
-// --- نمایش صفحه کامل جستجو ---
-// این بخش فقط برای درخواست‌های GET معمولی است که یک صفحه کامل را می‌خواهند
-include 'header.php';
-
-$search_query = isset($_GET['query']) ? $_GET['query'] : '';
 $all_results = [];
-if (!empty($search_query)) {
-    $sql = "SELECT * FROM `presentations` WHERE `title` LIKE ? OR `keywords` LIKE ? ORDER BY `created_at` DESC";
+$search_query = isset($_GET['query']) ? trim($_GET['query']) : '';
+
+// بررسی نوع درخواست (AJAX یا معمولی)
+$is_ajax_request = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+
+// تابع کمکی برای اصلاح مسیر فایل
+function getCorrectFilePath($path)
+{
+    if (empty($path)) {
+        return '#';
+    }
+    // اگر مسیر از قبل مطلق باشد، آن را برگردان
+    if (strpos($path, '/') === 0) {
+        return $path;
+    }
+    // اگر مسیر نسبی است (مانند ../uploads/...)، آن را به درستی تنظیم کن
+    if (strpos($path, '../') === 0) {
+        // حذف ".." از ابتدای مسیر و اضافه کردن /paper-new/
+        return '/paper-new' . substr($path, 2);
+    }
+    return $path;
+}
+
+// اگر کوئری وجود داشته باشد، جستجو را انجام بده
+if (!empty($search_query) && strlen($search_query) >= 3) {
+    // اصلاح کوئری SQL برای join با جدول users و دریافت نام و نام خانوادگی نویسنده
+    $sql = "SELECT p.*, CONCAT(u.name, ' ', u.family) AS full_name, u.id AS user_id FROM `presentations` p JOIN `users` u ON p.user_id = u.id WHERE p.`title` LIKE ? OR p.`keywords` LIKE ? ORDER BY p.`created_at` DESC";
     $stmt = $conn->prepare($sql);
     $search_param = "%" . $search_query . "%";
     $stmt->bind_param("ss", $search_param, $search_param);
     $stmt->execute();
     $result = $stmt->get_result();
-
     if ($result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-            $row['is_saved'] = isPresentationSaved($conn, $user_id, $row['id']);
             $all_results[] = $row;
         }
     }
     $stmt->close();
+    
 }
+
+// اگر درخواست AJAX باشد، نتایج را برای جستجوی زنده برمی‌گردانیم
+if ($is_ajax_request) {
+    if (!empty($all_results)) {
+        echo '<ul class="list-group">';
+        for ($i = 0; $i < min(5, count($all_results)); $i++) {
+            $result = $all_results[$i];
+            echo '<li class="list-group-item">';
+            echo '<h5><a href="' . getCorrectFilePath($result['pdf_path']) . '" target="_blank">' . htmlspecialchars($result['title']) . '</a></h5>';
+            echo '<p>' . htmlspecialchars($result['description']) . '</p>';
+            echo '</li>';
+        }
+        echo '</ul>';
+    } else {
+        echo '<div class="list-group-item">نتیجه‌ای یافت نشد.</div>';
+    }
+}
+// اگر درخواست معمولی باشد (برای صفحه کامل نتایج)
+else {
+    // شامل کردن هدر برای لود شدن استایل‌ها و نوار ناوبری
+    include 'header.php';
 ?>
+    <style>
+        .search-result-card {
+            transition: transform 0.2s ease-in-out;
+        }
 
-<div class="container mt-5">
-    <h2>Search Results for "<?php echo htmlspecialchars($search_query); ?>"</h2>
-    <hr>
-    <?php if (!empty($all_results)): ?>
-        <div class="list-group">
-            <?php foreach ($all_results as $result): ?>
-                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                    <div>
-                        <a href="<?php echo "..//" . htmlspecialchars($result['file_path']); ?>" target="_blank">
-                            <h5 class="mb-1"><?php echo htmlspecialchars($result['title']); ?></h5>
-                            <p class="mb-1"><?php echo htmlspecialchars($result['description']); ?></p>
-                            <small class="text-muted">Keywords: <?php echo htmlspecialchars($result['keywords']); ?></small>
-                        </a>
+        .search-result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+        }
+
+        .search-result-card .card-title {
+            color: #0d6efd;
+            /* رنگ آبی برای عنوان */
+        }
+    </style>
+
+    <div class="container mt-5">
+        <h2 class="mb-4">نتایج جستجو برای "<?php echo htmlspecialchars($search_query); ?>"</h2>
+        <hr>
+        <?php if (!empty($all_results)): ?>
+            <div class="row">
+                <?php foreach ($all_results as $result): ?>
+                    <?php
+                    $filePath = getCorrectFilePath($result['pdf_path'] ?? '');
+                    // استفاده از user_id از نتایج کوئری
+                    $authorProfileLink = '../people/profile.php?id=' . urlencode($result['user_id'] ?? '');
+                    ?>
+                    <div class="col-md-6 mb-4">
+                        <div class="card search-result-card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title"><a href="<?php echo $filePath; ?>" target="_blank"><?php echo htmlspecialchars($result['title'] ?? 'N/A'); ?></a></h5>
+                                <p class="card-text text-muted"><?php echo htmlspecialchars($result['description'] ?? 'N/A'); ?></p>
+                                <small class="text-secondary d-block mt-2">
+                                    **Author:** <a href="<?php echo $authorProfileLink; ?>"><?php echo htmlspecialchars($result['full_name'] ?? 'N/A'); ?></a>
+                                    <br>
+                                    **keywords:** <?php echo htmlspecialchars($result['keywords'] ?? 'N/A'); ?>
+                                </small>
+                            </div>
+                        </div>
                     </div>
-                    <?php if ($user_id): ?>
-                        <?php if ($result['is_saved']): ?>
-                            <button class="btn btn-sm btn-danger btn-unsave" data-presentation-id="<?php echo $result['id']; ?>">Unsave</button>
-                        <?php else: ?>
-                            <button class="btn btn-sm btn-success btn-save" data-presentation-id="<?php echo $result['id']; ?>">Save</button>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    <?php else: ?>
-        <div class="alert alert-warning" role="alert">
-            No results found for "<?php echo htmlspecialchars($search_query); ?>".
-        </div>
-    <?php endif; ?>
-</div>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $(document).ready(function() {
-        $(document).on('click', '.btn-save, .btn-unsave', function() {
-            var button = $(this);
-            var presentationId = button.data('presentation-id');
-            var action = button.hasClass('btn-save') ? 'save' : 'unsave';
-
-            $.ajax({
-                url: 'search.php',
-                method: 'POST',
-                dataType: 'json',
-                data: {
-                    action: action,
-                    presentation_id: presentationId
-                },
-                success: function(response) {
-                    if (response.status === 'success') {
-                        if (action === 'save') {
-                            button.removeClass('btn-success btn-save').addClass('btn-danger btn-unsave').text('Unsave');
-                        } else {
-                            button.removeClass('btn-danger btn-unsave').addClass('btn-success btn-save').text('Save');
-                        }
-                    } else {
-                        alert('Error: ' + response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    alert('An error occurred: ' + error);
-                    console.log(xhr.responseText);
-                }
-            });
-        });
-    });
-</script>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-warning text-center" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                نتیجه‌ای برای "<?php echo htmlspecialchars($search_query); ?>" یافت نشد.
+            </div>
+        <?php endif; ?>
+    </div>
 
 <?php
-include 'footer.php';
+    // شامل کردن فوتر
+    include 'footer.php';
+}
 ?>

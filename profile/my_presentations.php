@@ -35,30 +35,35 @@ if (isset($_POST['action_type'])) {
             if (isset($_FILES['pdf_file']) && $_FILES['pdf_file']['error'] == UPLOAD_ERR_OK) {
                 // Construct paths for saving file to server and database
                 $userUploadDir = '../uploads/pdfs/' . $userId . '/';
-                $localUploadDir = realpath(__DIR__ . '/../uploads/pdfs/' . $userId . '/');
+                $localUploadDir = __DIR__ . '/../uploads/pdfs/' . $userId . '/';
 
                 // Create user-specific upload directory if it doesn't exist
                 if (!is_dir($localUploadDir)) {
-                    mkdir($localUploadDir, 0777, true);
-                }
-
-                $fileName = basename($_FILES['pdf_file']['name']);
-                $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-
-                if ($fileExt === 'pdf') {
-                    $uniqueFileName = 'pres_' . uniqid() . '.' . $fileExt;
-                    $targetFilePath = $localUploadDir . '/' . $uniqueFileName;
-                    $dbPath = $userUploadDir . $uniqueFileName;
-
-                    if (move_uploaded_file($_FILES['pdf_file']['tmp_name'], $targetFilePath)) {
-                        $pdf_path = $dbPath;
-                    } else {
-                        $message = "Error uploading the PDF file.";
+                    if (!mkdir($localUploadDir, 0777, true)) {
+                        $message = "Error: Failed to create the required directory for PDFs. Please check folder permissions.";
                         $messageType = 'danger';
                     }
-                } else {
-                    $message = "Invalid PDF file type. Only PDF files are allowed.";
-                    $messageType = 'danger';
+                }
+
+                if (empty($message)) { // Proceed only if no directory creation error occurred
+                    $fileName = basename($_FILES['pdf_file']['name']);
+                    $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+                    if ($fileExt === 'pdf') {
+                        $uniqueFileName = 'pres_' . uniqid() . '.' . $fileExt;
+                        $targetFilePath = $localUploadDir . '/' . $uniqueFileName;
+                        $dbPath = $userUploadDir . $uniqueFileName;
+
+                        if (move_uploaded_file($_FILES['pdf_file']['tmp_name'], $targetFilePath)) {
+                            $pdf_path = $dbPath;
+                        } else {
+                            $message = "Error uploading the PDF file. Please check folder permissions.";
+                            $messageType = 'danger';
+                        }
+                    } else {
+                        $message = "Invalid PDF file type. Only PDF files are allowed.";
+                        $messageType = 'danger';
+                    }
                 }
             } else {
                 $message = "PDF file is required.";
@@ -69,38 +74,43 @@ if (isset($_POST['action_type'])) {
             if (empty($message) && isset($_FILES['video_file']) && $_FILES['video_file']['error'] == UPLOAD_ERR_OK) {
                 // Construct paths for saving file to server and database
                 $userUploadDir = '../uploads/videos/' . $userId . '/';
-                $localUploadDir = realpath(__DIR__ . '/../uploads/videos/' . $userId . '/');
+                $localUploadDir = __DIR__ . '/../uploads/videos/' . $userId . '/';
 
                 // Create user-specific upload directory if it doesn't exist
                 if (!is_dir($localUploadDir)) {
-                    mkdir($localUploadDir, 0777, true);
-                }
-
-                $fileName = basename($_FILES['video_file']['name']);
-                $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-
-                $allowedVideoTypes = ['mp4', 'webm', 'ogg'];
-
-                if (in_array($fileExt, $allowedVideoTypes)) {
-                    $uniqueFileName = 'user_' . $userId . '_' . uniqid() . '.' . $fileExt;
-                    $targetFilePath = $localUploadDir . '/' . $uniqueFileName;
-                    $dbPath = $userUploadDir . $uniqueFileName;
-
-                    if (move_uploaded_file($_FILES['video_file']['tmp_name'], $targetFilePath)) {
-                        $video_path = $dbPath;
-                    } else {
-                        $message = "Error uploading the video file.";
+                    if (!mkdir($localUploadDir, 0777, true)) {
+                        $message = "Error: Failed to create the required directory for videos. Please check folder permissions.";
                         $messageType = 'danger';
                     }
-                } else {
-                    $message = "Invalid video file type. Allowed formats: MP4, WebM, OGG.";
-                    $messageType = 'danger';
+                }
+
+                if (empty($message)) {
+                    $fileName = basename($_FILES['video_file']['name']);
+                    $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+                    $allowedVideoTypes = ['mp4', 'webm', 'ogg'];
+
+                    if (in_array($fileExt, $allowedVideoTypes)) {
+                        $uniqueFileName = 'user_' . $userId . '_' . uniqid() . '.' . $fileExt;
+                        $targetFilePath = $localUploadDir . '/' . $uniqueFileName;
+                        $dbPath = $userUploadDir . $uniqueFileName;
+
+                        if (move_uploaded_file($_FILES['video_file']['tmp_name'], $targetFilePath)) {
+                            $video_path = $dbPath;
+                        } else {
+                            $message = "Error uploading the video file.";
+                            $messageType = 'danger';
+                        }
+                    } else {
+                        $message = "Invalid video file type. Allowed formats: MP4, WebM, OGG.";
+                        $messageType = 'danger';
+                    }
                 }
             }
 
             // If no errors occurred during file upload and a file path is available, insert into database
             if (empty($message) && (!empty($pdf_path) || !empty($video_path))) {
-                $sql_add = "INSERT INTO Presentations (user_id, title, description, pdf_path, video_path, role, keywords) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                $sql_add = "INSERT INTO presentations (user_id, title, description, pdf_path, video_path, role, keywords) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 $stmt_add = $conn_add->prepare($sql_add);
 
                 if ($stmt_add) {

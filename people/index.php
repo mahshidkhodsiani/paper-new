@@ -137,16 +137,21 @@ if (isset($_SESSION['user_data']['id'])) {
         <div class="row">
             <?php
             try {
-                // اگر کاربر وارد نشده است، فقط لیست کاربران را نمایش می‌دهیم.
-                // اگر وارد شده است، کاربران را به جز خودش نمایش می‌دهیم.
-                $sql = "SELECT id, name, family, education, university, profile_pic, cover_photo, intro_video_path FROM users";
+                // اضافه کردن شرط WHERE status = 1 به کوئری
+                $sql = "SELECT id, name, family, education, university, profile_pic, cover_photo, intro_video_path FROM users WHERE status = 1";
+                $params = [];
+                $types = "";
+
+                // اگر کاربر وارد شده باشد، خودش را از لیست حذف می‌کنیم.
                 if ($current_user_id !== null) {
-                    $sql .= " WHERE id != ?";
+                    $sql .= " AND id != ?";
+                    $params[] = $current_user_id;
+                    $types .= "i";
                 }
 
                 $stmt = $conn->prepare($sql);
                 if ($current_user_id !== null) {
-                    $stmt->bind_param("i", $current_user_id);
+                    $stmt->bind_param($types, ...$params);
                 }
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -162,13 +167,11 @@ if (isset($_SESSION['user_data']['id'])) {
                         $introVideoPath = htmlspecialchars($row["intro_video_path"] ?? '');
                         $profileLink = "profile.php?id=" . (int)$target_user_id;
 
-                        // برای کاربران مهمان، دکمه همیشه "Connect" است و disabled نیست.
                         $button_text = 'Connect';
                         $button_class = 'btn-outline-primary';
                         $button_disabled = '';
                         $show_connect_button = true;
 
-                        // فقط برای کاربران وارد شده وضعیت اتصال را بررسی می‌کنیم.
                         if ($current_user_id !== null) {
                             $conn_stmt = $conn->prepare("SELECT status, sender_id FROM connections WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)");
                             $conn_stmt->bind_param("iiii", $current_user_id, $target_user_id, $target_user_id, $current_user_id);
@@ -274,7 +277,6 @@ if (isset($_SESSION['user_data']['id'])) {
             const videoModal = document.getElementById('videoModal');
             const videoPlayer = document.getElementById('introVideoPlayer');
 
-            // Logic to handle playing the video when the modal is shown
             videoModal.addEventListener('show.bs.modal', function(event) {
                 const button = event.relatedTarget;
                 const videoPath = button.getAttribute('data-video-path');
@@ -285,7 +287,6 @@ if (isset($_SESSION['user_data']['id'])) {
                 }
             });
 
-            // Logic to stop the video when the modal is hidden
             videoModal.addEventListener('hide.bs.modal', function() {
                 videoPlayer.pause();
                 videoPlayer.src = '';

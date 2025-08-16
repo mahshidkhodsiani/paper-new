@@ -32,6 +32,7 @@ if (isset($_SESSION['user_data']['id'])) {
         $stmt->execute();
         $result = $stmt->get_result();
         $unread_count = (int)$result->fetch_row()[0];
+        $stmt->close();
     }
 }
 ?>
@@ -63,7 +64,7 @@ if (isset($_SESSION['user_data']['id'])) {
             </a>
 
 
-            <form class="col-12 col-lg-5 mb-3 mb-lg-0 me-lg-3 mr-2 search-container" style="margin-left: 5px;" role="search" method="GET" action="search.php">
+            <form id="search-form" class="col-12 col-lg-5 mb-3 mb-lg-0 me-lg-3 mr-2 search-container" style="margin-left: 5px;" role="search" method="GET" action="search.php">
                 <input class="form-control" type="search" name="query" placeholder="Search..." aria-label="Search">
                 <div id="suggestions" class="search-results-box" style="display: none;"></div>
             </form>
@@ -80,13 +81,13 @@ if (isset($_SESSION['user_data']['id'])) {
                     <li class="nav-item dropdown">
                         <a class="nav-link px-2 link-dark dropdown-toggle" href="#" id="navbarDropdownNotification" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-bell"></i> Notification
-                            <?php if (isset($_SESSION['user_data']['id']) && $unread_count > 0): // شرط بررسی ورود کاربر 
+                            <?php if (isset($_SESSION['user_data']['id']) && $unread_count > 0): // شرط بررسی ورود کاربر
                             ?>
                                 <span class="badge bg-danger rounded-pill"><?= safe($unread_count) ?></span>
                             <?php endif; ?>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownNotification">
-                            <?php if (isset($_SESSION['user_data']['id'])): // شرط بررسی ورود کاربر 
+                            <?php if (isset($_SESSION['user_data']['id'])): // شرط بررسی ورود کاربر
                             ?>
                                 <?php if ($unread_count > 0): ?>
                                     <li>
@@ -103,7 +104,7 @@ if (isset($_SESSION['user_data']['id'])) {
                                 </li>
                                 <li><a class="dropdown-item" href="../profile/messages"><i class="fas fa-inbox me-2"></i> View all messages</a></li>
                                 <li><a class="dropdown-item" href="../profile/my_requests"><i class="fas fa-users me-2"></i> View all connection requests</a></li>
-                            <?php else: // اگر کاربر وارد نشده 
+                            <?php else: // اگر کاربر وارد نشده
                             ?>
                                 <li><a class="dropdown-item" href="../login.php"><i class="fas fa-sign-in-alt me-2"></i> Log in to view notifications</a></li>
                             <?php endif; ?>
@@ -160,7 +161,7 @@ if (isset($_SESSION['user_data']['id'])) {
                         <img src="<?= $pic ?>" alt="profile" width="32" height="32" class="rounded-circle">
                     </a>
                     <ul class="dropdown-menu text-small" aria-labelledby="dropdownUser1">
-                        <?php if (isset($_SESSION['user_data']['id'])): // شرط بررسی ورود کاربر 
+                        <?php if (isset($_SESSION['user_data']['id'])): // شرط بررسی ورود کاربر
                         ?>
                             <li><a class="dropdown-item" href="../profile"><i class="fas fa-user-circle me-2"></i> Profile</a></li>
                             <li><a class="dropdown-item" href="../profile/settings.php"><i class="fas fa-cog me-2"></i> Settings</a></li>
@@ -192,36 +193,43 @@ if (isset($_SESSION['user_data']['id'])) {
     $(document).ready(function() {
         const searchInput = $('input[name="query"]');
         const suggestionsBox = $('#suggestions');
-        const searchForm = $('.search-container');
+        const searchForm = $('form[role="search"]');
         let timeout = null;
 
-        searchInput.on('keyup', function() {
-            clearTimeout(timeout);
-            const query = $(this).val();
-
-            if (query.length > 2) {
-                timeout = setTimeout(function() {
-                    $.ajax({
-                        url: 'search.php', // مسیردهی صحیح به فایل search.php
-                        type: 'GET',
-                        data: {
-                            query: query
-                        },
-                        success: function(data) {
-                            suggestionsBox.html(data).show();
-                        },
-                        error: function() {
-                            suggestionsBox.html('<div class="list-group-item">خطا در بارگذاری نتایج.</div>').show();
-                        }
-                    });
-                }, 300);
-            } else {
+        function fetchResults(query) {
+            if (query.length < 3) {
                 suggestionsBox.hide().empty();
+                return;
+            }
+
+            clearTimeout(timeout);
+            timeout = setTimeout(function() {
+                $.ajax({
+                    url: 'search_live.php', // مسیردهی صحیح به فایل search_live.php
+                    type: 'GET',
+                    data: {
+                        query: query
+                    },
+                    success: function(data) {
+                        suggestionsBox.html(data).show();
+                    },
+                    error: function() {
+                        suggestionsBox.html('<div class="list-group-item">خطا در بارگذاری نتایج.</div>').show();
+                    }
+                });
+            }, 300);
+        }
+
+        searchInput.on('keyup', function(e) {
+            if (e.key === "Enter" || e.keyCode === 13) {
+                searchForm.submit();
+            } else {
+                fetchResults($(this).val());
             }
         });
 
         $(document).on('click', function(e) {
-            if (!searchForm.is(e.target) && searchForm.has(e.target).length === 0) {
+            if (!$(e.target).closest('.search-container').length) {
                 suggestionsBox.hide();
             }
         });

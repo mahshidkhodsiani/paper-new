@@ -3,8 +3,6 @@
 session_start();
 include "config.php";
 
-// ایجاد یک اتصال جدید به پایگاه داده
-// فرض بر این است که متغیرهای اتصال ($servername, $username, $password, $dbname) در config.php تعریف شده‌اند.
 $conn = new mysqli($servername, $username, $password, $dbname);
 
 if ($conn->connect_error) {
@@ -16,7 +14,7 @@ if (isset($_POST['enter'])) {
     $password = $_POST['password'];
 
     // ۱. از Prepared Statement برای جلوگیری از SQL Injection استفاده کنید.
-    $sql = "SELECT * FROM users WHERE email = ?";
+    $sql = "SELECT id, name, family, email, password, status, profile_pic FROM users WHERE email = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -29,8 +27,25 @@ if (isset($_POST['enter'])) {
         // ۲. از password_verify() برای تأیید رمز عبور هش شده استفاده کنید.
         if (password_verify($password, $stored_hashed_password)) {
             // رمز عبور صحیح است.
-            unset($row['password']); // برای امنیت، رمز عبور را از سشن حذف کنید.
+
+            // --- بخش جدید: بررسی و فعال‌سازی مجدد اکانت در صورت نیاز ---
+            if ($row['status'] == 0) {
+                $sql_reactivate = "UPDATE users SET status = 1 WHERE id = ?";
+                $stmt_reactivate = $conn->prepare($sql_reactivate);
+                $stmt_reactivate->bind_param("i", $row['id']);
+                $stmt_reactivate->execute();
+                $stmt_reactivate->close();
+
+                // پیام موفقیت برای کاربر تنظیم شود.
+                $_SESSION['login_message'] = "Your account has been reactivated successfully!";
+                $_SESSION['login_message_type'] = "success";
+            }
+
+            // اطلاعات کاربری را بدون رمز عبور در سشن ذخیره کنید.
+            unset($row['password']);
             $_SESSION['user_data'] = $row;
+
+            // کاربر را به صفحه پروفایل هدایت کنید.
             header("Location: profile");
             exit();
         } else {

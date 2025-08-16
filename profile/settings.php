@@ -13,9 +13,116 @@ include "../config.php";
 $message = '';
 $messageType = '';
 
-// --- Start of POST form processing section ---
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Get and filter input data
+// --- Connect to database for all operations ---
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+$conn->set_charset("utf8mb4");
+
+
+// --- Handle Deactivate Account ---
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['deactivate_account'])) {
+    $sql_deactivate = "UPDATE users SET status = 0 WHERE id = ?";
+    $stmt_deactivate = $conn->prepare($sql_deactivate);
+    if ($stmt_deactivate) {
+        $stmt_deactivate->bind_param("i", $userId);
+        if ($stmt_deactivate->execute()) {
+            session_destroy(); // لاگ اوت میشه
+            header("Location: ../login.php?status=info&msg=" . urlencode("Your account has been deactivated."));
+            exit();
+        } else {
+            $message = "Error deactivating account: " . $stmt_deactivate->error;
+            $messageType = "danger";
+        }
+        $stmt_deactivate->close();
+    } else {
+        $message = "Error preparing deactivate query: " . $conn->error;
+        $messageType = "danger";
+    }
+}
+
+
+
+// --- Handle Delete Account ---
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_account'])) {
+    // مرحله ۱: حذف اطلاعات مرتبط در جداول دیگر
+    try {
+        // حذف پیام‌های ارسالی و دریافتی از جدول messages
+        $sql_delete_messages = "DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?";
+        $stmt_delete_messages = $conn->prepare($sql_delete_messages);
+        $stmt_delete_messages->bind_param("ii", $userId, $userId);
+        $stmt_delete_messages->execute();
+        $stmt_delete_messages->close();
+
+        // حذف اتصالات از جدول connections
+        $sql_delete_connections = "DELETE FROM connections WHERE sender_id = ? OR receiver_id = ?";
+        $stmt_delete_connections = $conn->prepare($sql_delete_connections);
+        $stmt_delete_connections->bind_param("ii", $userId, $userId);
+        $stmt_delete_connections->execute();
+        $stmt_delete_connections->close();
+
+        // حذف هر داده دیگری که به id کاربر وابسته است (مثلاً posts، comments، notifications و...)
+        // اگر جداول دیگری هم دارید، کوئری‌های مشابهی برای آن‌ها اضافه کنید.
+        // مثال:
+        // $sql_delete_posts = "DELETE FROM posts WHERE user_id = ?";
+        // $stmt_delete_posts = $conn->prepare($sql_delete_posts);
+        // $stmt_delete_posts->bind_param("i", $userId);
+        // $stmt_delete_posts->execute();
+        // $stmt_delete_posts->close();
+
+
+        // مرحله ۲: حذف کاربر از جدول users
+        $sql_delete_user = "DELETE FROM users WHERE id = ?";
+        $stmt_delete_user = $conn->prepare($sql_delete_user);
+        if ($stmt_delete_user) {
+            $stmt_delete_user->bind_param("i", $userId);
+            if ($stmt_delete_user->execute()) {
+                // مرحله ۳: حذف فایل‌ها و فولدرهای کاربر
+                function deleteDir($dirPath)
+                {
+                    if (!is_dir($dirPath)) {
+                        return;
+                    }
+                    if (substr($dirPath, strlen($dirPath) - 1, 1) != '/') {
+                        $dirPath .= '/';
+                    }
+                    $files = glob($dirPath . '*', GLOB_MARK);
+                    foreach ($files as $file) {
+                        if (is_dir($file)) {
+                            deleteDir($file);
+                        } else {
+                            unlink($file);
+                        }
+                    }
+                    rmdir($dirPath);
+                }
+                deleteDir("../uploads/pics/" . $userId);
+                deleteDir("../uploads/covers/" . $userId);
+
+                // مرحله ۴: بستن سشن و ریدایرکت
+                session_destroy();
+                header("Location: ../register.php?status=success&msg=" . urlencode("Your account has been permanently deleted."));
+                exit();
+            } else {
+                $message = "Error deleting account: " . $stmt_delete_user->error;
+                $messageType = "danger";
+            }
+            $stmt_delete_user->close();
+        } else {
+            $message = "Error preparing delete user query: " . $conn->error;
+            $messageType = "danger";
+        }
+    } catch (Exception $e) {
+        $message = "A database error occurred: " . $e->getMessage();
+        $messageType = "danger";
+    }
+}
+
+
+// --- Start of POST form processing section for UPDATING profile ---
+if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['deactivate_account']) && !isset($_POST['delete_account'])) {
+    // Your existing update logic
     $name = filter_input(INPUT_POST, 'first_name', FILTER_SANITIZE_STRING);
     $family = filter_input(INPUT_POST, 'last_name', FILTER_SANITIZE_STRING);
     $university = filter_input(INPUT_POST, 'university', FILTER_SANITIZE_STRING);
@@ -105,7 +212,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // --- Password management ---
-    if (!empty($password_new) && !empty($password_confirm)) {
+    if (!empty($password_new) || !empty($password_confirm)) {
         if ($password_new === $password_confirm) {
             $hashed_password = password_hash($password_new, PASSWORD_DEFAULT);
             $updateFields[] = "password = ?";
@@ -115,9 +222,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $message = 'Passwords do not match.';
             $messageType = 'danger';
         }
-    } elseif ((!empty($password_new) && empty($password_confirm)) || (empty($password_new) && !empty($password_confirm))) {
-        $message = 'Both password fields must be filled to change your password.';
-        $messageType = 'danger';
     }
 
 
@@ -186,17 +290,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     if (!empty($updateFields) && $messageType !== 'danger') {
-        $conn_update = new mysqli($servername, $username, $password, $dbname);
-        if ($conn_update->connect_error) {
-            die("Connection failed: " . $conn_update->connect_error);
-        }
-        $conn_update->set_charset("utf8mb4");
-
         $sql_update = "UPDATE users SET " . implode(", ", $updateFields) . " WHERE id = ?";
         $bindParams .= "i";
         $bindValues[] = $userId;
 
-        $stmt_update = $conn_update->prepare($sql_update);
+        $stmt_update = $conn->prepare($sql_update);
         if ($stmt_update) {
             $bind_names = array_merge([$bindParams], $bindValues);
             $refs = [];
@@ -211,7 +309,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 // --- Crucial section: full update of $_SESSION['user_data'] from the database ---
                 $sql_fetch_updated_user = "SELECT id, name, family, email, profile_pic, cover_photo, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, created_at, updated_at FROM users WHERE id = ?";
-                $stmt_fetch = $conn_update->prepare($sql_fetch_updated_user);
+                $stmt_fetch = $conn->prepare($sql_fetch_updated_user);
                 if ($stmt_fetch) {
                     $stmt_fetch->bind_param("i", $userId);
                     $stmt_fetch->execute();
@@ -231,15 +329,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
             $stmt_update->close();
         } else {
-            $message = 'Error in preparing update query: ' . $conn_update->error;
+            $message = 'Error in preparing update query: ' . $conn->error;
             $messageType = 'danger';
         }
-        $conn_update->close();
     } elseif (empty($updateFields) && $messageType !== 'danger') {
         $message = 'No information was available for update.';
         $messageType = 'info';
     }
 }
+
 
 // --- Message handling after redirect (GET) ---
 if (isset($_GET['status']) && isset($_GET['msg'])) {
@@ -249,12 +347,6 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
 
 
 // --- Load user data for display in the form (if no POST request or after redirect) ---
-$conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-$conn->set_charset("utf8mb4");
-
 $user = [];
 $sql = "SELECT id, name, family, email, profile_pic, cover_photo, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography FROM users WHERE id = ?";
 $stmt = $conn->prepare($sql);
@@ -265,6 +357,7 @@ $result = $stmt->get_result();
 if ($result->num_rows > 0) {
     $user = $result->fetch_assoc();
 } else {
+    // This case should ideally not happen if session is set, but good for safety
     header("Location: ../login.php");
     exit();
 }
@@ -338,7 +431,6 @@ $stmt->close();
                     <?php endif; ?>
 
                     <form action="" method="post" enctype="multipart/form-data">
-
                         <div class="mb-4">
                             <label for="coverPhoto" class="form-label">Cover Photo</label>
                             <input type="file" class="form-control" id="coverPhoto" name="cover_photo" accept="image/png, image/jpeg, image/gif">
@@ -444,6 +536,23 @@ $stmt->close();
 
                         <button type="submit" class="btn btn-primary mt-4">Update</button>
                     </form>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-between">
+                        <form action="" method="post" onsubmit="return confirm('Are you sure you want to deactivate your account?')">
+                            <button type="submit" name="deactivate_account" class="btn btn-warning">
+                                Deactivate Account
+                            </button>
+                        </form>
+
+                        <form action="" method="post" onsubmit="return confirm('⚠️ This will permanently delete your account. Are you sure?')">
+                            <button type="submit" name="delete_account" class="btn btn-danger">
+                                Delete Account
+                            </button>
+                        </form>
+                    </div>
+
                 </div>
             </div>
 
