@@ -25,10 +25,9 @@ if (isset($_SESSION['message']) && isset($_SESSION['messageType'])) {
     $messageType = $_GET['status'];
     $message = urldecode($_GET['msg']);
 }
-// -------------------------------------
 
-// --- Helper function for file uploads ---
-// This function will now return an array with 'success', 'message', and 'messageType'
+
+
 function uploadFile($fileInputName, $baseTargetDir, $allowedExtensions, $maxFileSize, $conn, $userId, $columnName, $oldFilePath, $hideFile = null)
 {
     $success = false;
@@ -86,26 +85,27 @@ function uploadFile($fileInputName, $baseTargetDir, $allowedExtensions, $maxFile
     } elseif (isset($_FILES[$fileInputName]) && $_FILES[$fileInputName]['error'] != UPLOAD_ERR_NO_FILE) {
         // Handle PHP upload errors
         $phpFileUploadErrors = [
-            UPLOAD_ERR_INI_SIZE   => 'The uploaded file exceeds the upload_max_filesize directive in php.ini.',
-            UPLOAD_ERR_FORM_SIZE  => 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form.',
-            UPLOAD_ERR_PARTIAL    => 'The uploaded file was only partially uploaded.',
-            UPLOAD_ERR_NO_TMP_DIR => 'Missing a temporary folder.',
-            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
-            UPLOAD_ERR_EXTENSION => 'A PHP extension stopped the file upload.',
+            UPLOAD_ERR_INI_SIZE     => 'The uploaded file exceeds the upload_max_filesize directive in php.ini.',
+            UPLOAD_ERR_FORM_SIZE    => 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form.',
+            UPLOAD_ERR_PARTIAL      => 'The uploaded file was only partially uploaded.',
+            UPLOAD_ERR_NO_TMP_DIR   => 'Missing a temporary folder.',
+            UPLOAD_ERR_CANT_WRITE   => 'Failed to write file to disk.',
+            UPLOAD_ERR_EXTENSION    => 'A PHP extension stopped the file upload.',
         ];
         $msg = "File upload error: " . ($phpFileUploadErrors[$_FILES[$fileInputName]['error']] ?? 'Unknown upload error.');
         $type = 'danger';
         return ['success' => false, 'message' => $msg, 'messageType' => $type];
     }
 
-    // Prepare the SQL query based on whether file was uploaded
+    // Prepare the SQL query
     if ($success) {
-        $sql = "UPDATE users SET " . $columnName . " = ?, hide_resume = ? WHERE id = ?";
+        // Update the file path, hide status, AND the last update timestamp
+        $sql = "UPDATE users SET " . $columnName . " = ?, hide_resume = ?, last_resume_update = NOW() WHERE id = ?";
         $params = [$targetFilePath, $hideFile, $userId];
         $types = "sii";
     } else {
-        // Only update hide_resume if no file was uploaded
-        $sql = "UPDATE users SET hide_resume = ? WHERE id = ?";
+        // If NO new file was uploaded, only update the hide status and the last update timestamp
+        $sql = "UPDATE users SET hide_resume = ?, last_resume_update = NOW() WHERE id = ?";
         $params = [$hideFile, $userId];
         $types = "ii";
     }
@@ -116,11 +116,18 @@ function uploadFile($fileInputName, $baseTargetDir, $allowedExtensions, $maxFile
         $stmt->bind_param($types, ...$params);
 
         if ($stmt->execute()) {
-            // Update session data
-            if ($success) {
-                $_SESSION['user_data'][$columnName] = $targetFilePath;
+            // After successful database update, re-fetch all user data to sync the session
+            $sql_fetch_updated_user = "SELECT id, name, family, email, profile_pic, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, custom_profile_link, availability_status, meeting_link, google_calendar, last_resume_update, intro_video_path, resume_pdf_path, hide_resume FROM users WHERE id = ?";
+            $stmt_fetch = $conn->prepare($sql_fetch_updated_user);
+            if ($stmt_fetch) {
+                $stmt_fetch->bind_param("i", $userId);
+                $stmt_fetch->execute();
+                $result_fetch = $stmt_fetch->get_result();
+                if ($result_fetch->num_rows > 0) {
+                    $_SESSION['user_data'] = $result_fetch->fetch_assoc();
+                }
+                $stmt_fetch->close();
             }
-            $_SESSION['user_data']['hide_resume'] = $hideFile;
 
             $msg = $success ? "File uploaded and settings updated successfully." : "Settings updated successfully.";
             $type = 'success';
@@ -142,6 +149,7 @@ function uploadFile($fileInputName, $baseTargetDir, $allowedExtensions, $maxFile
         return ['success' => false, 'message' => $msg, 'messageType' => $type];
     }
 }
+
 
 // --- Process Availability Update Form ---
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_availability'])) {
@@ -398,9 +406,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                         <?php if (!empty($user['birthdate'])): ?>
                             <p><i class="fas fa-birthday-cake me-2 text-primary"></i>Birthdate: <?= htmlspecialchars($user['birthdate']) ?></p>
                         <?php endif; ?>
-                        <?php if (!empty($user['last_resume_update'])): ?>
-                            <p><i class="fas fa-calendar-alt me-2 text-primary"></i>Last Resume Update: <?= date('Y-m-d H:i', strtotime($user['last_resume_update'])) ?></p>
-                        <?php endif; ?>
+
                     </div>
 
                     <?php if (!empty($user['biography'])): ?>
@@ -537,6 +543,11 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
 
                     <hr>
                     <p>Upload Your Resume:</p>
+
+                    <?php if (!empty($user['last_resume_update'])): ?>
+
+                        <p>Last Resume Update: <?= date('Y-m-d', strtotime($user['last_resume_update'])); ?></p>
+                    <?php endif; ?>
 
                     <?php
                     if (isset($user['resume_pdf_path']) && $user['resume_pdf_path'] !== NULL) {

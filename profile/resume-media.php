@@ -74,7 +74,9 @@ function uploadFile($fileInputName, $baseTargetDir, $allowedExtensions, $maxFile
             }
 
             // Update the path in the database
-            $sql_update = "UPDATE users SET $columnName = ? WHERE id = ?";
+            // $sql_update = "UPDATE users SET $columnName = ? WHERE id = ?";
+            $sql_update = "UPDATE users SET $columnName = ?, last_resume_update = NOW() WHERE id = ?";
+
             $stmt_update = $conn->prepare($sql_update);
             if ($stmt_update) {
                 $stmt_update->bind_param("si", $targetFilePath, $userId);

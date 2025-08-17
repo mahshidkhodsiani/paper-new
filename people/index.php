@@ -297,7 +297,7 @@ if (isset($_SESSION['user_data']['id'])) {
                     clickedButton.classList.remove('btn-outline-primary', 'btn-secondary', 'btn-warning', 'btn-success');
                     clickedButton.classList.add('btn-info');
 
-                    fetch('handle_connection.php', {
+                    fetch('../profile/handle_connection.php', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/x-www-form-urlencoded',
