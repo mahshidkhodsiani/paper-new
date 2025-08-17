@@ -227,9 +227,13 @@ if (isset($_SESSION['user_data']['id'])) {
                                         </svg>
                                         <span>University: <?= $university ?></span>
                                     </div>
+
+
                                     <button type="button" class="btn <?= $button_class ?> btn-sm btn-custom connect-btn" data-user-id="<?= $target_user_id ?>" <?= $button_disabled ?>>
                                         <i class="fas fa-user-plus"></i> <?= $button_text ?>
                                     </button>
+
+
                                     <a href="<?= $profileLink ?>" class="btn btn-primary btn-sm btn-custom"><i class="fas fa-user-graduate"></i> View Profile</a>
                                 </div>
                             </div>
@@ -272,6 +276,90 @@ if (isset($_SESSION['user_data']['id'])) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const connectButtons = document.querySelectorAll('.connect-btn');
+            connectButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const receiverId = this.dataset.userId;
+                    const clickedButton = this;
+
+                    if (clickedButton.disabled) {
+                        return;
+                    }
+
+                    const originalText = clickedButton.innerHTML;
+                    const originalClass = clickedButton.className;
+
+                    clickedButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+                    clickedButton.disabled = true;
+                    clickedButton.classList.remove('btn-outline-primary', 'btn-secondary', 'btn-warning', 'btn-success');
+                    clickedButton.classList.add('btn-info');
+
+                    fetch('handle_connection.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: 'receiver_id=' + receiverId
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                clickedButton.innerHTML = '<i class="fas fa-check"></i> Request Sent';
+                                clickedButton.classList.remove('btn-info');
+                                clickedButton.classList.add('btn-secondary');
+
+                                // نمایش پیام موفقیت
+                                const messageAlert = document.getElementById('message-alert');
+                                if (messageAlert) {
+                                    messageAlert.textContent = data.message;
+                                    messageAlert.classList.add('alert-success');
+                                    document.getElementById('message-container').style.display = 'block';
+                                    setTimeout(() => {
+                                        document.getElementById('message-container').style.display = 'none';
+                                    }, 5000);
+                                }
+                            } else {
+                                clickedButton.innerHTML = originalText;
+                                clickedButton.className = originalClass;
+                                clickedButton.disabled = false;
+                                console.error('Error:', data.message);
+
+                                // نمایش پیام خطا
+                                const messageAlert = document.getElementById('message-alert');
+                                if (messageAlert) {
+                                    messageAlert.textContent = 'Failed to send connection request: ' + data.message;
+                                    messageAlert.classList.add('alert-danger');
+                                    document.getElementById('message-container').style.display = 'block';
+                                    setTimeout(() => {
+                                        document.getElementById('message-container').style.display = 'none';
+                                    }, 5000);
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Fetch error:', error);
+                            clickedButton.innerHTML = originalText;
+                            clickedButton.className = originalClass;
+                            clickedButton.disabled = false;
+
+                            // نمایش پیام خطای شبکه
+                            const messageAlert = document.getElementById('message-alert');
+                            if (messageAlert) {
+                                messageAlert.textContent = 'Network error or server issue. Please try again.';
+                                messageAlert.classList.add('alert-danger');
+                                document.getElementById('message-container').style.display = 'block';
+                                setTimeout(() => {
+                                    document.getElementById('message-container').style.display = 'none';
+                                }, 5000);
+                            }
+                        });
+                });
+            });
+        });
+    </script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const videoModal = document.getElementById('videoModal');

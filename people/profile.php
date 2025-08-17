@@ -164,13 +164,8 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             <?php include "sidebar.php"; ?>
             <div class="col-md-6">
                 <div class="main-content shadow-lg p-3 mb-5 bg-white rounded">
-                    <div class="cover-photo-container">
-                        <?php if (!empty($user['cover_photo'])): ?>
-                            <img src="../<?= htmlspecialchars($user['cover_photo']); ?>" alt="Cover Photo" style="height: 400px; width: 100%;">
-                        <?php else: ?>
-                            <img src="../images/11.jpg" alt="Default Cover Photo" style="height: 400px; width: 100%;">
-                        <?php endif; ?>
-                    </div>
+
+
                     <?php
                     $introVideoPath = htmlspecialchars($user['intro_video_path'] ?? '');
                     $hasVideo = !empty($introVideoPath) && file_exists($introVideoPath);
@@ -272,50 +267,59 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                     </div>
                                     <small class="text-muted mt-2 d-block">Uploaded on: <?= date('Y-m-d', strtotime($presentation['created_at'])) ?></small>
 
-                                    <div class="rating-section mt-3">
-                                        <h6 class="mb-1"><i class="fas fa-star me-1 text-warning"></i>Rating</h6>
-                                        <div class="d-flex align-items-center mb-2">
-                                            <div class="rating-stars me-2" data-rating="<?= htmlspecialchars($presentation['avg_rating']) ?>">
-                                                <?php
-                                                $avgRating = $presentation['avg_rating'];
-                                                for ($i = 1; $i <= 5; $i++) {
-                                                    if ($i <= $avgRating) {
-                                                        echo '<i class="fas fa-star text-warning"></i>';
-                                                    } else {
-                                                        echo '<i class="far fa-star text-muted"></i>';
+                                    <?php if ($presentation['rating_count'] > 0) : ?>
+                                        <div class="rating-section mt-3">
+                                            <h6 class="mb-1"><i class="fas fa-star me-1 text-warning"></i>Rating</h6>
+                                            <div class="d-flex align-items-center mb-2">
+                                                <div class="rating-stars me-2" data-rating="<?= htmlspecialchars($presentation['avg_rating']) ?>">
+                                                    <?php
+                                                    $avgRating = $presentation['avg_rating'];
+                                                    for ($i = 1; $i <= 5; $i++) {
+                                                        if ($i <= $avgRating) {
+                                                            echo '<i class="fas fa-star text-warning"></i>';
+                                                        } else {
+                                                            echo '<i class="far fa-star text-muted"></i>';
+                                                        }
                                                     }
-                                                }
-                                                ?>
-                                            </div>
-                                            <p class="mb-0 fw-bold"><?= htmlspecialchars($avgRating) ?> / 5</p>
-                                            <small class="text-muted ms-2">(<?= htmlspecialchars($presentation['rating_count']) ?> votes)</small>
-                                        </div>
-
-                                        <?php if ($loggedInUserId && $loggedInUserId != $profileId && !$presentation['has_user_rated']) : ?>
-                                            <div class="rating-form" data-presentation-id="<?= htmlspecialchars($presentation['id']) ?>">
-                                                <?php for ($i = 1; $i <= 5; $i++) : ?>
-                                                    <i class="far fa-star rating-star" data-rating="<?= $i ?>"></i>
-                                                <?php endfor; ?>
-                                                <div class="mt-2" style="display:none;" id="comment-box-<?= htmlspecialchars($presentation['id']) ?>">
-                                                    <textarea class="form-control" rows="2" placeholder="Leave a comment..."></textarea>
+                                                    ?>
                                                 </div>
-                                                <button class="btn btn-primary btn-sm mt-2 submit-rating-btn" style="display:none;">Submit Rating</button>
+                                                <p class="mb-0 fw-bold"><?= htmlspecialchars($avgRating) ?> / 5</p>
+                                                <small class="text-muted ms-2">(<?= htmlspecialchars($presentation['rating_count']) ?> votes)</small>
                                             </div>
-                                        <?php elseif ($loggedInUserId && $presentation['has_user_rated']) : ?>
-                                            <div class="alert alert-info py-2 px-3 d-inline-block">
-                                                You have rated this:
-                                                <span class="text-warning">
-                                                    <?php for ($i = 1; $i <= $presentation['user_rating']; $i++) {
-                                                        echo '<i class="fas fa-star"></i>';
-                                                    } ?>
-                                                </span>
-                                                <?php if (!empty($presentation['user_comment'])) : ?>
-                                                    <p class="mt-2 mb-0">Your comment: "<?= htmlspecialchars($presentation['user_comment']) ?>"</p>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
+                                        </div>
+                                    <?php endif; ?>
 
+                                    <?php if ($loggedInUserId && $loggedInUserId != $profileId && !$presentation['has_user_rated']) : ?>
+                                        <div class="rating-form" data-presentation-id="<?= htmlspecialchars($presentation['id']) ?>">
+                                            <?php for ($i = 1; $i <= 5; $i++) : ?>
+                                                <i class="far fa-star rating-star" data-rating="<?= $i ?>"></i>
+                                            <?php endfor; ?>
+                                            <div class="mt-2" style="display:none;" id="comment-box-<?= htmlspecialchars($presentation['id']) ?>">
+                                                <textarea class="form-control" rows="2" placeholder="Leave a comment..."></textarea>
+                                            </div>
+                                            <button class="btn btn-primary btn-sm mt-2 submit-rating-btn" style="display:none;">Submit Rating</button>
+                                        </div>
+                                    <?php elseif ($loggedInUserId && $presentation['has_user_rated']) : ?>
+                                        <div class="alert alert-info py-2 px-3 d-inline-block">
+                                            You have rated this:
+                                            <span class="text-warning">
+                                                <?php for ($i = 1; $i <= $presentation['user_rating']; $i++) {
+                                                    echo '<i class="fas fa-star"></i>';
+                                                } ?>
+                                            </span>
+                                            <?php if (!empty($presentation['user_comment'])) : ?>
+                                                <p class="mt-2 mb-0">Your comment: "<?= htmlspecialchars($presentation['user_comment']) ?>"</p>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <button class="btn btn-secondary btn-sm mt-2" onclick="shareItem(
+                                        'Presentation: <?= htmlspecialchars($presentation['title']) ?> by <?= htmlspecialchars($user['name'] . ' ' . $user['family']) ?>',
+                                        'Check out this presentation on: <?= htmlspecialchars($presentation['title']) ?>',
+                                        '<?=$presentation['pdf_path']?>'
+                                        )">
+                                        <i class="fas fa-share-alt me-1"></i> Share this Presentation
+                                    </button>
                                     <?php if (!empty($presentation['comments'])) : ?>
                                         <div class="comment-section mt-4">
                                             <h6><i class="fas fa-comments me-1"></i> User Comments</h6>
@@ -332,6 +336,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                 </div>
                             <?php endforeach; ?>
                         </div>
+
                     <?php else : ?>
                         <div class="mb-4">
                             <h5 class="profile-section-title"><i class="fas fa-chalkboard-teacher me-2"></i>Presentations</h5>
@@ -346,7 +351,11 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
 
                     <div class="mb-4">
                         <h5 class="profile-section-title"><i class="fas fa-share-alt me-2"></i>Share This Profile</h5>
-                        <button class="btn btn-primary btn-lg w-100" onclick="shareProfile('<?= htmlspecialchars($user['name'] . ' ' . $user['family']) ?>')">
+                        <button class="btn btn-primary btn-lg w-100" onclick="shareItem(
+                            'Profile of <?= htmlspecialchars($user['name'] . ' ' . $user['family']) ?> on Paperet',
+                            'Check out <?= htmlspecialchars($user['name'] . ' ' . $user['family']) ?>\'s profile on our website and get in touch.',
+                            window.location.href
+                        )">
                             <i class="fas fa-share-alt me-2"></i> Share
                         </button>
                     </div>
@@ -504,16 +513,17 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
         }
 
         /**
-         * Handles sharing the user profile using the Web Share API.
-         * @param {string} userName - The name of the user to be shared.
+         * Handles sharing any item (profile, presentation, etc.) using the Web Share API.
+         * @param {string} title - The title of the item to share.
+         * @param {string} text - The descriptive text for the item.
+         * @param {string} url - The URL of the item to share.
          */
-        function shareProfile(userName) {
-            // Checks if the browser supports the Web Share API.
+        function shareItem(title, text, url) {
             if (navigator.share) {
                 navigator.share({
-                    title: 'Profile of ' + userName + ' on Paperet',
-                    text: 'Check out ' + userName + '\'s profile on our website and get in touch.',
-                    url: window.location.href
+                    title: title,
+                    text: text,
+                    url: url
                 }).then(() => {
                     console.log('Sharing was successful!');
                 }).catch((error) => {
@@ -521,40 +531,36 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                 });
             } else {
                 // Fallback for older browsers or desktop
-                const currentUrl = window.location.href;
-                navigator.clipboard.writeText(currentUrl).then(() => {
-                    alert('Profile link has been copied to the clipboard.');
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('Link has been copied to the clipboard.');
                 }).catch(err => {
                     console.error('Failed to copy the link:', err);
-                    alert('Failed to copy the link. Please copy it manually: ' + currentUrl);
+                    alert('Failed to copy the link. Please copy it manually: ' + url);
                 });
             }
-        } // The missing closing brace '}' was added here
-
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
             var videoModal = document.getElementById('videoModal');
             var videoPlayer = document.getElementById('introVideoPlayer');
 
-            videoModal.addEventListener('show.bs.modal', function(event) {
-                var button = event.relatedTarget;
-                var videoPath = button.getAttribute('data-video-path');
-                if (videoPath) {
-                    videoPlayer.src = videoPath;
-                    videoPlayer.load();
-                }
-            });
+            if (videoModal && videoPlayer) {
+                videoModal.addEventListener('show.bs.modal', function(event) {
+                    var button = event.relatedTarget;
+                    var videoPath = button.getAttribute('data-video-path');
+                    if (videoPath) {
+                        videoPlayer.src = videoPath;
+                        videoPlayer.load();
+                    }
+                });
 
-            videoModal.addEventListener('hidden.bs.modal', function() {
-                videoPlayer.pause();
-                videoPlayer.removeAttribute('src');
-                videoPlayer.load();
-            });
+                videoModal.addEventListener('hidden.bs.modal', function() {
+                    videoPlayer.pause();
+                    videoPlayer.src = "";
+                });
+            }
         });
     </script>
-
-    <?php include "footer.php"; ?>
-
 </body>
 
 </html>
