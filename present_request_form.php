@@ -1,43 +1,86 @@
-<?php
-// Set variables for messages
-$message = '';
-$message_type = '';
-?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Submit a Presentation</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #6f42c1;
+            --success-color: #1cc88a;
+            --danger-color: #e74a3b;
+            --warning-color: #f6c23e;
+            --light-bg: #f8f9fc;
+        }
+
         body {
-            background-color: #f8f9fa;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px 0;
         }
 
         .container {
             max-width: 900px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            padding: 30px;
+            margin-top: 30px;
+            margin-bottom: 30px;
         }
 
-        .card {
-            border: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light-bg);
+        }
+
+        .header h2 {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #858796;
         }
 
         .section-title {
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             font-weight: bold;
-            color: #343a40;
+            color: var(--primary-color);
             margin-top: 2rem;
             margin-bottom: 1rem;
             padding-bottom: 0.5rem;
             border-bottom: 2px solid #e9ecef;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title i {
+            margin-right: 10px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 0.15rem 0.5rem rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            font-weight: 600;
         }
 
         .help-text {
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: #6c757d;
         }
 
@@ -59,85 +102,125 @@ $message_type = '';
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            padding: 10px 25px;
+            font-weight: 600;
+            border-radius: 30px;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            transform: translateY(-2px);
+            transition: all 0.3s;
+        }
+
+        .required-label:after {
+            content: " *";
+            color: var(--danger-color);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+        }
     </style>
 </head>
-
 <body>
-    <div class="container my-5">
-        <h2 class="text-center mb-4">Submit a Presentation</h2>
+    <div class="container">
+        <div class="header">
+            <h2><i class="fas fa-presentation"></i> Submit a Presentation Request</h2>
+            <p class="mt-3">Please fill out the form below to submit your presentation request</p>
+        </div>
 
-        <?php if ($message): ?>
-            <div class="message <?php echo $message_type === 'success' ? 'success' : 'error'; ?>">
-                <?php echo $message; ?>
+        <div class="message success" style="display: none;" id="successMessage">
+            Your request has been submitted successfully. Thank you!
+        </div>
+
+        <div class="message error" style="display: none;" id="errorMessage">
+            There was a problem submitting your request. Please try again.
+        </div>
+
+        <form id="presentationForm" method="post" action="email_request.php" enctype="multipart/form-data">
+            <div class="section-title">
+                <i class="fas fa-user"></i> Requester Details
             </div>
-        <?php endif; ?>
-
-        <form method="post" action="email_request" enctype="multipart/form-data">
-
-            <div class="section-title">Requester Details</div>
             <div class="card p-4 mb-4">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label for="requester_name" class="form-label">Name *</label>
-                        <input type="text" class="form-control" name="requester_name" id="requester_name" required value="<?php echo htmlspecialchars($_POST['requester_name'] ?? ''); ?>">
+                        <label for="requester_name" class="form-label required-label">Name</label>
+                        <input type="text" class="form-control" name="requester_name" id="requester_name" required>
                     </div>
                     <div class="col-md-6">
-                        <label for="requester_email" class="form-label">Email *</label>
-                        <input type="email" class="form-control" name="requester_email" id="requester_email" required value="<?php echo htmlspecialchars($_POST['requester_email'] ?? ''); ?>">
+                        <label for="requester_email" class="form-label required-label">Email</label>
+                        <input type="email" class="form-control" name="requester_email" id="requester_email" required>
                     </div>
                     <div class="col-md-6">
                         <label for="requester_affiliation" class="form-label">Affiliation</label>
-                        <input type="text" class="form-control" name="requester_affiliation" id="requester_affiliation" value="<?php echo htmlspecialchars($_POST['requester_affiliation'] ?? ''); ?>">
+                        <input type="text" class="form-control" name="requester_affiliation" id="requester_affiliation">
                     </div>
                     <div class="col-md-6">
                         <label for="requester_phone" class="form-label">Phone</label>
-                        <input type="tel" class="form-control" name="requester_phone" id="requester_phone" value="<?php echo htmlspecialchars($_POST['requester_phone'] ?? ''); ?>">
+                        <input type="tel" class="form-control" name="requester_phone" id="requester_phone">
                     </div>
                 </div>
             </div>
 
-            <div class="section-title">Presenter Details</div>
+            <div class="section-title">
+                <i class="fas fa-user-tie"></i> Presenter Details
+            </div>
             <div class="card p-4 mb-4">
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label for="presenter_name" class="form-label">Name *</label>
-                        <input type="text" class="form-control" name="presenter_name" id="presenter_name" required value="<?php echo htmlspecialchars($_POST['presenter_name'] ?? ''); ?>">
+                        <label for="presenter_name" class="form-label required-label">Name</label>
+                        <input type="text" class="form-control" name="presenter_name" id="presenter_name" required>
                     </div>
                     <div class="col-md-6">
-                        <label for="presenter_email" class="form-label">Email *</label>
-                        <input type="email" class="form-control" name="presenter_email" id="presenter_email" required value="<?php echo htmlspecialchars($_POST['presenter_email'] ?? ''); ?>">
+                        <label for="presenter_email" class="form-label required-label">Email</label>
+                        <input type="email" class="form-control" name="presenter_email" id="presenter_email" required>
                     </div>
-                    <div class="col-md-12">
+                    <div class="col-12">
                         <label for="presenter_affiliation" class="form-label">Affiliation</label>
-                        <input type="text" class="form-control" name="presenter_affiliation" id="presenter_affiliation" value="<?php echo htmlspecialchars($_POST['presenter_affiliation'] ?? ''); ?>">
+                        <input type="text" class="form-control" name="presenter_affiliation" id="presenter_affiliation">
                     </div>
                 </div>
             </div>
 
-            <div class="section-title">Paper Details</div>
+            <div class="section-title">
+                <i class="fas fa-file-alt"></i> Paper Details
+            </div>
             <div class="card p-4 mb-4">
                 <div class="row g-3">
                     <div class="col-12">
-                        <label for="paper_title" class="form-label">Paper Title *</label>
-                        <input type="text" class="form-control" name="paper_title" id="paper_title" required value="<?php echo htmlspecialchars($_POST['paper_title'] ?? ''); ?>">
+                        <label for="paper_title" class="form-label required-label">Paper Title</label>
+                        <input type="text" class="form-control" name="paper_title" id="paper_title" required>
                     </div>
                     <div class="col-12">
                         <label for="paper_link" class="form-label">Paper Link</label>
-                        <input type="url" class="form-control" name="paper_link" id="paper_link" value="<?php echo htmlspecialchars($_POST['paper_link'] ?? ''); ?>">
+                        <input type="url" class="form-control" name="paper_link" id="paper_link">
                         <div class="form-text help-text">Link to paper (e.g. arXiv, Google Scholar, etc.).</div>
                     </div>
                     <div class="col-12">
-                        <label for="paper_abstract" class="form-label">Abstract *</label>
-                        <textarea class="form-control" name="paper_abstract" id="paper_abstract" rows="10" required><?php echo htmlspecialchars($_POST['paper_abstract'] ?? ''); ?></textarea>
+                        <label for="paper_abstract" class="form-label required-label">Abstract</label>
+                        <textarea class="form-control" name="paper_abstract" id="paper_abstract" rows="6" required></textarea>
                     </div>
                     <div class="col-md-6">
                         <label for="tags" class="form-label">Tags</label>
-                        <input type="text" class="form-control" name="tags" id="tags" value="<?php echo htmlspecialchars($_POST['tags'] ?? ''); ?>">
+                        <input type="text" class="form-control" name="tags" id="tags">
                         <div class="form-text help-text">Comma-separated keywords (e.g., AI, Machine Learning)</div>
                     </div>
                     <div class="col-md-6 d-flex align-items-end">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="is_online" value="1" id="is_online" <?php echo isset($_POST['is_online']) ? 'checked' : ''; ?>>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="is_online" value="1" id="is_online">
                             <label class="form-check-label" for="is_online">
                                 I want to present online.
                             </label>
@@ -150,27 +233,29 @@ $message_type = '';
                 </div>
             </div>
 
-            <div class="section-title">Competition Details</div>
+            <div class="section-title">
+                <i class="fas fa-trophy"></i> Competition Details
+            </div>
             <div class="card p-4 mb-4">
                 <div class="mb-3">
                     <label class="form-label">Are you submitting for a competition?</label>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="include_comp" id="include_comp_yes" value="1" <?php echo (isset($_POST['include_comp']) && $_POST['include_comp'] == '1') ? 'checked' : ''; ?>>
+                        <input class="form-check-input" type="radio" name="include_comp" id="include_comp_yes" value="1">
                         <label class="form-check-label" for="include_comp_yes">Yes</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="include_comp" id="include_comp_no" value="0" <?php echo (!isset($_POST['include_comp']) || $_POST['include_comp'] == '0') ? 'checked' : ''; ?>>
+                        <input class="form-check-input" type="radio" name="include_comp" id="include_comp_no" value="0" checked>
                         <label class="form-check-label" for="include_comp_no">No</label>
                     </div>
                 </div>
-                <div id="comp-fields" class="row g-3 <?php echo (isset($_POST['include_comp']) && $_POST['include_comp'] == '1') ? '' : 'd-none'; ?>">
+                <div id="comp-fields" class="row g-3 d-none">
                     <div class="col-md-6">
                         <label for="comp_name" class="form-label">Competition Name</label>
-                        <input type="text" class="form-control" name="comp_name" id="comp_name" value="<?php echo htmlspecialchars($_POST['comp_name'] ?? ''); ?>">
+                        <input type="text" class="form-control" name="comp_name" id="comp_name">
                     </div>
                     <div class="col-md-6">
                         <label for="comp_link" class="form-label">Competition Link</label>
-                        <input type="url" class="form-control" name="comp_link" id="comp_link" value="<?php echo htmlspecialchars($_POST['comp_link'] ?? ''); ?>">
+                        <input type="url" class="form-control" name="comp_link" id="comp_link">
                     </div>
                     <div class="col-12">
                         <label for="comp_file" class="form-label">Competition PDF (optional)</label>
@@ -178,30 +263,34 @@ $message_type = '';
                     </div>
                     <div class="col-12">
                         <label for="comp_message" class="form-label">Message for competition organizer</label>
-                        <textarea class="form-control" name="comp_message" id="comp_message" rows="5"><?php echo htmlspecialchars($_POST['comp_message'] ?? ''); ?></textarea>
+                        <textarea class="form-control" name="comp_message" id="comp_message" rows="3"></textarea>
                     </div>
                 </div>
             </div>
 
-            <div class="section-title">Other Details</div>
+            <div class="section-title">
+                <i class="fas fa-info-circle"></i> Other Details
+            </div>
             <div class="card p-4 mb-4">
                 <div class="row g-3">
                     <div class="col-12">
                         <label for="custom_message" class="form-label">Custom message for organizers</label>
-                        <textarea class="form-control" name="custom_message" id="custom_message" rows="5"><?php echo htmlspecialchars($_POST['custom_message'] ?? ''); ?></textarea>
+                        <textarea class="form-control" name="custom_message" id="custom_message" rows="4"></textarea>
                     </div>
                     <div class="col-12">
                         <label for="cc_emails" class="form-label">CC email addresses</label>
-                        <input type="email" class="form-control" name="cc_emails" id="cc_emails" value="<?php echo htmlspecialchars($_POST['cc_emails'] ?? ''); ?>">
+                        <input type="text" class="form-control" name="cc_emails" id="cc_emails">
                         <div class="form-text help-text">Separate multiple emails with commas.</div>
                     </div>
                 </div>
             </div>
 
-            <div class="section-title">Consent</div>
+            <div class="section-title">
+                <i class="fas fa-shield-alt"></i> Consent
+            </div>
             <div class="card p-4 mb-4">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="consent" value="1" id="consent" required <?php echo isset($_POST['consent']) ? 'checked' : ''; ?>>
+                    <input class="form-check-input" type="checkbox" name="consent" value="1" id="consent" required>
                     <label class="form-check-label" for="consent">
                         I consent to storing this information for the purposes of organizing the presentation.
                     </label>
@@ -209,30 +298,76 @@ $message_type = '';
             </div>
 
             <div class="text-center mt-4">
-                <button type="submit" class="btn btn-primary btn-lg">Send Request</button>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-paper-plane"></i> Send Request
+                </button>
             </div>
         </form>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Toggle competition fields on Yes/No
-        (function() {
-            var radios = document.querySelectorAll('input[name="include_comp"]');
-            var comp = document.getElementById('comp-fields');
+        document.querySelectorAll('input[name="include_comp"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.getElementById('comp-fields').classList.toggle('d-none', this.value !== '1');
+            });
+        });
 
-            function update() {
-                var val = document.querySelector('input[name="include_comp"]:checked');
-                if (val && val.value === '1') comp.classList.remove('d-none');
-                else comp.classList.add('d-none');
+        // Form validation
+        document.getElementById('presentationForm').addEventListener('submit', function(e) {
+            let isValid = true;
+
+            // Check required fields
+            const requiredFields = this.querySelectorAll('[required]');
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    field.classList.add('is-invalid');
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            // Validate emails
+            const emailFields = this.querySelectorAll('input[type="email"]');
+            emailFields.forEach(field => {
+                if (field.value && !isValidEmail(field.value)) {
+                    isValid = false;
+                    field.classList.add('is-invalid');
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                // We no longer need to show a message here since PHP will handle it on redirect
             }
-            for (var i = 0; i < radios.length; i++) {
-                radios[i].addEventListener('change', update);
-            }
-            update(); // Initial call
-        })();
+        });
+
+        // Email validation function
+        function isValidEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        // Show message function - now triggered by URL parameters
+        function showMessage(text, type) {
+            const messageEl = document.getElementById(type + 'Message');
+            messageEl.textContent = text;
+            messageEl.style.display = 'block';
+
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 5000);
+        }
+
+        // Check if there's a message in URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('message') === 'success') {
+            showMessage('درخواست شما با موفقیت ارسال شد. متشکریم!', 'success');
+        } else if (urlParams.get('message') === 'error') {
+            showMessage('مشکلی در ارسال درخواست شما پیش آمد. لطفاً دوباره تلاش کنید.', 'error');
+        }
     </script>
 </body>
-
 </html>
