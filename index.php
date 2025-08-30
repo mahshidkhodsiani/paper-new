@@ -1,3 +1,12 @@
+<?php
+
+// این خط تمام خطاهای PHP را فعال می‌کند.
+error_reporting(E_ALL);
+
+// این خط نمایش خطاها را در مرورگر فعال می‌کند.
+ini_set('display_errors', 1);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 

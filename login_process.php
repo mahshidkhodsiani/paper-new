@@ -5,63 +5,65 @@ include "config.php";
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 
+// بررسی خطای اتصال به دیتابیس
 if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+    die("خطا در اتصال به دیتابیس: " . $conn->connect_error);
 }
 
-if (isset($_POST['enter'])) {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+// بررسی اینکه آیا اطلاعات فرم با متد POST ارسال شده است یا خیر
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['email']) && isset($_POST['password'])) {
+        $email = $_POST['email'];
+        $password = $_POST['password'];
 
-    // ۱. از Prepared Statement برای جلوگیری از SQL Injection استفاده کنید.
-    $sql = "SELECT id, name, family, email, password, status, profile_pic FROM users WHERE email = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
+        // استفاده از Prepared Statement برای جلوگیری از SQL Injection
+        $sql = "SELECT id, name, family, email, password, status, profile_pic FROM users WHERE email = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-    if ($result && $result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-        $stored_hashed_password = $row['password'];
+        if ($result && $result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            $stored_hashed_password = $row['password'];
 
-        // ۲. از password_verify() برای تأیید رمز عبور هش شده استفاده کنید.
-        if (password_verify($password, $stored_hashed_password)) {
-            // رمز عبور صحیح است.
+            // استفاده از password_verify() برای تأیید رمز عبور
+            if (password_verify($password, $stored_hashed_password)) {
+                // رمز عبور صحیح است.
+                if ($row['status'] == 0) {
+                    $sql_reactivate = "UPDATE users SET status = 1 WHERE id = ?";
+                    $stmt_reactivate = $conn->prepare($sql_reactivate);
+                    $stmt_reactivate->bind_param("i", $row['id']);
+                    $stmt_reactivate->execute();
+                    $stmt_reactivate->close();
+                    $_SESSION['login_message'] = "Your account has been reactivated successfully!";
+                    $_SESSION['login_message_type'] = "success";
+                }
 
-            // --- بخش جدید: بررسی و فعال‌سازی مجدد اکانت در صورت نیاز ---
-            if ($row['status'] == 0) {
-                $sql_reactivate = "UPDATE users SET status = 1 WHERE id = ?";
-                $stmt_reactivate = $conn->prepare($sql_reactivate);
-                $stmt_reactivate->bind_param("i", $row['id']);
-                $stmt_reactivate->execute();
-                $stmt_reactivate->close();
+                unset($row['password']);
+                $_SESSION['user_data'] = $row;
+                $_SESSION['logged_in'] = true;
 
-                // پیام موفقیت برای کاربر تنظیم شود.
-                $_SESSION['login_message'] = "Your account has been reactivated successfully!";
-                $_SESSION['login_message_type'] = "success";
+                // هدایت کاربر به صفحه پروفایل
+                header("Location: profile");
+                exit();
+            } else {
+                // رمز عبور اشتباه است.
+                $_SESSION['login_error'] = "ایمیل یا رمز عبور اشتباه است.";
             }
-
-            // اطلاعات کاربری را بدون رمز عبور در سشن ذخیره کنید.
-            unset($row['password']);
-            $_SESSION['user_data'] = $row;
-
-            // کاربر را به صفحه پروفایل هدایت کنید.
-            header("Location: profile");
-            exit();
         } else {
-            // رمز عبور اشتباه است.
-            $_SESSION['login_error'] = "Incorrect email or password.";
-            header("Location: login.php");
-            exit();
+            // ایمیل در پایگاه داده یافت نشد.
+            $_SESSION['login_error'] = "ایمیل یا رمز عبور اشتباه است.";
         }
     } else {
-        // ایمیل در پایگاه داده یافت نشد.
-        $_SESSION['login_error'] = "Incorrect email or password.";
-        header("Location: login.php");
-        exit();
+        // اطلاعات کامل نیست.
+        $_SESSION['login_error'] = "لطفاً تمامی فیلدها را پر کنید.";
     }
 } else {
-    // اگر کاربر مستقیماً به login_process.php بدون ارسال فرم دسترسی پیدا کند.
-    header("Location: login.php");
-    exit();
+    // اگر درخواست با متد POST ارسال نشده باشد
+    $_SESSION['login_error'] = "درخواست نامعتبر.";
 }
+
+// در صورت بروز هر گونه خطا، به صفحه ورود بازگردان
+header("Location: login.php");
+exit();

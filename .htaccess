@@ -1,54 +1,15 @@
-# <IfModule mod_rewrite.c>
-#     RewriteEngine On
-#     RewriteBase /
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
 
-#     # If the requested file or directory does not exist in public folder, serve it via public/index.php
-#     RewriteCond %{DOCUMENT_ROOT}/public/$1 !-f
-#     RewriteCond %{DOCUMENT_ROOT}/public/$1 !-d
-#     RewriteRule ^(.*)$ moonshid/public/index.php?route=$1 [L,QSA]
+    # ریدایرکت اجباری به HTTPS
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# </IfModule>
+    # اگر فایل یا پوشه ای وجود ندارد، پسوند .php را به آن اضافه کن.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME}\.php -f
+    RewriteRule ^(.*)$ $1.php [L]
 
-
-
-
-
-
-
-
-
-
-
-
-# <IfModule mod_rewrite.c>
-
-#     RewriteEngine On
-
-#     # Stop processing if already in the /public directory
-
-#     # RewriteRule ^public/ – [L]
-
-#     # Static resources if they exist
-
-#     RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
-
-#     RewriteRule (.+) public/$1 [L]
-
-#     # Route all other requests
-
-#     RewriteRule (.*) public/index.php?route=$1 [L,QSA]
-
-# </IfModule>
-
-
-
-
-
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^([^\.]+)$ $1.php [NC,L]
-
-
-RewriteCond %{HTTPS} off
-RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>

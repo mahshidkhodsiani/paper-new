@@ -15,10 +15,10 @@
 
 
 
-$servername = "185.94.99.249";
-$username = "ithrbuau_admin";
-$password = ").F*v(WcMj57";
-$dbname = "ithrbuau_testy";
+$servername = "212.85.28.169";
+$username = "u477456209_mahshid";
+$password ="123456M@hshid";
+$dbname = "u477456209_paper";
 
 
 
@@ -36,6 +36,6 @@ $conn->set_charset("utf8");
 
 define('GOOGLE_CLIENT_ID', '629465661814-hnhubojf35ee3clsj04tsatqpuuqiq69.apps.googleusercontent.com'); // مطمئن شو دقیقاً همین باشه
 define('GOOGLE_CLIENT_SECRET', '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'); // این رو هم چک کن
-define('GOOGLE_REDIRECT_URI', 'https://localhost/paper-new/google_login_callback.php'); // این باید دقیقاً با Authorized redirect URIs در کنسول گوگل یکی باشه
+define('GOOGLE_REDIRECT_URI', 'https://paperet.com/google_login_callback.php'); // این باید دقیقاً با Authorized redirect URIs در کنسول گوگل یکی باشه
 
-// define('GOOGLE_REDIRECT_URI', 'https://moonshid.ir/paper/google_login_callback.php');
+
