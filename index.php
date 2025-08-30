@@ -87,7 +87,7 @@ ini_set('display_errors', 1);
                 </a> -->
 
 
-                <a href="profile/send_email" class="btn btn-outline-info rounded mb-3">
+                <a href="present_request_form" class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-microphone"></i> Request To Present
                 </a>
                 <br>

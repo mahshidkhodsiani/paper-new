@@ -1,4 +1,5 @@
 <?php
+
 /**
  * request_to_present.php
  * - Auth required (login/register/logout)
@@ -87,12 +88,30 @@ if ($config['require_https'] && (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] 
 }
 
 // -------- Helpers --------
-function csrf_token() { if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32)); return $_SESSION['csrf']; }
-function validate_csrf($t) { return isset($_SESSION['csrf']) && hash_equals($_SESSION['csrf'], $t === null ? '' : $t); }
-function h($s) { return htmlspecialchars($s === null ? '' : $s, ENT_QUOTES, 'UTF-8'); }
-function is_valid_email($e) { return filter_var($e, FILTER_VALIDATE_EMAIL); }
-function trim_or_null($s) { $s = trim((string)$s); return $s === '' ? null : $s; }
-function parse_cc_emails($s) {
+function csrf_token()
+{
+  if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32));
+  return $_SESSION['csrf'];
+}
+function validate_csrf($t)
+{
+  return isset($_SESSION['csrf']) && hash_equals($_SESSION['csrf'], $t === null ? '' : $t);
+}
+function h($s)
+{
+  return htmlspecialchars($s === null ? '' : $s, ENT_QUOTES, 'UTF-8');
+}
+function is_valid_email($e)
+{
+  return filter_var($e, FILTER_VALIDATE_EMAIL);
+}
+function trim_or_null($s)
+{
+  $s = trim((string)$s);
+  return $s === '' ? null : $s;
+}
+function parse_cc_emails($s)
+{
   $s = trim((string)$s);
   if ($s === '') return null;
   $parts = array_map('trim', explode(',', $s));
@@ -102,70 +121,115 @@ function parse_cc_emails($s) {
   }
   return $valid ? implode(',', $valid) : null;
 }
-function ensure_upload_dir($dir) {
-  if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
+function ensure_upload_dir($dir)
+{
+  if (!is_dir($dir)) {
+    @mkdir($dir, 0775, true);
+  }
   if (!is_dir($dir) || !is_writable($dir)) throw new RuntimeException("Upload directory not writable: $dir");
 }
-function base_url() {
+
+function base_url()
+{
   global $config;
   if (!empty($config['base_url'])) return $config['base_url'];
-  $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https' : 'http';
-  return $scheme.'://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'];
+  $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+  return $scheme . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
 }
-function script_dir_url() {
-  $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https' : 'http';
-  $dir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
-  return $scheme.'://'.$_SERVER['HTTP_HOST'].$dir;
+
+function script_dir_url()
+{
+  $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+  $dir = rtrim(str_replace('\\', '/', dirname($_SERVER['PHP_SELF'])), '/');
+  return $scheme . '://' . $_SERVER['HTTP_HOST'] . $dir;
 }
-function file_public_url($abs_path) {
-  $abs = str_replace('\\','/',$abs_path);
-  $root = str_replace('\\','/',__DIR__);
+function file_public_url($abs_path)
+{
+  $abs = str_replace('\\', '/', $abs_path);
+  $root = str_replace('\\', '/', __DIR__);
   if (strpos($abs, $root) === 0) {
     $rel = substr($abs, strlen($root)); // like /uploads/requests/...
     $rel = str_replace(' ', '%20', $rel);
-    return rtrim(script_dir_url(),'/') . $rel;
+    return rtrim(script_dir_url(), '/') . $rel;
   }
   return null;
 }
-function build_manage_link($token,$action){
-  $u=base_url(); $sep=(strpos($u,'?')!==false)?'&':'?'; return $u.$sep.'token='.urlencode($token).'&action='.urlencode($action);
+function build_manage_link($token, $action)
+{
+  $u = base_url();
+  $sep = (strpos($u, '?') !== false) ? '&' : '?';
+  return $u . $sep . 'token=' . urlencode($token) . '&action=' . urlencode($action);
 }
-function dt_from_parts($date,$time,$tz){
-  if(!$date||!$time) return null;
-  try{ return new DateTime($date.' '.$time.':00',$tz?new DateTimeZone($tz):new DateTimeZone('UTC')); }catch(Exception $e){ return null; }
+function dt_from_parts($date, $time, $tz)
+{
+  if (!$date || !$time) return null;
+  try {
+    return new DateTime($date . ' ' . $time . ':00', $tz ? new DateTimeZone($tz) : new DateTimeZone('UTC'));
+  } catch (Exception $e) {
+    return null;
+  }
 }
-function make_ics($uid,$summary,$desc,$location,$startDt,$durationMinutes,$organizerEmail){
-  $dtStart=clone $startDt; $dtEnd=clone $startDt; $dtEnd->modify('+'.(int)$durationMinutes.' minutes');
-  $fmt='Ymd\THis\Z'; $now=new DateTime('now',new DateTimeZone('UTC'));
-  $ics=array('BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//YourOrg//PresentRequest//EN','CALSCALE:GREGORIAN','METHOD:REQUEST','BEGIN:VEVENT',
-        'UID:'.$uid,'DTSTAMP:'.$now->format($fmt),'DTSTART:'.$dtStart->setTimezone(new DateTimeZone('UTC'))->format($fmt),
-        'DTEND:'.$dtEnd->setTimezone(new DateTimeZone('UTC'))->format($fmt),
-        $organizerEmail?'ORGANIZER:mailto:'.$organizerEmail:null,
-        'SUMMARY:'.str_replace(array("\r","\n"),' ',$summary),
-        'LOCATION:'.str_replace(array("\r","\n"),' ',$location),
-        'DESCRIPTION:'.preg_replace('/\r?\n/','\\n',$desc),
-        'END:VEVENT','END:VCALENDAR');
-  $out = array(); foreach ($ics as $x) { if ($x !== null) $out[] = $x; } return implode("\r\n", $out);
+function make_ics($uid, $summary, $desc, $location, $startDt, $durationMinutes, $organizerEmail)
+{
+  $dtStart = clone $startDt;
+  $dtEnd = clone $startDt;
+  $dtEnd->modify('+' . (int)$durationMinutes . ' minutes');
+  $fmt = 'Ymd\THis\Z';
+  $now = new DateTime('now', new DateTimeZone('UTC'));
+  $ics = array(
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//YourOrg//PresentRequest//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:REQUEST',
+    'BEGIN:VEVENT',
+    'UID:' . $uid,
+    'DTSTAMP:' . $now->format($fmt),
+    'DTSTART:' . $dtStart->setTimezone(new DateTimeZone('UTC'))->format($fmt),
+    'DTEND:' . $dtEnd->setTimezone(new DateTimeZone('UTC'))->format($fmt),
+    $organizerEmail ? 'ORGANIZER:mailto:' . $organizerEmail : null,
+    'SUMMARY:' . str_replace(array("\r", "\n"), ' ', $summary),
+    'LOCATION:' . str_replace(array("\r", "\n"), ' ', $location),
+    'DESCRIPTION:' . preg_replace('/\r?\n/', '\\n', $desc),
+    'END:VEVENT',
+    'END:VCALENDAR'
+  );
+  $out = array();
+  foreach ($ics as $x) {
+    if ($x !== null) $out[] = $x;
+  }
+  return implode("\r\n", $out);
 }
-function send_webhook($event,$payload){
+function send_webhook($event, $payload)
+{
   global $config;
   if (empty($config['webhook_url'])) return;
-  $ch=curl_init($config['webhook_url']); $headers=array('Content-Type: application/json');
-  if (!empty($config['webhook_secret'])) $headers[]='Authorization: Bearer '.$config['webhook_secret'];
-  $data=array('event'=>$event,'payload'=>$payload);
-  curl_setopt_array($ch,array(CURLOPT_POST=>true,CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>$headers,CURLOPT_POSTFIELDS=>json_encode($data),CURLOPT_TIMEOUT=>6));
-  curl_exec($ch); curl_close($ch);
+  $ch = curl_init($config['webhook_url']);
+  $headers = array('Content-Type: application/json');
+  if (!empty($config['webhook_secret'])) $headers[] = 'Authorization: Bearer ' . $config['webhook_secret'];
+  $data = array('event' => $event, 'payload' => $payload);
+  curl_setopt_array($ch, array(CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => $headers, CURLOPT_POSTFIELDS => json_encode($data), CURLOPT_TIMEOUT => 6));
+  curl_exec($ch);
+  curl_close($ch);
 }
-function send_mail_with_optional_ics($to,$cc,$subject,$body,$icsContent=null,$icsFilename='invite.ics'){
+function send_mail_with_optional_ics($to, $cc, $subject, $body, $icsContent = null, $icsFilename = 'invite.ics')
+{
   global $config;
-  $headers=array(); $boundary='==Multipart_Boundary_x'.bin2hex(random_bytes(8)).'x';
-  if($icsContent){
-    $headers[]="From: {$config['org_name']} <{$config['from_email']}>"; if($cc) $headers[]="Cc: {$cc}"; $headers[]="MIME-Version: 1.0"; $headers[]="Content-Type: multipart/mixed; boundary=\"$boundary\"";
-    $msg="--$boundary\r\nContent-Type: text/plain; charset=\"UTF-8\"\r\n\r\n$body\r\n\r\n--$boundary\r\nContent-Type: text/calendar; method=REQUEST; charset=\"UTF-8\"\r\nContent-Transfer-Encoding: 8bit\r\nContent-Disposition: attachment; filename=\"$icsFilename\"\r\n\r\n$icsContent\r\n\r\n--$boundary--";
-    return @mail($to,$subject,$msg,implode("\r\n",$headers));
+  $headers = array();
+  $boundary = '==Multipart_Boundary_x' . bin2hex(random_bytes(8)) . 'x';
+  if ($icsContent) {
+    $headers[] = "From: {$config['org_name']} <{$config['from_email']}>";
+    if ($cc) $headers[] = "Cc: {$cc}";
+    $headers[] = "MIME-Version: 1.0";
+    $headers[] = "Content-Type: multipart/mixed; boundary=\"$boundary\"";
+    $msg = "--$boundary\r\nContent-Type: text/plain; charset=\"UTF-8\"\r\n\r\n$body\r\n\r\n--$boundary\r\nContent-Type: text/calendar; method=REQUEST; charset=\"UTF-8\"\r\nContent-Transfer-Encoding: 8bit\r\nContent-Disposition: attachment; filename=\"$icsFilename\"\r\n\r\n$icsContent\r\n\r\n--$boundary--";
+    return @mail($to, $subject, $msg, implode("\r\n", $headers));
   } else {
-    $headers[]="From: {$config['org_name']} <{$config['from_email']}>"; if($cc) $headers[]="Cc: {$cc}"; $headers[]="MIME-Version: 1.0"; $headers[]="Content-Type: text/plain; charset=UTF-8";
-    return @mail($to,$subject,$body,implode("\r\n",$headers));
+    $headers[] = "From: {$config['org_name']} <{$config['from_email']}>";
+    if ($cc) $headers[] = "Cc: {$cc}";
+    $headers[] = "MIME-Version: 1.0";
+    $headers[] = "Content-Type: text/plain; charset=UTF-8";
+    return @mail($to, $subject, $body, implode("\r\n", $headers));
   }
 }
 
@@ -180,12 +244,22 @@ try {
 }
 
 // -------- Auth helpers --------
-function current_user() { return isset($_SESSION['user']) ? $_SESSION['user'] : null; }
+function current_user()
+{
+  return isset($_SESSION['user']) ? $_SESSION['user'] : null;
+}
 
 // -------- CRON endpoint --------
 if (isset($_GET['cron'])) {
-  if (($_GET['secret'] ?? '') !== $config['cron_secret']) { http_response_code(403); echo 'Forbidden'; exit; }
-  if (!empty($db_error)) { echo 'DB error: '.h($db_error); exit; }
+  if (($_GET['secret'] ?? '') !== $config['cron_secret']) {
+    http_response_code(403);
+    echo 'Forbidden';
+    exit;
+  }
+  if (!empty($db_error)) {
+    echo 'DB error: ' . h($db_error);
+    exit;
+  }
   $today = new DateTime('today', new DateTimeZone('UTC'));
   $stmt = $pdo->prepare("SELECT * FROM request_to_present WHERE reminder_sent = 0 AND preferred_date IS NOT NULL AND status IN ('pending','accepted')");
   $stmt->execute();
@@ -229,7 +303,7 @@ if (isset($_GET['token'], $_GET['action']) && empty($_POST)) {
   } else {
     $token = $_GET['token'];
     $action = $_GET['action'];
-    if (!in_array($action, array('accept','decline'), true)) {
+    if (!in_array($action, array('accept', 'decline'), true)) {
       $status_message = 'Invalid action.';
     } else {
       $stmt = $pdo->prepare("SELECT * FROM request_to_present WHERE manage_token = :t LIMIT 1");
@@ -280,8 +354,8 @@ if (isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
           $hash = password_hash($pass, PASSWORD_DEFAULT);
           $stmt = $pdo->prepare("INSERT INTO users (name, email, password_hash) VALUES (:n,:e,:p)");
-          $stmt->execute(array(':n'=>$name, ':e'=>$email, ':p'=>$hash));
-          $_SESSION['user'] = array('id'=>$pdo->lastInsertId(), 'name'=>$name, 'email'=>$email);
+          $stmt->execute(array(':n' => $name, ':e' => $email, ':p' => $hash));
+          $_SESSION['user'] = array('id' => $pdo->lastInsertId(), 'name' => $name, 'email' => $email);
           header('Location: ' . strtok($_SERVER["REQUEST_URI"], '?'));
           exit;
         } catch (Exception $e) {
@@ -297,10 +371,10 @@ if (isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $auth_error = 'Database error: ' . h($db_error);
       } else {
         $stmt = $pdo->prepare("SELECT * FROM users WHERE email = :e LIMIT 1");
-        $stmt->execute(array(':e'=>$email));
+        $stmt->execute(array(':e' => $email));
         $user = $stmt->fetch();
         if ($user && password_verify($pass, $user['password_hash'])) {
-          $_SESSION['user'] = array('id'=>$user['id'], 'name'=>$user['name'], 'email'=>$user['email']);
+          $_SESSION['user'] = array('id' => $user['id'], 'name' => $user['name'], 'email' => $user['email']);
           header('Location: ' . strtok($_SERVER["REQUEST_URI"], '?'));
           exit;
         } else {
@@ -355,32 +429,36 @@ if (!isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
   $comp_details     = $include_comp ? trim_or_null(isset($_POST['comp_details']) ? $_POST['comp_details'] : '') : null;
 
   // Validation
-  if ($presenter_name==='') $errors[]='Presenter name is required.';
-  if (!is_valid_email($presenter_email)) $errors[]='A valid presenter email is required.';
-  if ($paper_title==='') $errors[]='Paper title is required.';
-  if ($paper_link && !filter_var($paper_link, FILTER_VALIDATE_URL)) $errors[]='Paper link must be a valid URL.';
-  if ($preferred_date && !preg_match('/^\d{4}-\d{2}-\d{2}$/',$preferred_date)) $errors[]='Preferred date must be YYYY-MM-DD.';
-  if ($preferred_time && !preg_match('/^\d{2}:\d{2}$/',$preferred_time)) $errors[]='Preferred time must be HH:MM.';
-  if ($alternate_date && !preg_match('/^\d{4}-\d{2}-\d{2}$/',$alternate_date)) $errors[]='Alternate date must be YYYY-MM-DD.';
-  if ($alternate_time && !preg_match('/^\d{2}:\d{2}$/',$alternate_time)) $errors[]='Alternate time must be HH:MM.';
-  if ($duration_minutes && !ctype_digit($duration_minutes)) $errors[]='Duration must be a whole number of minutes.';
-  if (!$consent) $errors[]='You must consent to store this information.';
+  if ($presenter_name === '') $errors[] = 'Presenter name is required.';
+  if (!is_valid_email($presenter_email)) $errors[] = 'A valid presenter email is required.';
+  if ($paper_title === '') $errors[] = 'Paper title is required.';
+  if ($paper_link && !filter_var($paper_link, FILTER_VALIDATE_URL)) $errors[] = 'Paper link must be a valid URL.';
+  if ($preferred_date && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $preferred_date)) $errors[] = 'Preferred date must be YYYY-MM-DD.';
+  if ($preferred_time && !preg_match('/^\d{2}:\d{2}$/', $preferred_time)) $errors[] = 'Preferred time must be HH:MM.';
+  if ($alternate_date && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $alternate_date)) $errors[] = 'Alternate date must be YYYY-MM-DD.';
+  if ($alternate_time && !preg_match('/^\d{2}:\d{2}$/', $alternate_time)) $errors[] = 'Alternate time must be HH:MM.';
+  if ($duration_minutes && !ctype_digit($duration_minutes)) $errors[] = 'Duration must be a whole number of minutes.';
+  if (!$consent) $errors[] = 'You must consent to store this information.';
 
   // File upload (paper PDF - optional)
   $pdf_path = null;
   if (!empty($_FILES['paper_pdf']['name'])) {
     try {
       ensure_upload_dir($config['upload_dir']);
-      $f=$_FILES['paper_pdf'];
-      if($f['error']!==UPLOAD_ERR_OK) throw new RuntimeException('Upload error code: '.$f['error']);
-      if($f['size']>$config['max_file_bytes']) throw new RuntimeException('File too large. Max 15 MB.');
-      $finfo=new finfo(FILEINFO_MIME_TYPE); $mime=$finfo->file($f['tmp_name']);
-      if(!in_array($mime,$config['allowed_mimes'],true)) throw new RuntimeException('Only PDF files are allowed.');
-      $ext='.pdf'; $safeBase=bin2hex(random_bytes(8));
-      $dest=$config['upload_dir'].'/'.date('Ymd_His').'_paper_'.$safeBase.$ext;
-      if(!move_uploaded_file($f['tmp_name'],$dest)) throw new RuntimeException('Failed to move uploaded file.');
-      $pdf_path=$dest;
-    } catch (Exception $e) { $errors[]='PDF upload failed (paper): '.$e->getMessage(); }
+      $f = $_FILES['paper_pdf'];
+      if ($f['error'] !== UPLOAD_ERR_OK) throw new RuntimeException('Upload error code: ' . $f['error']);
+      if ($f['size'] > $config['max_file_bytes']) throw new RuntimeException('File too large. Max 15 MB.');
+      $finfo = new finfo(FILEINFO_MIME_TYPE);
+      $mime = $finfo->file($f['tmp_name']);
+      if (!in_array($mime, $config['allowed_mimes'], true)) throw new RuntimeException('Only PDF files are allowed.');
+      $ext = '.pdf';
+      $safeBase = bin2hex(random_bytes(8));
+      $dest = $config['upload_dir'] . '/' . date('Ymd_His') . '_paper_' . $safeBase . $ext;
+      if (!move_uploaded_file($f['tmp_name'], $dest)) throw new RuntimeException('Failed to move uploaded file.');
+      $pdf_path = $dest;
+    } catch (Exception $e) {
+      $errors[] = 'PDF upload failed (paper): ' . $e->getMessage();
+    }
   }
 
   // File upload (competition PDF - optional, only if include_comp)
@@ -388,16 +466,20 @@ if (!isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($include_comp && !empty($_FILES['comp_pdf']['name'])) {
     try {
       ensure_upload_dir($config['upload_dir']);
-      $f=$_FILES['comp_pdf'];
-      if($f['error']!==UPLOAD_ERR_OK) throw new RuntimeException('Upload error code: '.$f['error']);
-      if($f['size']>$config['max_file_bytes']) throw new RuntimeException('File too large. Max 15 MB.');
-      $finfo=new finfo(FILEINFO_MIME_TYPE); $mime=$finfo->file($f['tmp_name']);
-      if(!in_array($mime,$config['allowed_mimes'],true)) throw new RuntimeException('Only PDF files are allowed.');
-      $ext='.pdf'; $safeBase=bin2hex(random_bytes(8));
-      $dest=$config['upload_dir'].'/'.date('Ymd_His').'_comp_'.$safeBase.$ext;
-      if(!move_uploaded_file($f['tmp_name'],$dest)) throw new RuntimeException('Failed to move uploaded file.');
-      $comp_pdf_path=$dest;
-    } catch (Exception $e) { $errors[]='PDF upload failed (competition): '.$e->getMessage(); }
+      $f = $_FILES['comp_pdf'];
+      if ($f['error'] !== UPLOAD_ERR_OK) throw new RuntimeException('Upload error code: ' . $f['error']);
+      if ($f['size'] > $config['max_file_bytes']) throw new RuntimeException('File too large. Max 15 MB.');
+      $finfo = new finfo(FILEINFO_MIME_TYPE);
+      $mime = $finfo->file($f['tmp_name']);
+      if (!in_array($mime, $config['allowed_mimes'], true)) throw new RuntimeException('Only PDF files are allowed.');
+      $ext = '.pdf';
+      $safeBase = bin2hex(random_bytes(8));
+      $dest = $config['upload_dir'] . '/' . date('Ymd_His') . '_comp_' . $safeBase . $ext;
+      if (!move_uploaded_file($f['tmp_name'], $dest)) throw new RuntimeException('Failed to move uploaded file.');
+      $comp_pdf_path = $dest;
+    } catch (Exception $e) {
+      $errors[] = 'PDF upload failed (competition): ' . $e->getMessage();
+    }
   }
 
   // Save
@@ -405,7 +487,11 @@ if (!isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
       $token = bin2hex(random_bytes(32));
       $reminder_date = null;
-      if ($preferred_date) { $dt = new DateTime($preferred_date, new DateTimeZone('UTC')); $dt->modify('-'.(int)$config['reminder_lead_days'].' days'); $reminder_date = $dt->format('Y-m-d'); }
+      if ($preferred_date) {
+        $dt = new DateTime($preferred_date, new DateTimeZone('UTC'));
+        $dt->modify('-' . (int)$config['reminder_lead_days'] . ' days');
+        $reminder_date = $dt->format('Y-m-d');
+      }
       $stmt = $pdo->prepare("
         INSERT INTO request_to_present
           (user_id, requester_name, requester_email, requester_affiliation, requester_phone,
@@ -423,18 +509,29 @@ if (!isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
            :comp_details, :comp_pdf_path)
       ");
       $stmt->execute(array(
-        ':user_id'=>$user['id'],
-        ':requester_name'=>$requester_name, ':requester_email'=>$requester_email,
-        ':requester_affiliation'=>$requester_aff, ':requester_phone'=>$requester_phone,
-        ':presenter_name'=>$presenter_name, ':presenter_email'=>$presenter_email,
-        ':presenter_affiliation'=>$presenter_aff,
-        ':paper_title'=>$paper_title, ':paper_link'=>$paper_link, ':pdf_path'=>$pdf_path,
-        ':message'=>$message,
-        ':preferred_date'=>$preferred_date, ':preferred_time'=>$preferred_time,
-        ':alternate_date'=>$alternate_date, ':alternate_time'=>$alternate_time,
-        ':timezone'=>$timezone_str, ':duration_minutes'=>$duration_minutes,
-        ':cc_emails'=>$cc_emails, ':manage_token'=>$token, ':reminder_date'=>$reminder_date,
-        ':comp_details'=>$comp_details, ':comp_pdf_path'=>$comp_pdf_path
+        ':user_id' => $user['id'],
+        ':requester_name' => $requester_name,
+        ':requester_email' => $requester_email,
+        ':requester_affiliation' => $requester_aff,
+        ':requester_phone' => $requester_phone,
+        ':presenter_name' => $presenter_name,
+        ':presenter_email' => $presenter_email,
+        ':presenter_affiliation' => $presenter_aff,
+        ':paper_title' => $paper_title,
+        ':paper_link' => $paper_link,
+        ':pdf_path' => $pdf_path,
+        ':message' => $message,
+        ':preferred_date' => $preferred_date,
+        ':preferred_time' => $preferred_time,
+        ':alternate_date' => $alternate_date,
+        ':alternate_time' => $alternate_time,
+        ':timezone' => $timezone_str,
+        ':duration_minutes' => $duration_minutes,
+        ':cc_emails' => $cc_emails,
+        ':manage_token' => $token,
+        ':reminder_date' => $reminder_date,
+        ':comp_details' => $comp_details,
+        ':comp_pdf_path' => $comp_pdf_path
       ));
       $insert_id = $pdo->lastInsertId();
       $success = true;
@@ -442,8 +539,8 @@ if (!isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
       // Email
       if ($config['send_email']) {
         $subject = "[{$config['org_name']}] Request to present: " . $paper_title;
-        $acceptLink  = build_manage_link($token,'accept');
-        $declineLink = build_manage_link($token,'decline');
+        $acceptLink  = build_manage_link($token, 'accept');
+        $declineLink = build_manage_link($token, 'decline');
 
         $lines = array();
         $lines[] = "Hello {$presenter_name},";
@@ -485,16 +582,16 @@ if (!isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $icsContent = null;
         if ($preferred_date && $preferred_time && $duration_minutes) {
           $tz = $timezone_str ? new DateTimeZone($timezone_str) : new DateTimeZone('UTC');
-          $start = dt_from_parts($preferred_date,$preferred_time,$tz);
+          $start = dt_from_parts($preferred_date, $preferred_time, $tz);
           if ($start) {
-            $uid  = 'rtp-'.$insert_id.'-'.bin2hex(random_bytes(6)).'@'.parse_url(base_url(), PHP_URL_HOST);
+            $uid  = 'rtp-' . $insert_id . '-' . bin2hex(random_bytes(6)) . '@' . parse_url(base_url(), PHP_URL_HOST);
             $descParts = array();
             if ($message) $descParts[] = $message;
             $descParts[] = "Paper: {$paper_title}";
             $descParts[] = "Requester: {$requester_name} ({$requester_email})";
             if ($requester_aff) $descParts[] = "Requester affiliation: {$requester_aff}";
             if ($requester_phone) $descParts[] = "Requester phone: {$requester_phone}";
-            if ($include_comp && $comp_details) $descParts[] = "Competition: ".$comp_details;
+            if ($include_comp && $comp_details) $descParts[] = "Competition: " . $comp_details;
             $desc = implode("\\n", $descParts);
             $icsContent = make_ics($uid, "Presentation: {$paper_title}", $desc, $config['org_name'], $start, (int)$duration_minutes, $requester_email);
           }
@@ -503,12 +600,17 @@ if (!isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
       }
 
       // Webhook
-      send_webhook('created',array(
-        'id'=>(int)$insert_id,'paper_title'=>$paper_title,'presenter_email'=>$presenter_email,
-        'preferred_date'=>$preferred_date,'preferred_time'=>$preferred_time,'timezone'=>$timezone_str,
-        'status'=>'pending','user_id'=>$user['id'],'include_comp'=>$include_comp
+      send_webhook('created', array(
+        'id' => (int)$insert_id,
+        'paper_title' => $paper_title,
+        'presenter_email' => $presenter_email,
+        'preferred_date' => $preferred_date,
+        'preferred_time' => $preferred_time,
+        'timezone' => $timezone_str,
+        'status' => 'pending',
+        'user_id' => $user['id'],
+        'include_comp' => $include_comp
       ));
-
     } catch (Exception $e) {
       $errors[] = 'Database error: ' . $e->getMessage();
     }
@@ -517,42 +619,178 @@ if (!isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Request to Present (Sign-in Required)</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#f6f7fb; margin:0; }
-    .container { max-width: 1000px; margin: 32px auto; background:white; padding:24px; border-radius:16px; box-shadow:0 6px 24px rgba(0,0,0,0.08); }
-    h1 { margin-top:0; font-size:24px; }
-    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:16px; }
-    .cards-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(340px,1fr)); gap:20px; align-items:start; }
-    .card { background:#ffffff; border:1px solid #e5e7eb; border-radius:14px; padding:16px; box-shadow:0 2px 10px rgba(0,0,0,0.04); }
-    .card h2 { margin:0 0 8px 0; font-size:18px; }
-    .card .sub { color:#6b7280; font-size:12px; margin-bottom:8px; }
-    label { display:block; font-weight:600; margin:6px 0; }
-    input[type="text"], input[type="email"], input[type="url"], input[type="date"], input[type="time"], input[type="number"], textarea, select, input[type="password"], input[type="file"] {
-      width:100%; padding:10px 12px; border:1px solid #e1e5ee; border-radius:10px; box-sizing:border-box; background:#fbfcff;
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #f6f7fb;
+      margin: 0;
     }
-    textarea { min-height:140px; }
-    .help { font-size:12px; color:#6b7280; }
-    .errors { background:#fff1f2; color:#b91c1c; border:1px solid #fecaca; padding:12px; border-radius:12px; margin-bottom:16px; }
-    .success { background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; padding:12px; border-radius:12px; margin-bottom:16px; }
-    .btn { appearance:none; border:0; background:#111827; color:white; padding:12px 16px; border-radius:12px; cursor:pointer; font-weight:600; }
-    .req:after { content:" *"; color:#ef4444; }
-    .section-title { font-size:18px; margin-top:12px; }
-    .status { background:#eef2ff; border:1px solid #c7d2fe; padding:12px; border-radius:12px; margin-bottom:16px; }
-    .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-    .muted { color:#6b7280; font-size:14px; }
-    a { color:#0f62fe; text-decoration:none; }
-    a:hover { text-decoration:underline; }
-    .hidden { display:none; }
+
+    .container {
+      max-width: 1000px;
+      margin: 32px auto;
+      background: white;
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+
+    .card h2 {
+      margin: 0 0 8px 0;
+      font-size: 18px;
+    }
+
+    .card .sub {
+      color: #6b7280;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin: 6px 0;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="url"],
+    input[type="date"],
+    input[type="time"],
+    input[type="number"],
+    textarea,
+    select,
+    input[type="password"],
+    input[type="file"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e1e5ee;
+      border-radius: 10px;
+      box-sizing: border-box;
+      background: #fbfcff;
+    }
+
+    textarea {
+      min-height: 140px;
+    }
+
+    .help {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .errors {
+      background: #fff1f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .success {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      background: #111827;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .req:after {
+      content: " *";
+      color: #ef4444;
+    }
+
+    .section-title {
+      font-size: 18px;
+      margin-top: 12px;
+    }
+
+    .status {
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .muted {
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    a {
+      color: #0f62fe;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="topbar">
-      <div><?php $org = isset($config['org_name']) ? trim($config['org_name']) : ''; if ($org !== '' && $org !== 'Your Lab / Department') { echo '<strong>'.h($org).'</strong>'; } ?></div>
+      <div><?php $org = isset($config['org_name']) ? trim($config['org_name']) : '';
+            if ($org !== '' && $org !== 'Your Lab / Department') {
+              echo '<strong>' . h($org) . '</strong>';
+            } ?></div>
       <div>
         <?php if (current_user()): ?>
           <span class="muted">Signed in as <?php echo h($_SESSION['user']['name']); ?> (<?php echo h($_SESSION['user']['email']); ?>)</span>
@@ -574,7 +812,7 @@ if (!isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="errors"><strong>Database connection failed.</strong><br><?php echo h($db_error); ?></div>
     <?php endif; ?>
 
-    <?php if (isset($_GET['auth']) && in_array($_GET['auth'], array('login','register'))): ?>
+    <?php if (isset($_GET['auth']) && in_array($_GET['auth'], array('login', 'register'))): ?>
       <?php if (!empty($auth_error)): ?>
         <div class="errors"><?php echo h($auth_error); ?></div>
       <?php endif; ?>
@@ -726,9 +964,12 @@ if (!isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
             <label for="timezone">Time Zone</label>
             <select id="timezone" name="timezone">
               <?php
-                $tzs = array('UTC','America/Chicago','America/New_York','America/Los_Angeles','Europe/London','Europe/Berlin','Europe/Paris','Asia/Tehran','Asia/Kolkata','Asia/Tokyo','Australia/Sydney');
-                $sel = isset($_POST['timezone']) ? $_POST['timezone'] : '';
-                foreach ($tzs as $tz) { $s = ($sel === $tz) ? 'selected' : ''; echo '<option value="'.h($tz).'" '.$s.'>'.h($tz).'</option>'; }
+              $tzs = array('UTC', 'America/Chicago', 'America/New_York', 'America/Los_Angeles', 'Europe/London', 'Europe/Berlin', 'Europe/Paris', 'Asia/Tehran', 'Asia/Kolkata', 'Asia/Tokyo', 'Australia/Sydney');
+              $sel = isset($_POST['timezone']) ? $_POST['timezone'] : '';
+              foreach ($tzs as $tz) {
+                $s = ($sel === $tz) ? 'selected' : '';
+                echo '<option value="' . h($tz) . '" ' . $s . '>' . h($tz) . '</option>';
+              }
               ?>
             </select>
             <div class="help">Time zone used for the invite & emails.</div>
@@ -800,17 +1041,21 @@ if (!isset($_GET['auth']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <script>
     // Toggle competition fields on Yes/No
-    (function(){
+    (function() {
       var radios = document.querySelectorAll('input[name="include_comp"]');
       var comp = document.getElementById('comp-fields');
+
       function update() {
         var val = document.querySelector('input[name="include_comp"]:checked');
         if (val && val.value === '1') comp.classList.remove('hidden');
         else comp.classList.add('hidden');
       }
-      for (var i=0;i<radios.length;i++){ radios[i].addEventListener('change', update); }
+      for (var i = 0; i < radios.length; i++) {
+        radios[i].addEventListener('change', update);
+      }
       update();
     })();
   </script>
 </body>
+
 </html>
