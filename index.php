@@ -92,10 +92,13 @@ ini_set('display_errors', 1);
                 </a>
                 <br>
 
-                <a href="" class="btn btn-outline-info rounded mb-3">
+                <a href="host_competetion" class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-trophy"></i> Host a competition
                 </a>
                 <br>
+                <!-- <a href="discover_competitions.php" class="btn btn-primary btn-lg mt-3">
+                    Discover Competitions
+                </a> -->
 
                 <a href="" class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-flask"></i> Build your Lab Page
