@@ -813,6 +813,9 @@ $user_data = $_SESSION['user_data'];
     <div class="container">
         <!-- Left: Setup form -->
         <div>
+
+                    <form class="card" method="post" enctype="multipart/form-data" id="competitionForm">
+
             <div class="card" style="border-left: 4px solid var(--success);">
                 <div class="d-flex justify-between align-center">
                     <div>
@@ -841,7 +844,7 @@ $user_data = $_SESSION['user_data'];
             </div>
 
             <!-- <form class="card" method="post" enctype="multipart/form-data" id="competitionForm" action="save_competition.php"> -->
-            <form class="card" method="post" enctype="multipart/form-data" id="competitionForm">
+            <!-- <form class="card" method="post" enctype="multipart/form-data" id="competitionForm"> -->
 
                 <input type="hidden" name="user_id" value="<?php echo $user_data['id']; ?>">
                 <input type="hidden" name="scope" value="setup">
