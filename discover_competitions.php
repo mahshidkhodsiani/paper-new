@@ -1,312 +1,333 @@
 <?php
-// discover_competitions.php
 
-// این خط فایل اتصال به دیتابیس را فراخوانی می‌کند.
+session_start();
 include "config.php";
 
-// این خط فایل هدر سایت را فراخوانی می‌کند.
-include 'header.php';
+function get_competitions()
+{
+    global $conn;
+    $competitions = [];
 
-// کوئری برای دریافت تمام مسابقات از دیتابیس
-$sql = "SELECT * FROM competitions ORDER BY start_date DESC";
-$result = $conn->query($sql);
+    $sql = "SELECT id, competition_title, organizer_name, start_date, end_date, submission_type FROM competitions ORDER BY start_date DESC";
+    $result = $conn->query($sql);
 
-$competitions = [];
-if ($result->num_rows > 0) {
-  while ($row = $result->fetch_assoc()) {
-    $competitions[] = $row;
-  }
-}
-?>
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $status = 'Upcoming';
+            $now = new DateTime();
+            $start_date = new DateTime($row['start_date']);
+            $end_date = new DateTime($row['end_date']);
 
-<style>
-  :root {
-    --brand: #0ea5b3;
-    --brand-dark: #0c8a96;
-    --brand-light: #ecfeff;
-    --text: #0f172a;
-    --text-light: #64748b;
-    --bg: #f8fafc;
-    --surface: #ffffff;
-    --border: #e2e8f0;
-    --border-light: #f1f5f9;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --error: #ef4444;
-    --radius: 12px;
-    --radius-sm: 8px;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  }
+            if ($now > $start_date && $now < $end_date) {
+                $status = 'Active';
+            } elseif ($now >= $end_date) {
+                $status = 'Completed';
+            }
 
-  body {
-    background-color: var(--bg);
-    color: var(--text);
-  }
-
-  .container {
-    max-width: 1200px;
-    margin: auto;
-    padding: 24px;
-  }
-
-  .section-title {
-    font-size: 2.25rem;
-    font-weight: 700;
-    margin-bottom: 24px;
-    color: var(--text);
-  }
-
-  .filters-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 24px;
-    padding: 16px;
-    background-color: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-  }
-
-  .filters-bar select,
-  .filters-bar input,
-  .filters-bar button {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 8px 12px;
-    font-size: 1rem;
-  }
-
-  .grid-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 24px;
-  }
-
-  .competition-card {
-    background-color: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.2s ease-in-out;
-  }
-
-  .competition-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-lg);
-  }
-
-  .card-header {
-    height: 120px;
-    position: relative;
-    background-color: var(--brand);
-    color: white;
-    display: flex;
-    align-items: flex-end;
-    padding: 16px;
-  }
-
-  .card-header .status-badge {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    background-color: rgba(255, 255, 255, 0.85);
-    color: var(--text);
-    padding: 4px 8px;
-    border-radius: var(--radius-sm);
-    font-size: 0.8rem;
-    font-weight: 600;
-  }
-
-  .card-header .status-badge.active {
-    background-color: var(--success);
-    color: white;
-  }
-
-  .card-header .status-badge.upcoming {
-    background-color: var(--brand-light);
-    color: var(--brand-dark);
-  }
-
-  .card-header .status-badge.completed {
-    background-color: var(--text-light);
-    color: white;
-  }
-
-  .card-header h3 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .card-body {
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-  }
-
-  .card-body .org-name {
-    color: var(--text-light);
-    font-size: 0.9rem;
-    margin-bottom: 8px;
-  }
-
-  .card-body .competition-details {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.9rem;
-    color: var(--text-light);
-    margin-bottom: 12px;
-  }
-
-  .card-body .competition-details span {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .card-body .description {
-    font-size: 0.95rem;
-    color: var(--text);
-    flex-grow: 1;
-    margin-bottom: 12px;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .card-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 12px;
-  }
-
-  .card-tags .tag {
-    background-color: var(--border-light);
-    color: var(--text-light);
-    padding: 4px 8px;
-    border-radius: var(--radius-sm);
-    font-size: 0.8rem;
-  }
-
-  .card-footer {
-    padding: 16px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .card-footer .prize-info {
-    font-weight: 600;
-    color: var(--brand-dark);
-    font-size: 1rem;
-  }
-
-  .btn {
-    padding: 8px 16px;
-    border-radius: var(--radius-sm);
-    font-weight: 500;
-    text-decoration: none;
-    text-align: center;
-  }
-
-  .btn-primary {
-    background-color: var(--brand);
-    color: white;
-    border: none;
-  }
-
-  .btn-primary:hover {
-    background-color: var(--brand-dark);
-    color: white;
-  }
-
-  .btn-secondary {
-    background-color: var(--border-light);
-    color: var(--text-light);
-    border: none;
-  }
-
-  .btn-secondary:hover {
-    background-color: var(--border);
-  }
-</style>
-
-<div class="container">
-  <h1 class="section-title">Explore Competitions</h1>
-  <div class="filters-bar">
-    <div>
-      <label for="sort_by">Sort by:</label>
-      <select id="sort_by">
-        <option value="date">Newest</option>
-        <option value="popularity">Popularity</option>
-      </select>
-    </div>
-    <div>
-      <label for="category_filter">Category:</label>
-      <select id="category_filter">
-        <option value="all">All</option>
-        <option value="AI">AI</option>
-        <option value="Biomed">Biomed</option>
-        <option value="Art">Art</option>
-        <option value="Engineering">Engineering</option>
-      </select>
-    </div>
-    <button class="btn btn-primary" onclick="window.location.href='host_competetion.php'">Host a Competition</button>
-  </div>
-
-  <div class="grid-container" id="competitions-grid">
-    <?php
-    if (!empty($competitions)) {
-      foreach ($competitions as $competition) {
-        $status_class = 'upcoming';
-        $status_text = 'Upcoming';
-        if (strtotime($competition['end_date']) < time()) {
-          $status_class = 'completed';
-          $status_text = 'Completed';
-        } elseif (strtotime($competition['start_date']) <= time()) {
-          $status_class = 'active';
-          $status_text = 'Active';
+            $competitions[] = [
+                'id' => $row['id'],
+                'title' => $row['competition_title'],
+                'organizer' => $row['organizer_name'],
+                'date' => $row['start_date'],
+                'prize' => 'TBD',
+                'status' => $status,
+                'format' => 'TBD',
+                'submission' => $row['submission_type'],
+            ];
         }
-    ?>
-        <div class="competition-card">
-          <div class="card-header" style="background-color: var(--brand);">
-            <span class="status-badge <?= $status_class ?>"><?= $status_text ?></span>
-            <h3><?= htmlspecialchars($competition['title']) ?></h3>
-          </div>
-          <div class="card-body">
-            <span class="org-name"><?= htmlspecialchars($competition['org_name']) ?></span>
-            <p class="description"><?= htmlspecialchars($competition['description']) ?></p>
-            <div class="competition-details">
-              <span><i class="fa fa-calendar-alt"></i> <?= htmlspecialchars(date('M d, Y', strtotime($competition['start_date']))) ?></span>
-            </div>
-          </div>
-          <div class="card-footer">
-            <span class="prize-info"><?= htmlspecialchars($competition['prizes']) ?></span>
-            <button class="btn btn-primary">Details</button>
-          </div>
-        </div>
-    <?php
-      }
-    } else {
-      echo "<p>No competitions found. Be the first to host one!</p>";
     }
-    ?>
-  </div>
-</div>
 
-<?php
-// این خط فایل فوتر سایت را فراخوانی می‌کند.
-include 'footer.php';
+    $conn->close();
+
+    return $competitions;
+}
+
+$competitions = get_competitions();
+
 ?>
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Discover Competitions</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .competition-card {
+            border: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .competition-card:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            transform: translateY(-5px);
+        }
+
+        .card-title {
+            font-weight: bold;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="row align-items-center mb-5">
+            <div class="col-md-8">
+                <h1 class="display-4 fw-bold mb-3">Discover Competitions</h1>
+                <p class="lead">Browse competitions hosted by organizations and creators. Join or create your own.</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="host_competition.php" class="btn btn-primary btn-lg">Create Competition</a>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <div class="col-12 d-flex flex-wrap gap-3">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">All Statuses</button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#">All Statuses</a></li>
+                        <li><a class="dropdown-item" href="#">Upcoming</a></li>
+                        <li><a class="dropdown-item" href="#">Active</a></li>
+                        <li><a class="dropdown-item" href="#">Completed</a></li>
+                        <li><a class="dropdown-item" href="#">Expired</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <p class="text-muted mb-0"><?php echo count($competitions); ?> results</p>
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted small">Sort by</span>
+                <a href="#" class="text-decoration-none">Recent</a>
+                <span class="text-muted">|</span>
+                <a href="#" class="text-decoration-none">Popular</a>
+                <button class="btn btn-outline-secondary btn-sm ms-3">Apply Filters</button>
+            </div>
+        </div>
+        <div class="row g-4">
+            <?php foreach ($competitions as $competition) : ?>
+                <div class="col-md-6 col-lg-4">
+                    <div class="card competition-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <span class="badge bg-primary rounded-pill mb-2 status-badge"><?php echo htmlspecialchars($competition['status']); ?></span>
+                            <h5 class="card-title"><?php echo htmlspecialchars($competition['title']); ?></h5>
+                            <p class="card-text text-muted mb-1"><small>
+                                    <i class="bi bi-building me-1"></i><?php echo htmlspecialchars($competition['organizer']); ?>
+                                    <i class="bi bi-calendar-event me-1 ms-3"></i><?php echo htmlspecialchars($competition['date']); ?>
+                                    <i class="bi bi-gift me-1 ms-3"></i><?php echo htmlspecialchars($competition['prize']); ?>
+                                </small></p>
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge text-bg-light border"><?php echo htmlspecialchars($competition['format']); ?></span>
+                                    <span class="badge text-bg-light border"><?php echo htmlspecialchars($competition['submission']); ?></span>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#competitionModal" data-bs-id="<?php echo $competition['id']; ?>">View</button>
+                                    <button class="btn btn-primary btn-sm participate-btn-main" data-competition-id="<?php echo $competition['id']; ?>">Participate</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <footer class="text-center py-4 bg-white mt-5">
+        <p class="text-muted small mb-0">&copy; 2025 Paperet • Community Discover</p>
+        <p class="text-muted small"><a href="#" class="text-decoration-none">Host yours</a></p>
+    </footer>
+
+    <div class="modal fade" id="competitionModal" tabindex="-1" aria-labelledby="competitionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="competitionModalLabel"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modal-content-container">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <div>
+                        <button class="btn btn-outline-secondary" id="modal-share-btn">Share</button>
+                        <a href="#" class="btn btn-secondary" id="modal-download-btn" target="_blank">Download Rubric</a>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" id="modal-participate-btn">Participate</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const competitionModal = document.getElementById('competitionModal');
+        const participateBtn = document.getElementById('modal-participate-btn');
+        const shareBtn = document.getElementById('modal-share-btn');
+        const downloadBtn = document.getElementById('modal-download-btn');
+        let currentCompetitionId = null;
+
+        competitionModal.addEventListener('show.bs.modal', async event => {
+            const button = event.relatedTarget;
+            currentCompetitionId = button.getAttribute('data-bs-id');
+            const modalTitle = competitionModal.querySelector('.modal-title');
+            const modalBody = competitionModal.querySelector('.modal-body #modal-content-container');
+
+            modalBody.innerHTML = `<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
+            modalTitle.textContent = 'Loading...';
+            participateBtn.disabled = false;
+            downloadBtn.style.display = 'none';
+
+            try {
+                const response = await fetch(`fetch_competition_details.php?id=${currentCompetitionId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    modalTitle.textContent = data.competition.title;
+
+                    const deadlineDate = new Date(data.competition.endDate);
+                    const now = new Date();
+                    const timeLeftMs = deadlineDate - now;
+                    const daysLeft = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
+                    const deadlineText = daysLeft > 0 ? `${daysLeft} days left` : 'Expired';
+
+                    let contentHtml = `
+                        <p class="text-muted"><span class="fw-bold">Description:</span> ${data.competition.description}</p>
+                        <div class="row">
+                            <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Organizer:</span> ${data.competition.organizer}</p></div>
+                            <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Date:</span> ${data.competition.startDate}</p></div>
+                            <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Status:</span> ${data.competition.status}</p></div>
+                            <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Deadline:</span> ${deadlineText}</p></div>
+                            <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Prizes:</span> ${data.competition.prize}</p></div>
+                            <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Participants:</span> ${data.competition.participants}</p></div>
+                            <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Views:</span> ${data.competition.views}</p></div>
+                            <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Format:</span> ${data.competition.format}</p></div>
+                            ${data.competition.room_link ? `<div class="col-md-12 mt-2"><p class="text-muted mb-0"><span class="fw-bold">Live link:</span> <a href="${data.competition.room_link}" target="_blank">Link will be shared after acceptance</a></p></div>` : ''}
+                        </div>
+                        <div class="mt-3">
+                            <span class="fw-bold">Tags:</span>
+                            ${data.competition.tags.map(tag => `<span class="badge bg-secondary me-1">${tag}</span>`).join('')}
+                        </div>
+                    `;
+
+                    if (data.competition.rubric && Object.keys(data.competition.rubric).length > 0) {
+                        contentHtml += `
+                            <hr class="my-4">
+                            <h5>Evaluation Rubric</h5>
+                            <table class="table table-striped table-sm">
+                                <thead><tr><th>Criteria</th><th>Weight</th></tr></thead>
+                                <tbody>
+                                    ${Object.keys(data.competition.rubric).map(criteria => `
+                                        <tr><td>${criteria}</td><td>${data.competition.rubric[criteria]}%</td></tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        `;
+                    }
+                    if (data.competition.rubric_pdf) {
+                        downloadBtn.style.display = 'inline-block';
+                        downloadBtn.href = data.competition.rubric_pdf;
+                    } else {
+                        downloadBtn.style.display = 'none';
+                    }
+
+                    modalBody.innerHTML = contentHtml;
+                } else {
+                    modalTitle.textContent = 'Error';
+                    modalBody.innerHTML = `<p class="text-danger">${data.message}</p>`;
+                }
+            } catch (error) {
+                modalTitle.textContent = 'Error';
+                modalBody.innerHTML = `<p class="text-danger">Failed to fetch data. Please try again.</p>`;
+                console.error('Fetch error:', error);
+            }
+        });
+
+        // Handle Share button click for modal
+        shareBtn.addEventListener('click', () => {
+            const url = `${window.location.protocol}//${window.location.host}${window.location.pathname}?id=${currentCompetitionId}`;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Check out this competition!',
+                    url: url
+                }).catch(console.error);
+            } else {
+                navigator.clipboard.writeText(url).then(() => {
+                    alert('Competition URL copied to clipboard!');
+                }).catch(err => console.error('Could not copy text: ', err));
+            }
+        });
+
+        // Handle Participate button click for modal
+        participateBtn.addEventListener('click', async () => {
+            const competitionId = currentCompetitionId;
+            try {
+                const registerResponse = await fetch(`register_participant.php?competition_id=${competitionId}`);
+                const registerData = await registerResponse.json();
+
+                if (registerData.success) {
+                    alert(registerData.message);
+                    window.location.reload();
+                } else {
+                    if (registerData.message.includes("must be logged in")) {
+                        alert(registerData.message);
+                        const redirectUrl = encodeURIComponent(`${window.location.pathname}?id=${competitionId}`);
+                        window.location.href = `login.php?redirect_to=${redirectUrl}`;
+                    } else {
+                        alert(registerData.message);
+                    }
+                }
+            } catch (error) {
+                alert('An error occurred. Please try again.');
+                console.error('Participation error:', error);
+            }
+        });
+
+        // Handle Participate button click on the main page
+        document.addEventListener('click', async e => {
+            if (e.target.classList.contains('participate-btn-main')) {
+                const competitionId = e.target.getAttribute('data-competition-id');
+                try {
+                    const registerResponse = await fetch(`register_participant.php?competition_id=${competitionId}`);
+                    const registerData = await registerResponse.json();
+
+                    if (registerData.success) {
+                        alert(registerData.message);
+                        window.location.reload();
+                    } else {
+                        if (registerData.message.includes("must be logged in")) {
+                            alert(registerData.message);
+                            const redirectUrl = encodeURIComponent(`${window.location.pathname}?id=${competitionId}`);
+                            window.location.href = `login.php?redirect_to=${redirectUrl}`;
+                        } else {
+                            alert(registerData.message);
+                        }
+                    }
+                } catch (error) {
+                    alert('An error occurred. Please try again.');
+                    console.error('Participation error:', error);
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

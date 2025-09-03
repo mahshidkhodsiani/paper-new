@@ -814,37 +814,37 @@ $user_data = $_SESSION['user_data'];
         <!-- Left: Setup form -->
         <div>
 
-                    <form class="card" method="post" enctype="multipart/form-data" id="competitionForm">
+            <form class="card" method="post" enctype="multipart/form-data" id="competitionForm">
 
-            <div class="card" style="border-left: 4px solid var(--success);">
-                <div class="d-flex justify-between align-center">
-                    <div>
-                        <h3>Create New Competition</h3>
-                        <p class="text-muted">Set up a new competition in minutes with our step-by-step wizard</p>
+                <div class="card" style="border-left: 4px solid var(--success);">
+                    <div class="d-flex justify-between align-center">
+                        <div>
+                            <h3>Create New Competition</h3>
+                            <p class="text-muted">Set up a new competition in minutes with our step-by-step wizard</p>
+                        </div>
+                        <div class="spinner" id="headerSpinner" style="display: none;"></div>
                     </div>
-                    <div class="spinner" id="headerSpinner" style="display: none;"></div>
+
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 14%;"></div>
+                    </div>
+
+                    <div class="d-flex justify-between mt-4">
+                        <button type="button" class="btn btn-secondary" id="prevTab">
+                            <i class="fas fa-arrow-left"></i> Previous
+                        </button>
+                        <button type="button" class="btn" id="nextTab">
+                            Next <i class="fas fa-arrow-right"></i>
+                        </button>
+                        <button type="submit" class="btn" id="submitBtn" style="display: none;">
+                            <span>Create Competition</span>
+                            <div class="spinner" id="submitSpinner" style="display: none;"></div>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill" style="width: 14%;"></div>
-                </div>
-
-                <div class="d-flex justify-between mt-4">
-                    <button type="button" class="btn btn-secondary" id="prevTab">
-                        <i class="fas fa-arrow-left"></i> Previous
-                    </button>
-                    <button type="button" class="btn" id="nextTab">
-                        Next <i class="fas fa-arrow-right"></i>
-                    </button>
-                    <button type="submit" class="btn" id="submitBtn" style="display: none;">
-                        <span>Create Competition</span>
-                        <div class="spinner" id="submitSpinner" style="display: none;"></div>
-                    </button>
-                </div>
-            </div>
-
-            <!-- <form class="card" method="post" enctype="multipart/form-data" id="competitionForm" action="save_competition.php"> -->
-            <!-- <form class="card" method="post" enctype="multipart/form-data" id="competitionForm"> -->
+                <!-- <form class="card" method="post" enctype="multipart/form-data" id="competitionForm" action="save_competition.php"> -->
+                <!-- <form class="card" method="post" enctype="multipart/form-data" id="competitionForm"> -->
 
                 <input type="hidden" name="user_id" value="<?php echo $user_data['id']; ?>">
                 <input type="hidden" name="scope" value="setup">
