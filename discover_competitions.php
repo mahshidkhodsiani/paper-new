@@ -54,6 +54,8 @@ $competitions = get_competitions();
     <title>Discover Competitions</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
     <style>
         .competition-card {
             border: none;
@@ -79,6 +81,9 @@ $competitions = get_competitions();
 </head>
 
 <body class="bg-light">
+
+    <?php include 'header.php'; ?>
+    
     <div class="container py-5">
         <div class="row align-items-center mb-5">
             <div class="col-md-8">
@@ -142,10 +147,8 @@ $competitions = get_competitions();
             <?php endforeach; ?>
         </div>
     </div>
-    <footer class="text-center py-4 bg-white mt-5">
-        <p class="text-muted small mb-0">&copy; 2025 Paperet • Community Discover</p>
-        <p class="text-muted small"><a href="#" class="text-decoration-none">Host yours</a></p>
-    </footer>
+
+
 
     <div class="modal fade" id="competitionModal" tabindex="-1" aria-labelledby="competitionModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -177,6 +180,22 @@ $competitions = get_competitions();
         </div>
     </div>
 
+    <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="messageModalLabel"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="messageModalBody">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const competitionModal = document.getElementById('competitionModal');
@@ -184,6 +203,19 @@ $competitions = get_competitions();
         const shareBtn = document.getElementById('modal-share-btn');
         const downloadBtn = document.getElementById('modal-download-btn');
         let currentCompetitionId = null;
+
+        // New function to show custom modal messages
+        function showMessageModal(message, isSuccess = true) {
+            const modal = new bootstrap.Modal(document.getElementById('messageModal'));
+            const modalTitle = document.getElementById('messageModalLabel');
+            const modalBody = document.getElementById('messageModalBody');
+
+            modalTitle.textContent = isSuccess ? 'Success' : 'Error';
+            modalTitle.className = 'modal-title ' + (isSuccess ? 'text-success' : 'text-danger');
+            modalBody.innerHTML = `<p>${message}</p>`;
+
+            modal.show();
+        }
 
         competitionModal.addEventListener('show.bs.modal', async event => {
             const button = event.relatedTarget;
@@ -271,8 +303,11 @@ $competitions = get_competitions();
                 }).catch(console.error);
             } else {
                 navigator.clipboard.writeText(url).then(() => {
-                    alert('Competition URL copied to clipboard!');
-                }).catch(err => console.error('Could not copy text: ', err));
+                    showMessageModal('Competition URL copied to clipboard!', true);
+                }).catch(err => {
+                    showMessageModal('Could not copy text to clipboard.', false);
+                    console.error('Could not copy text: ', err);
+                });
             }
         });
 
@@ -284,19 +319,20 @@ $competitions = get_competitions();
                 const registerData = await registerResponse.json();
 
                 if (registerData.success) {
-                    alert(registerData.message);
-                    window.location.reload();
+                    showMessageModal(registerData.message, true);
+                    // No need to reload, just show a success message
+                    // window.location.reload(); 
                 } else {
                     if (registerData.message.includes("must be logged in")) {
-                        alert(registerData.message);
+                        showMessageModal(registerData.message, false);
                         const redirectUrl = encodeURIComponent(`${window.location.pathname}?id=${competitionId}`);
                         window.location.href = `login.php?redirect_to=${redirectUrl}`;
                     } else {
-                        alert(registerData.message);
+                        showMessageModal(registerData.message, false);
                     }
                 }
             } catch (error) {
-                alert('An error occurred. Please try again.');
+                showMessageModal('An error occurred. Please try again.', false);
                 console.error('Participation error:', error);
             }
         });
@@ -310,24 +346,29 @@ $competitions = get_competitions();
                     const registerData = await registerResponse.json();
 
                     if (registerData.success) {
-                        alert(registerData.message);
-                        window.location.reload();
+                        showMessageModal(registerData.message, true);
+                        // No need to reload, just show a success message
+                        // window.location.reload(); 
                     } else {
                         if (registerData.message.includes("must be logged in")) {
-                            alert(registerData.message);
+                            showMessageModal(registerData.message, false);
                             const redirectUrl = encodeURIComponent(`${window.location.pathname}?id=${competitionId}`);
                             window.location.href = `login.php?redirect_to=${redirectUrl}`;
                         } else {
-                            alert(registerData.message);
+                            showMessageModal(registerData.message, false);
                         }
                     }
                 } catch (error) {
-                    alert('An error occurred. Please try again.');
+                    showMessageModal('An error occurred. Please try again.', false);
                     console.error('Participation error:', error);
                 }
             }
         });
     </script>
+
+
+    <?php include 'footer.php'; ?>
+
 </body>
 
 </html>

@@ -49,4 +49,3 @@
         </li>
     </ul>
 </nav>
-<div class="container mt-5">

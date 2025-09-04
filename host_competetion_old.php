@@ -1,17 +1,3 @@
-<?php
-session_start();
-include "config.php";
-
-// بررسی اینکه کاربر لاگین کرده است
-if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    header("Location: login.php");
-    exit();
-}
-
-// دریافت اطلاعات کاربر
-$user_data = $_SESSION['user_data'];
-?>
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -20,8 +6,6 @@ $user_data = $_SESSION['user_data'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paperet Competition Hosting</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-
     <style>
         :root {
             --brand: #0ea5b3;
@@ -744,68 +728,27 @@ $user_data = $_SESSION['user_data'];
         <div class="d-flex align-center gap-4">
             <div><i class="fas fa-info-circle"></i></div>
             <div>
-                <strong>Welcome, <?php echo htmlspecialchars($user_data['name'] . ' ' . $user_data['family']); ?>!</strong>
-                Create and manage your academic competitions.
+                <strong>Demo Mode:</strong> This is a preview of the enhanced Paperet Competition Hosting platform.
+                The backend integration would be required for full functionality.
             </div>
         </div>
     </div>
 
-    <?php
-    // اتصال به دیتابیس و دریافت تعداد مسابقات کاربر
-    $conn = new mysqli($servername, $username, $password, $dbname);
-    $user_id = $user_data['id'];
-
-    // بررسی خطای اتصال
-    if ($conn->connect_error) {
-        echo "<div class='alert alert-error'>خطا در اتصال به دیتابیس: " . $conn->connect_error . "</div>";
-        $active_count = $total_count = $completed_count = 0;
-    } else {
-        // دریافت تعداد مسابقات فعال
-        $sql_active = "SELECT COUNT(*) as count FROM competitions WHERE user_id = ? AND status IN ('upcoming', 'active')";
-        $stmt_active = $conn->prepare($sql_active);
-        $stmt_active->bind_param("i", $user_id);
-        $stmt_active->execute();
-        $result_active = $stmt_active->get_result();
-        $active_count = $result_active->fetch_assoc()['count'];
-        $stmt_active->close();
-
-        // دریافت تعداد کل مسابقات
-        $sql_total = "SELECT COUNT(*) as count FROM competitions WHERE user_id = ?";
-        $stmt_total = $conn->prepare($sql_total);
-        $stmt_total->bind_param("i", $user_id);
-        $stmt_total->execute();
-        $result_total = $stmt_total->get_result();
-        $total_count = $result_total->fetch_assoc()['count'];
-        $stmt_total->close();
-
-        // دریافت تعداد مسابقات تکمیل شده
-        $sql_completed = "SELECT COUNT(*) as count FROM competitions WHERE user_id = ? AND status = 'completed'";
-        $stmt_completed = $conn->prepare($sql_completed);
-        $stmt_completed->bind_param("i", $user_id);
-        $stmt_completed->execute();
-        $result_completed = $stmt_completed->get_result();
-        $completed_count = $result_completed->fetch_assoc()['count'];
-        $stmt_completed->close();
-
-        $conn->close();
-    }
-    ?>
-
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-number"><?php echo $active_count; ?></div>
+            <div class="stat-number">4</div>
             <div class="stat-label">Active Competitions</div>
         </div>
         <div class="stat-card">
-            <div class="stat-number"><?php echo $total_count; ?></div>
-            <div class="stat-label">Total Competitions</div>
+            <div class="stat-number">127</div>
+            <div class="stat-label">Total Submissions</div>
         </div>
         <div class="stat-card">
-            <div class="stat-number"><?php echo $completed_count; ?></div>
-            <div class="stat-label">Completed</div>
+            <div class="stat-number">23</div>
+            <div class="stat-label">Judges</div>
         </div>
         <div class="stat-card">
-            <div class="stat-number"><?php echo $total_count > 0 ? round(($completed_count / $total_count) * 100) : 0; ?>%</div>
+            <div class="stat-number">86%</div>
             <div class="stat-label">Completion Rate</div>
         </div>
     </div>
@@ -813,40 +756,34 @@ $user_data = $_SESSION['user_data'];
     <div class="container">
         <!-- Left: Setup form -->
         <div>
-
-            <form class="card" method="post" enctype="multipart/form-data" id="competitionForm">
-
-                <div class="card" style="border-left: 4px solid var(--success);">
-                    <div class="d-flex justify-between align-center">
-                        <div>
-                            <h3>Create New Competition</h3>
-                            <p class="text-muted">Set up a new competition in minutes with our step-by-step wizard</p>
-                        </div>
-                        <div class="spinner" id="headerSpinner" style="display: none;"></div>
+            <div class="card" style="border-left: 4px solid var(--success);">
+                <div class="d-flex justify-between align-center">
+                    <div>
+                        <h3>Create New Competition</h3>
+                        <p class="text-muted">Set up a new competition in minutes with our step-by-step wizard</p>
                     </div>
-
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill" style="width: 14%;"></div>
-                    </div>
-
-                    <div class="d-flex justify-between mt-4">
-                        <button type="button" class="btn btn-secondary" id="prevTab">
-                            <i class="fas fa-arrow-left"></i> Previous
-                        </button>
-                        <button type="button" class="btn" id="nextTab">
-                            Next <i class="fas fa-arrow-right"></i>
-                        </button>
-                        <button type="submit" class="btn" id="submitBtn" style="display: none;">
-                            <span>Create Competition</span>
-                            <div class="spinner" id="submitSpinner" style="display: none;"></div>
-                        </button>
-                    </div>
+                    <div class="spinner" id="headerSpinner" style="display: none;"></div>
                 </div>
 
-                <!-- <form class="card" method="post" enctype="multipart/form-data" id="competitionForm" action="save_competition.php"> -->
-                <!-- <form class="card" method="post" enctype="multipart/form-data" id="competitionForm"> -->
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 14%;"></div>
+                </div>
 
-                <input type="hidden" name="user_id" value="<?php echo $user_data['id']; ?>">
+                <div class="d-flex justify-between mt-4">
+                    <button type="button" class="btn btn-secondary" id="prevTab">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button type="button" class="btn" id="nextTab">
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button type="submit" class="btn" id="submitBtn" style="display: none;">
+                        <span>Create Competition</span>
+                        <div class="spinner" id="submitSpinner" style="display: none;"></div>
+                    </button>
+                </div>
+            </div>
+
+            <form class="card" method="post" enctype="multipart/form-data" id="competitionForm">
                 <input type="hidden" name="scope" value="setup">
                 <input type="hidden" name="action" value="create">
 
@@ -874,7 +811,7 @@ $user_data = $_SESSION['user_data'];
                             </div>
                             <div class="form-group">
                                 <label for="org_email">Organizer Contact Email <span class="text-error">*</span></label>
-                                <input type="email" id="org_email" name="org_email" placeholder="organizer@example.com" value="<?php echo htmlspecialchars($user_data['email']); ?>" required>
+                                <input type="email" id="org_email" name="org_email" placeholder="organizer@example.com" required>
                                 <div class="error-message" id="emailError">Please enter a valid email address</div>
                             </div>
                             <div class="form-row">
@@ -927,76 +864,66 @@ $user_data = $_SESSION['user_data'];
             <div class="card">
                 <div class="card-header">
                     <h2>Your Competitions</h2>
-                    <span class="badge badge-info" id="competitionCount"><?php echo $total_count; ?></span>
+                    <span class="badge badge-info" id="competitionCount">4</span>
                 </div>
 
                 <div id="competitionsList">
-                    <?php
-                    // اتصال به دیتابیس و دریافت مسابقات کاربر
-                    $conn = new mysqli($servername, $username, $password, $dbname);
-
-                    if ($conn->connect_error) {
-                        echo "<div class='alert alert-error'>خطا در اتصال به دیتابیس: " . $conn->connect_error . "</div>";
-                    } else {
-                        $sql = "SELECT id, comp_title, status, created_at FROM competitions WHERE user_id = ? ORDER BY created_at DESC";
-                        $stmt = $conn->prepare($sql);
-                        $stmt->bind_param("i", $user_id);
-                        $stmt->execute();
-                        $result = $stmt->get_result();
-
-                        if ($result->num_rows > 0) {
-                            echo '<table>
-                                <thead>
-                                    <tr>
-                                        <th>Title</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>';
-
-                            while ($row = $result->fetch_assoc()) {
-                                $badge_class = '';
-                                switch ($row['status']) {
-                                    case 'active':
-                                        $badge_class = 'badge-success';
-                                        break;
-                                    case 'completed':
-                                        $badge_class = 'badge-warning';
-                                        break;
-                                    case 'upcoming':
-                                        $badge_class = 'badge-info';
-                                        break;
-                                    default:
-                                        $badge_class = 'badge-info';
-                                }
-
-                                echo '<tr>
-                                    <td>
-                                        <div style="font-weight: 600;">' . htmlspecialchars($row['comp_title']) . '</div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">
-                                            ' . date('M j, Y', strtotime($row['created_at'])) . '
-                                        </div>
-                                    </td>
-                                    <td><span class="badge ' . $badge_class . '">' . ucfirst($row['status']) . '</span></td>
-                                    <td>
-                                        <div class="d-flex gap-2">
-                                            <button class="btn btn-sm" onclick="viewCompetition(' . $row['id'] . ')">View</button>
-                                            <button class="btn btn-sm btn-secondary" onclick="editCompetition(' . $row['id'] . ')">Edit</button>
-                                        </div>
-                                    </td>
-                                </tr>';
-                            }
-
-                            echo '</tbody></table>';
-                        } else {
-                            echo '<p class="text-muted">You haven\'t created any competitions yet.</p>';
-                        }
-
-                        $stmt->close();
-                        $conn->close();
-                    }
-                    ?>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600;">Spring 2023 Research Symposium</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">
+                                        Apr 15, 2023
+                                    </div>
+                                </td>
+                                <td><span class="badge badge-success">Active</span></td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm" onclick="viewCompetition('comp1')">View</button>
+                                        <button class="btn btn-sm btn-secondary" onclick="editCompetition('comp1')">Edit</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600;">Summer Innovation Challenge</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">
+                                        Jul 10, 2023
+                                    </div>
+                                </td>
+                                <td><span class="badge badge-warning">Completed</span></td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm" onclick="viewCompetition('comp2')">View</button>
+                                        <button class="btn btn-sm btn-secondary" onclick="editCompetition('comp2')">Edit</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div style="font-weight: 600;">Fall Design Competition</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">
+                                        Oct 5, 2023
+                                    </div>
+                                </td>
+                                <td><span class="badge badge-info">Upcoming</span></td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm" onclick="viewCompetition('comp3')">View</button>
+                                        <button class="btn btn-sm btn-secondary" onclick="editCompetition('comp3')">Edit</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -1030,6 +957,78 @@ $user_data = $_SESSION['user_data'];
     </div>
 
     <script>
+        // Data structure to store competitions
+        let competitions = [{
+                id: 'comp1',
+                title: 'Spring 2023 Research Symposium',
+                status: 'active',
+                date: 'Apr 15, 2023',
+                organization: 'University of Technology',
+                email: 'research@university.edu',
+                description: 'Annual research symposium showcasing student projects',
+                privacy: 'public',
+                voting: 'judges',
+                submissionType: 'file',
+                maxFileSize: 10,
+                allowedFormats: ['pdf', 'doc', 'docx'],
+                awards: [{
+                        name: 'First Place',
+                        value: 1000
+                    },
+                    {
+                        name: 'Second Place',
+                        value: 500
+                    }
+                ]
+            },
+            {
+                id: 'comp2',
+                title: 'Summer Innovation Challenge',
+                status: 'completed',
+                date: 'Jul 10, 2023',
+                organization: 'Innovate Inc.',
+                email: 'events@innovate.com',
+                description: 'Summer challenge for innovative tech solutions',
+                privacy: 'private',
+                voting: 'public',
+                submissionType: 'url',
+                maxFileSize: 5,
+                allowedFormats: ['pdf', 'ppt', 'pptx'],
+                awards: [{
+                        name: 'Grand Prize',
+                        value: 5000
+                    },
+                    {
+                        name: 'Innovation Award',
+                        value: 2500
+                    }
+                ]
+            },
+            {
+                id: 'comp3',
+                title: 'Fall Design Competition',
+                status: 'upcoming',
+                date: 'Oct 5, 2023',
+                organization: 'Design Guild',
+                email: 'competitions@designguild.org',
+                description: 'Annual design competition for creative professionals',
+                privacy: 'public',
+                voting: 'hybrid',
+                submissionType: 'file',
+                maxFileSize: 20,
+                allowedFormats: ['jpg', 'png', 'psd', 'ai'],
+                awards: [{
+                        name: 'Best Design',
+                        value: 3000
+                    },
+                    {
+                        name: 'People\'s Choice',
+                        value: 1500
+                    }
+                ]
+            }
+        ];
+
         // Tab management
         const tabs = document.querySelectorAll('.tab');
         const tabContent = document.getElementById('tabContent');
@@ -1133,7 +1132,7 @@ $user_data = $_SESSION['user_data'];
                                 </div>
                                 <div class="form-group">
                                     <label for="org_email">Organizer Contact Email <span class="text-error">*</span></label>
-                                    <input type="email" id="org_email" name="org_email" placeholder="organizer@example.com" value="<?php echo htmlspecialchars($user_data['email']); ?>" required>
+                                    <input type="email" id="org_email" name="org_email" placeholder="organizer@example.com" required>
                                     <div class="error-message" id="emailError">Please enter a valid email address</div>
                                 </div>
                                 <div class="form-row">
@@ -1178,48 +1177,73 @@ $user_data = $_SESSION['user_data'];
                                     <div class="form-group">
                                         <label for="timezone">Timezone</label>
                                         <select id="timezone" name="timezone">
-                                            <option value="America/Chicago">America/Chicago (CT)</option>
-                                            <option value="America/New_York">America/New_York (ET)</option>
-                                            <option value="America/Los_Angeles">America/Los_Angeles (PT)</option>
-                                            <option value="UTC">UTC</option>
+                                            <option value="EST">Eastern Time (EST)</option>
+                                            <option value="PST">Pacific Time (PST)</option>
+                                            <option value="CST">Central Time (CST)</option>
+                                            <option value="MST">Mountain Time (MST)</option>
+                                            <option value="GMT">Greenwich Mean Time (GMT)</option>
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label for="venue_link">Room / Meeting Link</label>
-                                        <input type="text" id="venue_link" name="venue_link" placeholder="Building & room, or Zoom/Meet link">
+                                        <label for="category">Category</label>
+                                        <select id="category" name="category">
+                                            <option value="academic">Academic</option>
+                                            <option value="business">Business</option>
+                                            <option value="technology">Technology</option>
+                                            <option value="design">Design</option>
+                                            <option value="arts">Arts</option>
+                                            <option value="sciences">Sciences</option>
+                                            <option value="other">Other</option>
+                                        </select>
                                     </div>
                                 </div>
+                            
+        <div class="form-row">
+            <div class="form-group">
+                <label for="timezone">Timezone</label>
+                <select id="timezone" name="timezone">
+                    <option value="America/Chicago">America/Chicago (CT)</option>
+                    <option value="America/New_York">America/New_York (ET)</option>
+                    <option value="America/Los_Angeles">America/Los_Angeles (PT)</option>
+                    <option value="UTC">UTC</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="venue_link">Room / Meeting Link</label>
+                <input type="text" id="venue_link" name="venue_link" placeholder="Building & room, or Zoom/Meet link">
+            </div>
+        </div>
 
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="session_track">Session / Track</label>
-                                        <input type="text" id="session_track" name="session_track" placeholder="e.g., AI, Bio, Design">
-                                        <div class="text-muted">Use commas for multiple tracks</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="slot_minutes">Presentation Duration (minutes)</label>
-                                        <input type="number" id="slot_minutes" name="slot_minutes" min="5" max="60" value="12">
-                                    </div>
-                                </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="session_track">Session / Track</label>
+                <input type="text" id="session_track" name="session_track" placeholder="e.g., AI, Bio, Design">
+                <div class="text-muted">Use commas for multiple tracks</div>
+            </div>
+            <div class="form-group">
+                <label for="slot_minutes">Presentation Duration (minutes)</label>
+                <input type="number" id="slot_minutes" name="slot_minutes" min="5" max="60" value="12">
+            </div>
+        </div>
 
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="buffer_minutes">Buffer Between Presentations (minutes)</label>
-                                        <input type="number" id="buffer_minutes" name="buffer_minutes" min="0" max="30" value="3">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Presentation Order</label>
-                                        <div class="checkbox-item">
-                                            <input type="checkbox" id="randomize_order" name="randomize_order" checked>
-                                            <label for="randomize_order">Randomize</label>
-                                        </div>
-                                        <div class="checkbox-item" style="margin-top:6px;">
-                                            <input type="checkbox" id="lock_order" name="lock_order">
-                                            <label for="lock_order">Lock order after publishing</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </fieldset>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="buffer_minutes">Buffer Between Presentations (minutes)</label>
+                <input type="number" id="buffer_minutes" name="buffer_minutes" min="0" max="30" value="3">
+            </div>
+            <div class="form-group">
+                <label>Presentation Order</label>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="randomize_order" name="randomize_order" checked>
+                    <label for="randomize_order">Randomize</label>
+                </div>
+                <div class="checkbox-item" style="margin-top:6px;">
+                    <input type="checkbox" id="lock_order" name="lock_order">
+                    <label for="lock_order">Lock order after publishing</label>
+                </div>
+            </div>
+        </div>
+    </fieldset>
                         </div>
                     `;
                     break;
@@ -1259,6 +1283,8 @@ $user_data = $_SESSION['user_data'];
                                     <div class="text-muted">Tip: choosing <em>Private</em> will also set visibility to Private.</div>
                                 </div>
 
+
+                                
                                 <div class="form-group">
                                     <label>Voting System <span class="text-error">*</span></label>
                                     <div style="margin-top: 8px;">
@@ -1328,11 +1354,11 @@ $user_data = $_SESSION['user_data'];
                                     </div>
                                 </div>
                             
-                                <div class="form-group">
-                                    <label for="judge_calibration">Judge Calibration Notes</label>
-                                    <textarea id="judge_calibration" name="judge_calibration" rows="3" placeholder="Explain scoring examples, what '5/Excellent' means, etc."></textarea>
-                                </div>
-                            </fieldset>
+        <div class="form-group">
+            <label for="judge_calibration">Judge Calibration Notes</label>
+            <textarea id="judge_calibration" name="judge_calibration" rows="3" placeholder="Explain scoring examples, what '5/Excellent' means, etc."></textarea>
+        </div>
+    </fieldset>
                         </div>
                     `;
                     break;
@@ -1379,11 +1405,12 @@ $user_data = $_SESSION['user_data'];
                                         </select>
                                         <div class="text-muted">Hold Ctrl/Cmd to select multiple</div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="rubric_pdf">Competition Rubric (PDF)</label>
-                                    <input type="file" id="rubric_pdf" name="rubric_pdf" accept="application/pdf">
-                                    <div class="text-muted">Upload a detailed scoring rubric as a PDF (optional).</div>
+        <div class="form-group">
+            <label for="rubric_pdf">Competition Rubric (PDF)</label>
+            <input type="file" id="rubric_pdf" name="rubric_pdf" accept="application/pdf">
+            <div class="text-muted">Upload a detailed scoring rubric as a PDF (optional).</div>
+        </div>
+        
                                 </div>
                                 
                                 <div class="form-group">
@@ -1397,35 +1424,35 @@ $user_data = $_SESSION['user_data'];
                                     <div class="text-muted">Add custom fields to the submission form using JSON format</div>
                                 </div>
                             
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="slide_deck">Slide Deck (required)</label>
-                                        <input type="file" id="slide_deck" name="slide_deck" accept=".pdf,.ppt,.pptx" required>
-                                        <div class="text-muted">Upload slides as PDF or PowerPoint.</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="abstract_text">Abstract (text)</label>
-                                        <textarea id="abstract_text" name="abstract_text" rows="3" placeholder="150–300 words describing the presentation."></textarea>
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="poster_image">Poster Image (optional)</label>
-                                        <input type="file" id="poster_image" name="poster_image" accept=".png,.jpg,.jpeg">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Consents</label>
-                                        <div class="checkbox-item">
-                                            <input type="checkbox" id="consent_record" name="consent_record">
-                                            <label for="consent_record">I consent to recording/photography of my presentation</label>
-                                        </div>
-                                        <div class="checkbox-item" style="margin-top:6px;">
-                                            <input type="checkbox" id="consent_public" name="consent_public">
-                                            <label for="consent_public">I consent to public display of my slides/abstract</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </fieldset>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="slide_deck">Slide Deck (required)</label>
+                <input type="file" id="slide_deck" name="slide_deck" accept=".pdf,.ppt,.pptx" required>
+                <div class="text-muted">Upload slides as PDF or PowerPoint.</div>
+            </div>
+            <div class="form-group">
+                <label for="abstract_text">Abstract (text)</label>
+                <textarea id="abstract_text" name="abstract_text" rows="3" placeholder="150–300 words describing the presentation."></textarea>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="poster_image">Poster Image (optional)</label>
+                <input type="file" id="poster_image" name="poster_image" accept=".png,.jpg,.jpeg">
+            </div>
+            <div class="form-group">
+                <label>Consents</label>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="consent_record" name="consent_record">
+                    <label for="consent_record">I consent to recording/photography of my presentation</label>
+                </div>
+                <div class="checkbox-item" style="margin-top:6px;">
+                    <input type="checkbox" id="consent_public" name="consent_public">
+                    <label for="consent_public">I consent to public display of my slides/abstract</label>
+                </div>
+            </div>
+        </div>
+    </fieldset>
                         </div>
                     `;
                     break;
@@ -1448,24 +1475,23 @@ $user_data = $_SESSION['user_data'];
                                                 <input type="text" name="award_values[]" placeholder="e.g., $1000 or Gold Medal">
                                             </div>
                                         </div>
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label>Number of Winners</label>
-                                                <input type="number" name="award_winner_counts[]" min="1" value="1">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Per‑Winner Prize (optional)</label>
-                                                <input type="text" name="award_per_winner_values[]" placeholder="e.g., $500 each">
-                                            </div>
-                                        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Number of Winners</label>
+                <input type="number" name="award_winner_counts[]" min="1" value="1">
+            </div>
+            <div class="form-group">
+                <label>Per‑Winner Prize (optional)</label>
+                <input type="text" name="award_per_winner_values[]" placeholder="e.g., $500 each">
+            </div>
+        </div>
+        
                                         <button type="button" class="btn btn-secondary btn-sm remove-award">Remove</button>
                                     </div>
                                 </div>
                                 
                                 <button type="button" class="btn btn-secondary" id="addAward">
-                                    <i class="fas fa-plus
-
-                                     <i class="fas fa-plus"></i> Add Another Award
+                                    <i class="fas fa-plus"></i> Add Another Award
                                 </button>
                                 
                                 <div class="form-group" style="margin-top: 20px;">
@@ -1478,12 +1504,14 @@ $user_data = $_SESSION['user_data'];
                                     </select>
                                     <div class="text-muted">Certificates will be generated for winners, participants, and judges</div>
                                 </div>
-                                <div class="form-group">
-                                    <label for="sample_certificate">Sample Certificate (optional)</label>
-                                    <input type="file" id="sample_certificate" name="sample_certificate" accept="application/pdf,image/*">
-                                    <div class="text-muted">Upload a sample certificate design to use for winners.</div>
-                                </div>
-                            </fieldset>
+        <div class="form-group">
+            <label for="sample_certificate">Sample Certificate (optional)</label>
+            <input type="file" id="sample_certificate" name="sample_certificate" accept="application/pdf,image/*">
+            <div class="text-muted">Upload a sample certificate design to use for winners.</div>
+        </div>
+        
+                                
+                                </fieldset>
                         </div>
                     `;
                     break;
@@ -1520,144 +1548,148 @@ $user_data = $_SESSION['user_data'];
                                     <input type="url" id="redirect_url" name="redirect_url" placeholder="https://example.com/thank-you">
                                 </div>
                                 
-                                <div class="options-grid">
-                                    <div class="form-group">
-                                        <div class="switch-row">
-                                            <input type="checkbox" id="enable_comments" name="enable_comments">
-                                            <label for="enable_comments">
-                                                Enable comments on submissions
-                                                <span class="hint">Let viewers and judges leave feedback; can be moderated.</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <div class="switch-row">
-                                            <input type="checkbox" id="moderate_submissions" name="moderate_submissions">
-                                            <label for="moderate_submissions">
-                                                Moderate submissions before they are public
-                                                <span class="hint">Submissions require organizer approval before appearing to others.</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <div class="switch-row">
-                                            <input type="checkbox" id="blind_review" name="blind_review">
-                                            <label for="blind_review">
-                                                Enable blind review (hide participant identities from judges)
-                                                <span class="hint">Judge view hides names, emails, and affiliations during scoring.</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <div class="switch-row">
-                                            <input type="checkbox" id="conflict_disclosure" name="conflict_disclosure">
-                                            <label for="conflict_disclosure">
-                                                Require judges to self-report conflicts of interest
-                                                <span class="hint">Judges confirm no conflicts before entering scores.</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="late_grace">Late Submission Grace Period (minutes)</label>
-                                        <input type="number" id="late_grace" name="late_grace" min="0" value="0">
-                                        <div class="text-muted">Allow a short window for late uploads without penalty.</div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="judging_visibility">Judging Visibility</label>
-                                        <select id="judging_visibility" name="judging_visibility">
-                                            <option value="private">Private (only judges & admins)</option>
-                                            <option value="public_after_close">Public after competition closes</option>
-                                            <option value="public_live">Public during competition</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="webhook_url">Webhook URL (optional)</label>
-                                        <input type="url" id="webhook_url" name="webhook_url" placeholder="https://yourapp.com/webhooks/paperet">
-                                        <div class="text-muted">Receive real-time events for new submissions, status changes, and awards.</div>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Export Options</label>
-                                    <div class="align-options" style="margin-top: 8px; flex-wrap: wrap; gap: 12px;">
-                                        <label class="checkbox-item"><input type="checkbox" name="export_options[]" value="csv"> <span>CSV</span></label>
-                                        <label class="checkbox-item"><input type="checkbox" name="export_options[]" value="json"> <span>JSON</span></label>
-                                        <label class="checkbox-item"><input type="checkbox" name="export_options[]" value="pdf"> <span>PDF Summary</span></label>
-                                    </div>
-                                </div>
                                 
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="score_scale">Per-criterion Score Scale</label>
-                                        <select id="score_scale" name="score_scale">
-                                            <option value="1-5">1–5</option>
-                                            <option value="1-10">1–10</option>
-                                        </select>
-                                        <div class="text-muted">Used when normalizing totals.</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="tiebreak_policy">Tie-break Policy</label>
-                                        <select id="tiebreak_policy" name="tiebreak_policy">
-                                            <option value="highest_impact">Highest score on "Impact"</option>
-                                            <option value="chair_vote">Chair decision</option>
-                                            <option value="earliest_submission">Earliest submission</option>
-                                        </select>
-                                    </div>
-                                </div>
+<div class="options-grid">
+    <div class="form-group">
+        <div class="switch-row">
+            <input type="checkbox" id="enable_comments" name="enable_comments">
+            <label for="enable_comments">
+                Enable comments on submissions
+                <span class="hint">Let viewers and judges leave feedback; can be moderated.</span>
+            </label>
+        </div>
+    </div>
 
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="qa_minutes">Q&A Time per Presentation (minutes)</label>
-                                        <input type="number" id="qa_minutes" name="qa_minutes" min="0" max="30" value="3">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="leaderboard_visibility">Live Leaderboard Visibility</label>
-                                        <select id="leaderboard_visibility" name="leaderboard_visibility">
-                                            <option value="judges_only">Judges only</option>
-                                            <option value="public_after_close">Public after competition closes</option>
-                                            <option value="public_live">Public during competition</option>
-                                        </select>
-                                    </div>
-                                </div>
+    <div class="form-group">
+        <div class="switch-row">
+            <input type="checkbox" id="moderate_submissions" name="moderate_submissions">
+            <label for="moderate_submissions">
+                Moderate submissions before they are public
+                <span class="hint">Submissions require organizer approval before appearing to others.</span>
+            </label>
+        </div>
+    </div>
 
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label>Email Notifications</label>
-                                        <div class="checkbox-item">
-                                            <input type="checkbox" id="notify_submission" name="notify_options[]" value="submission" checked>
-                                            <label for="notify_submission">Notify on new submission</label>
-                                        </div>
-                                        <div class="checkbox-item" style="margin-top:6px;">
-                                            <input type="checkbox" id="notify_schedule" name="notify_options[]" value="schedule">
-                                            <label for="notify_schedule">Send schedule to presenters & judges</label>
-                                        </div>
-                                        <div class="checkbox-item" style="margin-top:6px;">
-                                            <input type="checkbox" id="notify_results" name="notify_options[]" value="results">
-                                            <label for="notify_results">Email winners when results are published</label>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="results_publish_date">Results Publish Date (optional)</label>
-                                        <input type="date" id="results_publish_date" name="results_publish_date">
-                                    </div>
-                                </div>
+    <div class="form-group">
+        <div class="switch-row">
+            <input type="checkbox" id="blind_review" name="blind_review">
+            <label for="blind_review">
+                Enable blind review (hide participant identities from judges)
+                <span class="hint">Judge view hides names, emails, and affiliations during scoring.</span>
+            </label>
+        </div>
+    </div>
 
-                                <div class="form-group">
-                                    <label for="announcement_template">Winner Announcement Template (Email)</label>
-                                    <textarea id="announcement_template" name="announcement_template" rows="4" placeholder="Subject: Congratulations!
+    <div class="form-group">
+        <div class="switch-row">
+            <input type="checkbox" id="conflict_disclosure" name="conflict_disclosure">
+            <label for="conflict_disclosure">
+                Require judges to self-report conflicts of interest
+                <span class="hint">Judges confirm no conflicts before entering scores.</span>
+            </label>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="late_grace">Late Submission Grace Period (minutes)</label>
+        <input type="number" id="late_grace" name="late_grace" min="0" value="0">
+        <div class="text-muted">Allow a short window for late uploads without penalty.</div>
+    </div>
+
+    <div class="form-group">
+        <label for="judging_visibility">Judging Visibility</label>
+        <select id="judging_visibility" name="judging_visibility">
+            <option value="private">Private (only judges & admins)</option>
+            <option value="public_after_close">Public after competition closes</option>
+            <option value="public_live">Public during competition</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="webhook_url">Webhook URL (optional)</label>
+        <input type="url" id="webhook_url" name="webhook_url" placeholder="https://yourapp.com/webhooks/paperet">
+        <div class="text-muted">Receive real-time events for new submissions, status changes, and awards.</div>
+    </div>
+</div>
+</div>
+            </div>
+
+            
+<div class="form-group">
+    <label>Export Options</label>
+    <div class="align-options" style="margin-top: 8px; flex-wrap: wrap; gap: 12px;">
+        <label class="checkbox-item"><input type="checkbox" name="export_options[]" value="csv"> <span>CSV</span></label>
+        <label class="checkbox-item"><input type="checkbox" name="export_options[]" value="json"> <span>JSON</span></label>
+        <label class="checkbox-item"><input type="checkbox" name="export_options[]" value="pdf"> <span>PDF Summary</span></label>
+    </div>
+</div>
+    
+        <div class="form-row">
+            <div class="form-group">
+                <label for="score_scale">Per-criterion Score Scale</label>
+                <select id="score_scale" name="score_scale">
+                    <option value="1-5">1–5</option>
+                    <option value="1-10">1–10</option>
+                </select>
+                <div class="text-muted">Used when normalizing totals.</div>
+            </div>
+            <div class="form-group">
+                <label for="tiebreak_policy">Tie-break Policy</label>
+                <select id="tiebreak_policy" name="tiebreak_policy">
+                    <option value="highest_impact">Highest score on "Impact"</option>
+                    <option value="chair_vote">Chair decision</option>
+                    <option value="earliest_submission">Earliest submission</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="qa_minutes">Q&A Time per Presentation (minutes)</label>
+                <input type="number" id="qa_minutes" name="qa_minutes" min="0" max="30" value="3">
+            </div>
+            <div class="form-group">
+                <label for="leaderboard_visibility">Live Leaderboard Visibility</label>
+                <select id="leaderboard_visibility" name="leaderboard_visibility">
+                    <option value="judges_only">Judges only</option>
+                    <option value="public_after_close">Public after competition closes</option>
+                    <option value="public_live">Public during competition</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Email Notifications</label>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="notify_submission" name="notify_options[]" value="submission" checked>
+                    <label for="notify_submission">Notify on new submission</label>
+                </div>
+                <div class="checkbox-item" style="margin-top:6px;">
+                    <input type="checkbox" id="notify_schedule" name="notify_options[]" value="schedule">
+                    <label for="notify_schedule">Send schedule to presenters & judges</label>
+                </div>
+                <div class="checkbox-item" style="margin-top:6px;">
+                    <input type="checkbox" id="notify_results" name="notify_options[]" value="results">
+                    <label for="notify_results">Email winners when results are published</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="results_publish_date">Results Publish Date (optional)</label>
+                <input type="date" id="results_publish_date" name="results_publish_date">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="announcement_template">Winner Announcement Template (Email)</label>
+            <textarea id="announcement_template" name="announcement_template" rows="4" placeholder="Subject: Congratulations!
 
 Dear {name},
 You have been selected as {award} ..."></textarea>
-                                </div>
-                            </fieldset>
-                        </div>
-                    `;
+        </div>
+    </fieldset>
+        </div>
+        `;
                     break;
             }
 
@@ -1673,39 +1705,6 @@ You have been selected as {award} ..."></textarea>
                 initAwards();
             }
         }
-
-
-
-        // اضافه کردن این تابع قبل از loadTab
-        function validateTab(tabIndex) {
-            const tabName = tabNames[tabIndex];
-
-            if (tabName === 'basic') {
-                const orgName = document.getElementById('organization');
-                const orgEmail = document.getElementById('org_email');
-
-                if (!orgName.value.trim()) {
-                    document.getElementById('orgError').style.display = 'block';
-                    orgName.classList.add('error');
-                    return false;
-                }
-
-                if (!orgEmail.value.trim() || !isValidEmail(orgEmail.value)) {
-                    document.getElementById('emailError').style.display = 'block';
-                    orgEmail.classList.add('error');
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        // اضافه کردن این تابع
-        function validateCurrentTab() {
-            return validateTab(currentTab);
-        }
-
-
 
         // Initialize tag inputs for judges and participants
         function initTagInputs() {
@@ -1759,16 +1758,6 @@ You have been selected as {award} ..."></textarea>
                         <div class="form-group">
                             <label>Award Value</label>
                             <input type="text" name="award_values[]" placeholder="e.g., $1000 or Gold Medal">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Number of Winners</label>
-                            <input type="number" name="award_winner_counts[]" min="1" value="1">
-                        </div>
-                        <div class="form-group">
-                            <label>Per‑Winner Prize (optional)</label>
-                            <input type="text" name="award_per_winner_values[]" placeholder="e.g., $500 each">
                         </div>
                     </div>
                     <button type="button" class="btn btn-secondary btn-sm remove-award">Remove</button>
@@ -1843,127 +1832,117 @@ You have been selected as {award} ..."></textarea>
 
         // View competition details
         function viewCompetition(id) {
-            // AJAX request to get competition details
-            fetch('get_competition.php?id=' + id)
-                .then(response => response.json())
-                .then(competition => {
-                    document.getElementById('modalTitle').textContent = competition.comp_title;
+            const competition = competitions.find(c => c.id === id);
+            if (!competition) return;
 
-                    let content = `
-                        <div style="margin-bottom: 20px;">
-                            <p><strong>Status:</strong> <span class="badge badge-${competition.status === 'active' ? 'success' : competition.status === 'completed' ? 'warning' : 'info'}">${competition.status}</span></p>
-                            <p><strong>Date:</strong> ${new Date(competition.created_at).toLocaleDateString()}</p>
-                            <p><strong>Organization:</strong> ${competition.org_name}</p>
-                            <p><strong>Contact:</strong> ${competition.org_email}</p>
-                        </div>
-                        
-                        <div style="margin-bottom: 20px;">
-                            <h3>Description</h3>
-                            <p>${competition.comp_description}</p>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <h3>Privacy Settings</h3>
-                                <p>Visibility: ${competition.visibility}</p>
-                                <p>Voting: ${competition.voting}</p>
-                            </div>
-                            <div class="form-group">
-                                <h3>Submission Details</h3>
-                                <p>Type: ${competition.submission_type}</p>
-                                <p>Max File Size: ${competition.max_file_size}MB</p>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex justify-between">
-                            <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-                            <button class="btn" onclick="editCompetition(${competition.id})">Edit Competition</button>
-                        </div>
-                    `;
+            document.getElementById('modalTitle').textContent = competition.title;
 
-                    document.getElementById('modalContent').innerHTML = content;
-                    document.getElementById('competitionModal').style.display = 'flex';
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showToast('Error loading competition details', 'error');
-                });
+            let content = `
+                <div style="margin-bottom: 20px;">
+                    <p><strong>Status:</strong> <span class="badge badge-${competition.status === 'active' ? 'success' : competition.status === 'completed' ? 'warning' : 'info'}">${competition.status}</span></p>
+                    <p><strong>Date:</strong> ${competition.date}</p>
+                    <p><strong>Organization:</strong> ${competition.organization}</p>
+                    <p><strong>Contact:</strong> ${competition.email}</p>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h3>Description</h3>
+                    <p>${competition.description}</p>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <h3>Privacy Settings</h3>
+                        <p>Visibility: ${competition.privacy}</p>
+                        <p>Voting: ${competition.voting}</p>
+                    </div>
+                    <div class="form-group">
+                        <h3>Submission Details</h3>
+                        <p>Type: ${competition.submissionType}</p>
+                        <p>Max File Size: ${competition.maxFileSize}MB</p>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h3>Awards</h3>
+                    <ul>
+            `;
+
+            competition.awards.forEach(award => {
+                content += `<li>${award.name}: ${award.value}</li>`;
+            });
+
+            content += `
+                    </ul>
+                </div>
+                
+                <div class="d-flex justify-between">
+                    <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                    <button class="btn" onclick="editCompetition('${competition.id}')">Edit Competition</button>
+                </div>
+            `;
+
+            document.getElementById('modalContent').innerHTML = content;
+            document.getElementById('competitionModal').style.display = 'flex';
         }
 
         // Edit competition
         function editCompetition(id) {
-            // AJAX request to get competition details
-            fetch('get_competition.php?id=' + id)
-                .then(response => response.json())
-                .then(competition => {
-                    document.getElementById('modalTitle').textContent = `Edit: ${competition.comp_title}`;
+            const competition = competitions.find(c => c.id === id);
+            if (!competition) return;
 
-                    let content = `
-                        <form id="editCompetitionForm">
-                            <input type="hidden" name="id" value="${competition.id}">
-                            <div class="form-group">
-                                <label for="edit_title">Competition Title</label>
-                                <input type="text" id="edit_title" name="comp_title" value="${competition.comp_title}" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="edit_description">Description</label>
-                                <textarea id="edit_description" name="comp_description" rows="3" required>${competition.comp_description}</textarea>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="edit_organization">Organization</label>
-                                    <input type="text" id="edit_organization" name="org_name" value="${competition.org_name}" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="edit_email">Contact Email</label>
-                                    <input type="email" id="edit_email" name="org_email" value="${competition.org_email}" required>
-                                </div>
-                            </div>
-                            
-                            <div class="d-flex justify-between">
-                                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                                <button type="submit" class="btn">Save Changes</button>
-                            </div>
-                        </form>
-                    `;
+            document.getElementById('modalTitle').textContent = `Edit: ${competition.title}`;
 
-                    document.getElementById('modalContent').innerHTML = content;
+            let content = `
+                <form id="editCompetitionForm">
+                    <div class="form-group">
+                        <label for="edit_title">Competition Title</label>
+                        <input type="text" id="edit_title" value="${competition.title}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_description">Description</label>
+                        <textarea id="edit_description" rows="3" required>${competition.description}</textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit_organization">Organization</label>
+                            <input type="text" id="edit_organization" value="${competition.organization}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_email">Contact Email</label>
+                            <input type="email" id="edit_email" value="${competition.email}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-between">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                        <button type="submit" class="btn">Save Changes</button>
+                    </div>
+                </form>
+            `;
 
-                    // Add form submission handler
-                    document.getElementById('editCompetitionForm').addEventListener('submit', function(e) {
-                        e.preventDefault();
+            document.getElementById('modalContent').innerHTML = content;
 
-                        const formData = new FormData(this);
-                        formData.append('action', 'update');
+            // Add form submission handler
+            document.getElementById('editCompetitionForm').addEventListener('submit', function(e) {
+                e.preventDefault();
 
-                        fetch('save_competition.php', {
-                                method: 'POST',
-                                body: formData
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    showToast('Competition updated successfully');
-                                    closeModal();
-                                    location.reload(); // Refresh the page to show updated data
-                                } else {
-                                    showToast('Error updating competition: ' + data.message, 'error');
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-                                showToast('Error updating competition', 'error');
-                            });
-                    });
+                // Update competition data
+                competition.title = document.getElementById('edit_title').value;
+                competition.description = document.getElementById('edit_description').value;
+                competition.organization = document.getElementById('edit_organization').value;
+                competition.email = document.getElementById('edit_email').value;
 
-                    document.getElementById('competitionModal').style.display = 'flex';
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showToast('Error loading competition details', 'error');
-                });
+                showToast('Competition updated successfully');
+                closeModal();
+
+                // Refresh competitions list
+                renderCompetitions();
+            });
+
+            document.getElementById('competitionModal').style.display = 'flex';
         }
 
         // Close modal
@@ -1971,72 +1950,107 @@ You have been selected as {award} ..."></textarea>
             document.getElementById('competitionModal').style.display = 'none';
         }
 
-        // Form submission - جایگزینی کامل این بخش
+        // Render competitions list
+        function renderCompetitions() {
+            const container = document.getElementById('competitionsList');
+            const countElement = document.getElementById('competitionCount');
+
+            countElement.textContent = competitions.length;
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            competitions.forEach(comp => {
+                let badgeClass = 'badge-info';
+                if (comp.status === 'active') badgeClass = 'badge-success';
+                if (comp.status === 'completed') badgeClass = 'badge-warning';
+
+                html += `
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600;">${comp.title}</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">
+                                ${comp.date}
+                            </div>
+                        </td>
+                        <td><span class="badge ${badgeClass}">${comp.status}</span></td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm" onclick="viewCompetition('${comp.id}')">View</button>
+                                <button class="btn btn-sm btn-secondary" onclick="editCompetition('${comp.id}')">Edit</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Form submission
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-
-            // Validate all tabs before submission
-            let valid = true;
-            for (let i = 0; i < tabs.length; i++) {
-                loadTab(i);
-                if (!validateTab(i)) {
-                    valid = false;
-                    // برگشت به تب فعلی
-                    loadTab(currentTab);
-                    break;
-                }
-            }
-
-            if (!valid) {
-                showToast('Please fix validation errors before submitting', 'error');
-                loadTab(currentTab); // بازگشت به تب فعلی
-                return;
-            }
 
             // Show loading state
             submitSpinner.style.display = 'block';
             submitBtn.querySelector('span').textContent = 'Creating...';
             submitBtn.disabled = true;
-            headerSpinner.style.display = 'block';
 
-            // Create FormData object
-            const formData = new FormData(form);
+            // Simulate API call
+            setTimeout(() => {
+                // Create a mock competition
+                const newCompetition = {
+                    id: 'comp' + (competitions.length + 1),
+                    title: document.getElementById('comp_title')?.value || 'New Competition',
+                    status: 'upcoming',
+                    date: new Date().toLocaleDateString(),
+                    organization: document.getElementById('organization')?.value || 'Your Organization',
+                    email: document.getElementById('org_email')?.value || 'email@example.com',
+                    description: document.getElementById('comp_description')?.value || 'Competition description',
+                    privacy: document.querySelector('input[name="visibility"]:checked')?.value || 'public',
+                    accessMode: document.querySelector('input[name="access_mode"]:checked')?.value || (document.querySelector('input[name="visibility"]:checked')?.value === 'private' ? 'private' : 'open'),
+                    requiresApproval: (document.querySelector('input[name="access_mode"]:checked')?.value === 'apply'),
+                    voting: document.querySelector('input[name="voting"]:checked')?.value || 'judges',
+                    submissionType: document.querySelector('input[name="submission_type"]:checked')?.value || 'file',
+                    maxFileSize: document.getElementById('max_file_size')?.value || 10,
+                    awards: [{
+                        name: 'First Place',
+                        value: 'Prize'
+                    }]
+                };
 
-            // Send AJAX request
-            fetch('save_competition.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        showToast('Competition created successfully!');
-                        // Reset form
-                        form.reset();
-                        // Redirect or reload page after delay
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1500);
-                    } else {
-                        showToast('Error: ' + (data.message || 'Unknown error'), 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showToast('An error occurred while creating the competition', 'error');
-                })
-                .finally(() => {
-                    // Reset UI
-                    submitSpinner.style.display = 'none';
-                    submitBtn.querySelector('span').textContent = 'Create Competition';
-                    submitBtn.disabled = false;
-                    headerSpinner.style.display = 'none';
-                });
+                competitions.push(newCompetition);
+
+                // Reset form and UI
+                form.reset();
+                submitSpinner.style.display = 'none';
+                submitBtn.querySelector('span').textContent = 'Create Competition';
+                submitBtn.disabled = false;
+
+                // Show success message
+                showToast('Competition created successfully!');
+
+                // Refresh competitions list
+                renderCompetitions();
+
+                // Reset to first tab
+                currentTab = 0;
+                loadTab(currentTab);
+            }, 1500);
         });
 
         // Navigation between tabs
@@ -2090,38 +2104,75 @@ You have been selected as {award} ..."></textarea>
                 }
             }
 
-            // اضافه کردن در بخش validateTab بعد از بخش basic
             if (tabName === 'details') {
                 const compTitle = document.getElementById('comp_title');
                 const compDesc = document.getElementById('comp_description');
+                const startDate = document.getElementById('start_date');
+                const endDate = document.getElementById('end_date');
 
-                if (!compTitle || !compTitle.value.trim()) {
-                    // ایجاد عنصر خطا اگر وجود ندارد
-                    let errorEl = document.getElementById('titleError');
-                    if (!errorEl) {
-                        errorEl = document.createElement('div');
+                if (!compTitle.value.trim()) {
+                    // Create error element if it doesn't exist
+                    if (!document.getElementById('titleError')) {
+                        const errorEl = document.createElement('div');
                         errorEl.className = 'error-message';
                         errorEl.id = 'titleError';
                         errorEl.textContent = 'Please enter a competition title';
                         compTitle.parentNode.appendChild(errorEl);
                     }
-                    errorEl.style.display = 'block';
+                    document.getElementById('titleError').style.display = 'block';
                     compTitle.classList.add('error');
                     return false;
+                } else {
+                    if (document.getElementById('titleError')) {
+                        document.getElementById('titleError').style.display = 'none';
+                    }
+                    compTitle.classList.remove('error');
                 }
 
-                if (!compDesc || !compDesc.value.trim()) {
-                    let errorEl = document.getElementById('descError');
-                    if (!errorEl) {
-                        errorEl = document.createElement('div');
+                if (!compDesc.value.trim()) {
+                    if (!document.getElementById('descError')) {
+                        const errorEl = document.createElement('div');
                         errorEl.className = 'error-message';
                         errorEl.id = 'descError';
                         errorEl.textContent = 'Please enter a competition description';
                         compDesc.parentNode.appendChild(errorEl);
                     }
-                    errorEl.style.display = 'block';
+                    document.getElementById('descError').style.display = 'block';
                     compDesc.classList.add('error');
                     return false;
+                } else {
+                    if (document.getElementById('descError')) {
+                        document.getElementById('descError').style.display = 'none';
+                    }
+                    compDesc.classList.remove('error');
+                }
+
+                // Set today's date as default for start date if empty
+                if (!startDate.value) {
+                    const today = new Date();
+                    const yyyy = today.getFullYear();
+                    let mm = today.getMonth() + 1;
+                    let dd = today.getDate();
+
+                    if (dd < 10) dd = '0' + dd;
+                    if (mm < 10) mm = '0' + mm;
+
+                    startDate.value = `${yyyy}-${mm}-${dd}`;
+                }
+
+                // Set end date to 7 days from start if empty
+                if (!endDate.value && startDate.value) {
+                    const start = new Date(startDate.value);
+                    start.setDate(start.getDate() + 7);
+
+                    const yyyy = start.getFullYear();
+                    let mm = start.getMonth() + 1;
+                    let dd = start.getDate();
+
+                    if (dd < 10) dd = '0' + dd;
+                    if (mm < 10) mm = '0' + mm;
+
+                    endDate.value = `${yyyy}-${mm}-${dd}`;
                 }
             }
 
@@ -2131,6 +2182,7 @@ You have been selected as {award} ..."></textarea>
         // Initialize the application
         function init() {
             loadTab(0);
+            renderCompetitions();
 
             // Set default dates
             const today = new Date();

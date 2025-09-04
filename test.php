@@ -1,146 +1,80 @@
 <?php
-// این بخش باید قبل از هر خروجی HTML قرار گیرد
-if (isset($_POST['initial_load']) || isset($_POST['search'])) {
-    header('Content-Type: application/json; charset=utf-8');
 
-    include 'config.php';
+// Load PHPMailer classes
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+use PHPMailer\PHPMailer\SMTP;
 
-    // Logik for initial load or search
-    if (isset($_POST['initial_load'])) {
-        $sql = "SELECT * FROM user";
-    } else {
-        $searchTerm = $conn->real_escape_string($_POST['search']);
-        $sql = "SELECT * FROM user WHERE name LIKE '%$searchTerm%'";
+// Adjust this path based on your setup
+require 'vendor/phpmailer/phpmailer/src/Exception.php';
+require 'vendor/phpmailer/phpmailer/src/PHPMailer.php';
+require 'vendor/phpmailer/phpmailer/src/SMTP.php';
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+
+    $to_email = 'info@paperet.com';
+
+    // Collect and sanitize form data
+    $requester_name = htmlspecialchars($_POST['requester_name'] ?? '');
+    $requester_email = htmlspecialchars($_POST['requester_email'] ?? '');
+    $presenter_name = htmlspecialchars($_POST['presenter_name'] ?? '');
+    $presenter_email = htmlspecialchars($_POST['presenter_email'] ?? '');
+    $paper_title = htmlspecialchars($_POST['paper_title'] ?? '');
+    $paper_abstract = htmlspecialchars($_POST['paper_abstract'] ?? '');
+
+    // Validate required fields
+    if (empty($requester_name) || empty($requester_email) || empty($presenter_name) || empty($presenter_email) || empty($paper_title) || empty($paper_abstract) || !isset($_POST['consent'])) {
+        // header("Location: present_request_form.php?message=error");
+        exit;
     }
 
-    $result = $conn->query($sql);
-    $titles = [];
+    // Build the email body
+    $email_body = "A new presentation request has been submitted with the following details:\n\n";
+    $email_body .= "--- Requester Details ---\n";
+    $email_body .= "Name: " . $requester_name . "\n";
+    $email_body .= "Email: " . $requester_email . "\n";
 
-    if ($result) {
-        if ($result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $titles[] = $row['name'];
-            }
+    $mail = new PHPMailer(true);
+
+    try {
+        // Server settings - UPDATED FOR HOSTINGER
+        $mail->SMTPDebug = SMTP::DEBUG_SERVER;
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.hostinger.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'info@paperet.com';
+        $mail->Password   = '123456789M@hshid';
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail->Port       = 465;
+
+        // NEW: Set charset to UTF-8 to handle Persian characters
+        $mail->CharSet = 'UTF-8';
+
+        // Recipients
+        $mail->setFrom('info@paperet.com', 'Paperet Website');
+        $mail->addAddress($to_email);
+        // NEW: Set the reply-to header correctly with a name
+        $mail->addReplyTo($requester_email, $requester_name);
+
+        // Add Attachments
+        if (isset($_FILES['paper_file']) && $_FILES['paper_file']['error'] == 0) {
+            $mail->addAttachment($_FILES['paper_file']['tmp_name'], $_FILES['paper_file']['name']);
         }
-        echo json_encode($titles);
-    } else {
-        echo json_encode(['error' => 'Query failed: ' . $conn->error]);
-    }
+        if (isset($_FILES['comp_file']) && $_FILES['comp_file']['error'] == 0 && isset($_POST['include_comp']) && $_POST['include_comp'] == '1') {
+            $mail->addAttachment($_FILES['comp_file']['tmp_name'], $_FILES['comp_file']['name']);
+        }
 
-    $conn->close();
-    exit(); // مهم: بعد از ارسال JSON باید اسکریپت را متوقف کنید
+        // Content
+        $mail->isHTML(false);
+        $mail->Subject = "New Presentation Submission: " . $paper_title;
+        $mail->Body    = $email_body;
+
+        $mail->send();
+        // header("Location: present_request_form.php?message=success");
+        // exit;
+    } catch (Exception $e) {
+        error_log("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+        // header("Location: present_request_form.php?message=error");
+        // exit;
+    }
 }
-?>
-
-<!DOCTYPE html>
-<html lang="fa">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جستجو در بلاگ</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        #resultsList li,
-        #allnamesList li {
-            list-style-type: none;
-            padding: 5px;
-            border-bottom: 1px solid #eee;
-        }
-
-        #resultsList,
-        #allnamesList {
-            margin-top: 15px;
-            padding: 0;
-        }
-    </style>
-</head>
-
-<body>
-    <h2>جستجو در بلاگ</h2>
-    <input type="text" id="searchInput" placeholder="عنوان را وارد کنید">
-    <button id="searchButton">جستجو</button>
-
-    <h3>نتایج جستجو</h3>
-    <ul id="resultsList"></ul>
-
-    <hr>
-
-    <h3>همه تایتل‌ها</h3>
-    <ul id="allnamesList"></ul>
-
-    <script>
-        $(document).ready(function() {
-            // ... (بقیه کدهای جاوااسکریپت شما بدون تغییر)
-            function loadAllTitles() {
-                $.ajax({
-                    url: 'index.php', // URL به همین فایل
-                    method: 'POST',
-                    data: {
-                        initial_load: true
-                    },
-                    success: function(response) {
-                        try {
-                            var titles = JSON.parse(response);
-                            $('#allnamesList').empty();
-                            if (titles.length > 0) {
-                                titles.forEach(function(name) {
-                                    $('#allnamesList').append('<li>' + name + '</li>');
-                                });
-                            } else {
-                                $('#allnamesList').append('<li>مطلب دیگری وجود ندارد.</li>');
-                            }
-                        } catch (e) {
-                            console.error("Error parsing JSON response: " + response);
-                            alert('خطا در پردازش اطلاعات.');
-                        }
-                    },
-                    error: function() {
-                        alert('خطا در برقراری ارتباط با سرور برای بارگذاری اولیه.');
-                    }
-                });
-            }
-
-            loadAllTitles();
-
-            $('#searchButton').click(function() {
-                var searchTerm = $('#searchInput').val().trim();
-                $('#resultsList').empty();
-                $('#allnamesList').hide();
-
-                if (searchTerm !== '') {
-                    $.ajax({
-                        url: 'index.php', // URL به همین فایل
-                        method: 'POST',
-                        data: {
-                            search: searchTerm
-                        },
-                        success: function(response) {
-                            try {
-                                var titles = JSON.parse(response);
-                                if (titles.length > 0) {
-                                    titles.forEach(function(name) {
-                                        $('#resultsList').append('<li>' + name + '</li>');
-                                    });
-                                } else {
-                                    $('#resultsList').append('<li>نتیجه‌ای یافت نشد.</li>');
-                                }
-                            } catch (e) {
-                                console.error("Error parsing JSON response: " + response);
-                                alert('خطا در پردازش اطلاعات.');
-                            }
-                        },
-                        error: function() {
-                            alert('خطا در برقراری ارتباط با سرور.');
-                        }
-                    });
-                } else {
-                    alert('لطفا عبارتی را برای جستجو وارد کنید.');
-                    $('#allnamesList').show();
-                }
-            });
-        });
-    </script>
-</body>
-
-</html>
