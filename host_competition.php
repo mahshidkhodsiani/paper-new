@@ -3,6 +3,11 @@
 session_start();
 
 if (!isset($_SESSION['user_data'])) {
+  // گرفتن URL کامل صفحه فعلی
+  // $current_page_url = urlencode($_SERVER['REQUEST_URI']);
+  $_SESSION['redirect_to'] = $_SERVER['REQUEST_URI']; // ذخیره URL فعلی در سشن
+
+  
   header("Location: login.php");
   exit();
 }
@@ -760,19 +765,19 @@ $userId = $_SESSION['user_data']['id']; // For updating current user's data
           <div class="card-body">
             <?php
             // تعریف کوئری با INNER JOIN برای جوین دو جدول
-            $select = "SELECT 
-                    c.id, 
-                    c.organizer_name, 
-                    c.start_date, 
-                    c.end_date, 
-                    cp.user_id 
-                   FROM 
+            $select = "SELECT
+                    c.id,
+                    c.organizer_name,
+                    c.start_date,
+                    c.end_date,
+                    cp.user_id
+                   FROM
                     competitions c
-                   INNER JOIN 
-                    competition_participants cp 
-                   ON 
-                    c.id = cp.competition_id 
-                   WHERE 
+                   INNER JOIN
+                    competition_participants cp
+                   ON
+                    c.id = cp.competition_id
+                   WHERE
                     cp.user_id = $userId";
 
             $result = $conn->query($select);

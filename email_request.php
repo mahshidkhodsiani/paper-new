@@ -17,10 +17,8 @@ require 'vendor/phpmailer/phpmailer/src/SMTP.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    // The recipient email is taken from the form
-    $to_email = htmlspecialchars($_POST['presenter_email'] ?? '');
-
     // Collect and sanitize form data
+    $to_email = htmlspecialchars($_POST['presenter_email'] ?? '');
     $requester_name = htmlspecialchars($_POST['requester_name'] ?? '');
     $requester_email = htmlspecialchars($_POST['requester_email'] ?? '');
     $presenter_name = htmlspecialchars($_POST['presenter_name'] ?? '');
@@ -30,60 +28,152 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Validate required fields
     if (empty($requester_name) || empty($requester_email) || empty($presenter_name) || empty($presenter_email) || empty($paper_title) || empty($paper_abstract) || !isset($_POST['consent'])) {
-        echo "Error: Required fields are missing.";
+        // Redirect on error
+        header("Location: present_request_form.php?status=error");
         exit;
     }
 
-    // Build the email body
-    $email_body = "A new presentation request has been submitted with the following details:\n\n";
-    $email_body .= "--- Requester Details ---\n";
-    $email_body .= "Name: " . $requester_name . "\n";
-    $email_body .= "Email: " . $requester_email . "\n";
-    $email_body .= "Affiliation: " . htmlspecialchars($_POST['requester_affiliation'] ?? '') . "\n";
-    $email_body .= "Phone: " . htmlspecialchars($_POST['requester_phone'] ?? '') . "\n\n";
+    // Build the email body in HTML format
+    $email_body_html = '
+    <html>
+    <head>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+            .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            h1 { color: #1a1a1a; text-align: center; }
+            h2 { color: #333333; border-bottom: 2px solid #eeeeee; padding-bottom: 10px; margin-top: 30px; }
+            p { color: #555555; line-height: 1.6; }
+            .details-section { margin-bottom: 20px; }
+            .details-item { margin-bottom: 10px; }
+            .label { font-weight: bold; color: #777777; display: block; margin-bottom: 4px; }
+            .value { background-color: #f9f9f9; padding: 8px; border-radius: 4px; border: 1px solid #e0e0e0; word-wrap: break-word; }
+            .link-value { color: #007bff; text-decoration: none; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>New Presentation Request</h1>
+            <p>A new presentation request has been submitted with the following details:</p>
 
-    $email_body .= "--- Presenter Details ---\n";
-    $email_body .= "Name: " . $presenter_name . "\n";
-    $email_body .= "Email: " . $presenter_email . "\n";
-    $email_body .= "Affiliation: " . htmlspecialchars($_POST['presenter_affiliation'] ?? '') . "\n\n";
+            <div class="details-section">
+                <h2>Requester Details</h2>
+                <div class="details-item">
+                    <span class="label">Name:</span>
+                    <span class="value">' . $requester_name . '</span>
+                </div>
+                <div class="details-item">
+                    <span class="label">Email:</span>
+                    <span class="value">' . $requester_email . '</span>
+                </div>
+                <div class="details-item">
+                    <span class="label">Affiliation:</span>
+                    <span class="value">' . htmlspecialchars($_POST['requester_affiliation'] ?? '') . '</span>
+                </div>
+                <div class="details-item">
+                    <span class="label">Phone:</span>
+                    <span class="value">' . htmlspecialchars($_POST['requester_phone'] ?? '') . '</span>
+                </div>
+            </div>
 
-    $email_body .= "--- Paper Details ---\n";
-    $email_body .= "Title: " . $paper_title . "\n";
-    $email_body .= "Link: " . htmlspecialchars($_POST['paper_link'] ?? '') . "\n";
-    $email_body .= "Abstract: " . $paper_abstract . "\n";
-    $email_body .= "Tags: " . htmlspecialchars($_POST['tags'] ?? '') . "\n";
-    $email_body .= "Online Presentation: " . (isset($_POST['is_online']) ? 'Yes' : 'No') . "\n\n";
+            <div class="details-section">
+                <h2>Presenter Details</h2>
+                <div class="details-item">
+                    <span class="label">Name:</span>
+                    <span class="value">' . $presenter_name . '</span>
+                </div>
+                <div class="details-item">
+                    <span class="label">Email:</span>
+                    <span class="value">' . $presenter_email . '</span>
+                </div>
+                <div class="details-item">
+                    <span class="label">Affiliation:</span>
+                    <span class="value">' . htmlspecialchars($_POST['presenter_affiliation'] ?? '') . '</span>
+                </div>
+            </div>
 
-    $email_body .= "--- Competition Details ---\n";
-    $email_body .= "For Competition: " . (isset($_POST['include_comp']) && $_POST['include_comp'] == '1' ? 'Yes' : 'No') . "\n";
+            <div class="details-section">
+                <h2>Paper Details</h2>
+                <div class="details-item">
+                    <span class="label">Title:</span>
+                    <span class="value">' . $paper_title . '</span>
+                </div>
+                <div class="details-item">
+                    <span class="label">Link:</span>
+                    <span class="value"><a href="' . htmlspecialchars($_POST['paper_link'] ?? '') . '" class="link-value">' . htmlspecialchars($_POST['paper_link'] ?? '') . '</a></span>
+                </div>
+                <div class="details-item">
+                    <span class="label">Abstract:</span>
+                    <p class="value">' . nl2br($paper_abstract) . '</p>
+                </div>
+                <div class="details-item">
+                    <span class="label">Tags:</span>
+                    <span class="value">' . htmlspecialchars($_POST['tags'] ?? '') . '</span>
+                </div>
+                <div class="details-item">
+                    <span class="label">Online Presentation:</span>
+                    <span class="value">' . (isset($_POST['is_online']) ? 'Yes' : 'No') . '</span>
+                </div>
+            </div>
+    ';
+
     if (isset($_POST['include_comp']) && $_POST['include_comp'] == '1') {
-        $email_body .= "Competition Name: " . htmlspecialchars($_POST['comp_name'] ?? '') . "\n";
-        $email_body .= "Competition Link: " . htmlspecialchars($_POST['comp_link'] ?? '') . "\n";
-        $email_body .= "Competition Message: " . htmlspecialchars($_POST['comp_message'] ?? '') . "\n\n";
+        $email_body_html .= '
+            <div class="details-section">
+                <h2>Competition Details</h2>
+                <div class="details-item">
+                    <span class="label">For Competition:</span>
+                    <span class="value">Yes</span>
+                </div>
+                <div class="details-item">
+                    <span class="label">Competition Name:</span>
+                    <span class="value">' . htmlspecialchars($_POST['comp_name'] ?? '') . '</span>
+                </div>
+                <div class="details-item">
+                    <span class="label">Competition Link:</span>
+                    <span class="value"><a href="' . htmlspecialchars($_POST['comp_link'] ?? '') . '" class="link-value">' . htmlspecialchars($_POST['comp_link'] ?? '') . '</a></span>
+                </div>
+                <div class="details-item">
+                    <span class="label">Competition Message:</span>
+                    <p class="value">' . nl2br(htmlspecialchars($_POST['comp_message'] ?? '')) . '</p>
+                </div>
+            </div>
+        ';
     }
 
-    $email_body .= "--- Other Details ---\n";
-    $email_body .= "Custom Message: " . htmlspecialchars($_POST['custom_message'] ?? '') . "\n";
-    $email_body .= "CC Emails: " . htmlspecialchars($_POST['cc_emails'] ?? '') . "\n";
+    $email_body_html .= '
+            <div class="details-section">
+                <h2>Other Details</h2>
+                <div class="details-item">
+                    <span class="label">Custom Message:</span>
+                    <p class="value">' . nl2br(htmlspecialchars($_POST['custom_message'] ?? '')) . '</p>
+                </div>
+                <div class="details-item">
+                    <span class="label">CC Emails:</span>
+                    <span class="value">' . htmlspecialchars($_POST['cc_emails'] ?? '') . '</span>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    ';
 
     $mail = new PHPMailer(true);
 
     try {
         // Server settings
-        $mail->SMTPDebug = SMTP::DEBUG_SERVER;
         $mail->isSMTP();
-        $mail->Host       = 'smtp.hostinger.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'info@paperet.com';
-        $mail->Password   = '123456789M@hshid'; // REPLACE WITH YOUR REAL PASSWORD
+        $mail->Host      = 'smtp.hostinger.com';
+        $mail->SMTPAuth  = true;
+        $mail->Username  = 'info@paperet.com';
+        $mail->Password  = '123456789M@hshid'; // REPLACE WITH YOUR REAL PASSWORD
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port       = 465;
-        $mail->CharSet    = 'UTF-8';
+        $mail->Port      = 465;
+        $mail->CharSet   = 'UTF-8';
 
         // Recipients
         $mail->setFrom('info@paperet.com', 'Paperet Website');
-        $mail->addAddress($to_email); // Recipient email from form: presenter_email
-        $mail->addReplyTo($requester_email, $requester_name); // Reply-to email from form: requester_email
+        $mail->addAddress($to_email);
+        $mail->addReplyTo($requester_email, $requester_name);
 
         // Add Attachments
         if (isset($_FILES['paper_file']) && $_FILES['paper_file']['error'] == 0) {
@@ -94,16 +184,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         // Content
-        $mail->isHTML(false);
+        $mail->isHTML(true);
         $mail->Subject = "New Presentation Submission: " . $paper_title;
-        $mail->Body    = $email_body;
+        $mail->Body    = $email_body_html;
+        $mail->AltBody = "A new presentation request has been submitted..."; // Fallback plain-text body
 
         $mail->send();
-        echo "Email sent successfully!"; // On success, display a success message
+
+        // Redirect on success
+        header("Location: present_request_form.php?status=success");
+        exit;
+
     } catch (Exception $e) {
+        // Redirect on error
         error_log("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
-        // On error, display the specific error message
-        echo "Mailer Error: " . $mail->ErrorInfo;
+        header("Location: present_request_form.php?status=error");
+        exit;
     }
 }
 ?>

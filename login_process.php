@@ -44,6 +44,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_data'] = $row;
                 $_SESSION['logged_in'] = true;
 
+                if (isset($_SESSION['redirect_to'])) {
+                    $redirect_url = $_SESSION['redirect_to'];
+                    unset($_SESSION['redirect_to']);
+                    header("Location: " . $redirect_url);
+                    exit();
+                }
                 // هدایت کاربر به صفحه پروفایل
                 header("Location: profile");
                 exit();

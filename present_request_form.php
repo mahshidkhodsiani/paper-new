@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,6 +22,10 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
             padding: 20px 0;
+            direction: ltr;
+            /* Changed to LTR for English */
+            text-align: left;
+            /* Changed to left for English */
         }
 
         .container {
@@ -63,6 +68,7 @@
 
         .section-title i {
             margin-right: 10px;
+            margin-left: 0;
         }
 
         .card {
@@ -89,6 +95,8 @@
             margin-bottom: 1rem;
             border-radius: 5px;
             text-align: center;
+            display: none;
+            /* Initially hidden */
         }
 
         .message.success {
@@ -135,18 +143,21 @@
         }
     </style>
 </head>
+
 <body>
+
+    <?php include "header.php"; ?>
     <div class="container">
         <div class="header">
             <h2><i class="fas fa-presentation"></i> Submit a Presentation Request</h2>
-            <p class="mt-3">Please fill out the form below to submit your presentation request</p>
+            <p class="mt-3">Please fill out the form below to submit your presentation request.</p>
         </div>
 
-        <div class="message success" style="display: none;" id="successMessage">
+        <div class="message success" id="successMessage">
             Your request has been submitted successfully. Thank you!
         </div>
 
-        <div class="message error" style="display: none;" id="errorMessage">
+        <div class="message error" id="errorMessage">
             There was a problem submitting your request. Please try again.
         </div>
 
@@ -207,7 +218,7 @@
                     <div class="col-12">
                         <label for="paper_link" class="form-label">Paper Link</label>
                         <input type="url" class="form-control" name="paper_link" id="paper_link">
-                        <div class="form-text help-text">Link to paper (e.g. arXiv, Google Scholar, etc.).</div>
+                        <div class="form-text help-text">Link to paper (e.g., arXiv, Google Scholar, etc.).</div>
                     </div>
                     <div class="col-12">
                         <label for="paper_abstract" class="form-label required-label">Abstract</label>
@@ -314,60 +325,27 @@
             });
         });
 
-        // Form validation
-        document.getElementById('presentationForm').addEventListener('submit', function(e) {
-            let isValid = true;
-
-            // Check required fields
-            const requiredFields = this.querySelectorAll('[required]');
-            requiredFields.forEach(field => {
-                if (!field.value.trim()) {
-                    isValid = false;
-                    field.classList.add('is-invalid');
-                } else {
-                    field.classList.remove('is-invalid');
-                }
-            });
-
-            // Validate emails
-            const emailFields = this.querySelectorAll('input[type="email"]');
-            emailFields.forEach(field => {
-                if (field.value && !isValidEmail(field.value)) {
-                    isValid = false;
-                    field.classList.add('is-invalid');
-                }
-            });
-
-            if (!isValid) {
-                e.preventDefault();
-                // We no longer need to show a message here since PHP will handle it on redirect
-            }
-        });
-
-        // Email validation function
-        function isValidEmail(email) {
-            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return re.test(email);
-        }
-
-        // Show message function - now triggered by URL parameters
+        // Show message function - triggered by URL parameters
         function showMessage(text, type) {
             const messageEl = document.getElementById(type + 'Message');
-            messageEl.textContent = text;
-            messageEl.style.display = 'block';
+            if (messageEl) {
+                messageEl.textContent = text;
+                messageEl.style.display = 'block';
 
-            setTimeout(() => {
-                messageEl.style.display = 'none';
-            }, 5000);
+                setTimeout(() => {
+                    messageEl.style.display = 'none';
+                }, 5000);
+            }
         }
 
         // Check if there's a message in URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('message') === 'success') {
-            showMessage('درخواست شما با موفقیت ارسال شد. متشکریم!', 'success');
-        } else if (urlParams.get('message') === 'error') {
-            showMessage('مشکلی در ارسال درخواست شما پیش آمد. لطفاً دوباره تلاش کنید.', 'error');
+        if (urlParams.get('status') === 'success') {
+            showMessage('Your request has been submitted successfully. Thank you!', 'success');
+        } else if (urlParams.get('status') === 'error') {
+            showMessage('There was a problem submitting your request. Please try again.', 'error');
         }
     </script>
 </body>
+
 </html>
