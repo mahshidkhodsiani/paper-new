@@ -265,7 +265,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->close();
 
     // --- پاسخ موفقیت آمیز ---
-    echo json_encode(['success' => true, 'message' => 'اطلاعات با موفقیت ذخیره شد.']);
+    // echo json_encode(['success' => true, 'message' => 'اطلاعات با موفقیت ذخیره شد.']);
+
+    header("Location: discover_competitions");
+    exit(); // برای جلوگیری از اجرای ادامه کد پس از ریدایرکت
+
 } else {
     http_response_code(405); // Method Not Allowed
     echo json_encode(['success' => false, 'message' => 'فقط درخواست‌های POST پذیرفته می‌شود.']);
