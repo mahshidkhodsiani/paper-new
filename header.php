@@ -41,11 +41,40 @@
                 </li>
             </ul>
         </li>
-        <li class="nav-item m-1">
-            <a class="btn btn-info" href="login">Sign in</a>
-        </li>
-        <li class="nav-item m-1">
-            <a class="btn btn-info" href="register">Sign up</a>
-        </li>
+        <?php
+        if (isset($_SESSION['user_data'])) {
+        ?>
+            <li class="nav-item dropdown m-1">
+                <div class="dropdown">
+                    <a href="#" class="d-block link-dark text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                        <img src="<?= $_SESSION['user_data']['profile_pic'] ?>" alt="profile" width="32" height="32" class="rounded-circle">
+                    </a>
+                    <ul class="dropdown-menu text-small" aria-labelledby="dropdownUser1">
+                        <li>
+                            <a class="dropdown-item" href="profile"><i class="fas fa-user-circle me-2"></i> Profile</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="profile/settings.php"><i class="fas fa-cog me-2"></i> Settings</a>
+                        </li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i> log out</a></li>
+                    </ul>
+                </div>
+            </li>
+        <?php
+        } else {
+        ?>
+            <li class="nav-item m-1">
+                <a class="btn btn-info" href="login">Sign in</a>
+            </li>
+            <li class="nav-item m-1">
+                <a class="btn btn-info" href="register">Sign up</a>
+            </li>
+        <?php
+        }
+        ?>
+
     </ul>
 </nav>

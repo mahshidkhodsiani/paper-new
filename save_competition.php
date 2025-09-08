@@ -1,6 +1,7 @@
 <?php
 
 include "config.php";
+include "send_invitation_email.php";
 
 // تابع برای اعتبارسنجی و تمیز کردن داده‌ها
 function sanitizeInput($data)
@@ -11,9 +12,15 @@ function sanitizeInput($data)
     return $data;
 }
 
+// var_dump($_SESSION);
+// die;
+// $userId = $_SESSION['user_data']['id']; // For updating current user's data
+
+
 // بررسی اینکه درخواست از نوع POST است
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
+    $userId = $_POST['userID'];
     // --- اعتبارسنجی فیلدهای اجباری ---
     $required_fields = [
         'organizer',
@@ -91,7 +98,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $winner_email_template = sanitizeInput($_POST['winnerEmailTemplate']);
 
     // --- ذخیره اطلاعات اصلی رقابت ---
-    $stmt = $conn->prepare("INSERT INTO competitions (
+    $stmt = $conn->prepare("INSERT INTO competitions (user_id,
         organizer_name, organizer_email, competition_title, competition_description, start_date, end_date, timezone,
         room_link, session_track, presentation_duration, buffer_duration, presentation_order, competition_visibility,
         participation_access, voting_system, max_votes_per_participant, results_visibility, max_participants,
@@ -102,12 +109,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         judging_visibility, webhook_url, export_options, per_criterion_score_scale, tie_break_policy, qa_time,
         leaderboard_visibility, notify_new_submission, send_schedule, email_winners, results_publish_date,
         winner_email_template
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-    $types = "sssssssssiiisssisssisisiiiiisssssiiiissssssiissssss";
+    $types = "isssssssssiiisssisssisisiiiiisssssiiiissssssiissssss";
 
     $stmt->bind_param(
         $types,
+        $userId,
         $organizer_name,
         $organizer_email,
         $competition_title,
@@ -266,6 +274,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // --- پاسخ موفقیت آمیز ---
     // echo json_encode(['success' => true, 'message' => 'اطلاعات با موفقیت ذخیره شد.']);
+
+
+
+    // --- ارسال ایمیل دعوت به داوران ---
+    if (!empty($_POST['judgeEmail'])) {
+        $competition_title = sanitizeInput($_POST['competitionTitle']);
+        $competition_link = 'https://paperet.com/competition/' . $competition_id; // **این لینک را با لینک واقعی مسابقه خود جایگزین کنید**
+        foreach ($_POST['judgeEmail'] as $index => $email) {
+            $name = sanitizeInput($_POST['judgeName'][$index]);
+            sendInvitationEmail($email, $name, $competition_title, $competition_link, 'داور');
+        }
+    }
+
+    // --- ارسال ایمیل دعوت به شرکت‌کنندگان ---
+    if (!empty($_POST['participantEmail'])) {
+        $competition_title = sanitizeInput($_POST['competitionTitle']);
+        $competition_link = 'https://paperet.com/competition/' . $competition_id; // **این لینک را با لینک واقعی مسابقه خود جایگزین کنید**
+        foreach ($_POST['participantEmail'] as $index => $email) {
+            $name = sanitizeInput($_POST['participantName'][$index]);
+            sendInvitationEmail($email, $name, $competition_title, $competition_link, 'شرکت‌کننده');
+        }
+    }
+
+
 
     header("Location: discover_competitions");
     exit(); // برای جلوگیری از اجرای ادامه کد پس از ریدایرکت

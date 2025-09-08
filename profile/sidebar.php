@@ -69,6 +69,7 @@ if (isset($_POST['update_profile_pic'])) {
             <a class="list-group-item list-group-item-action" href="messages.php">Messages</a>
             <a class="list-group-item list-group-item-action" href="my_requests.php">My requests</a>
             <a class="list-group-item list-group-item-action" href="#">My Labs</a>
+            <a class="list-group-item list-group-item-action" href="my_competitions.php">My Competitions</a>
         </div>
     </div>
 </div>

@@ -1,14 +1,15 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /paper-new/
-
-    # ریدایرکت اجباری به HTTPS
+    
+    # Force HTTPS for all requests
     RewriteCond %{HTTPS} off
     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-    # حذف .php از آدرس
-    RewriteCond %{REQUEST_FILENAME} !-f
+    # Rewrite /competition/123 to competition_details.php?id=123
+    RewriteRule ^competition/([0-9]+)/?$ competition_details.php?id=$1 [L,QSA]
+    
+    # Hide the .php extension
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^([^/]+)/?$ $1.php [L]
-
+    RewriteCond %{REQUEST_FILENAME}\.php -f
+    RewriteRule ^(.*)$ $1.php [L]
 </IfModule>

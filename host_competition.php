@@ -123,12 +123,40 @@ $userId = $_SESSION['user_data']['id']; // For updating current user's data
           </li>
         </ul>
       </li>
-      <li class="nav-item m-1">
-        <a class="btn btn-info" href="login">Sign in</a>
-      </li>
-      <li class="nav-item m-1">
-        <a class="btn btn-info" href="register">Sign up</a>
-      </li>
+      <?php
+      if (isset($_SESSION['user_data'])) {
+      ?>
+        <li class="nav-item dropdown m-1">
+          <div class="dropdown">
+            <a href="#" class="d-block link-dark text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+              <img src="<?= $_SESSION['user_data']['profile_pic'] ?>" alt="profile" width="32" height="32" class="rounded-circle">
+            </a>
+            <ul class="dropdown-menu text-small" aria-labelledby="dropdownUser1">
+              <li>
+                <a class="dropdown-item" href="profile"><i class="fas fa-user-circle me-2"></i> Profile</a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="profile/settings.php"><i class="fas fa-cog me-2"></i> Settings</a>
+              </li>
+              <li>
+                <hr class="dropdown-divider">
+              </li>
+              <li><a class="dropdown-item" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i> log out</a></li>
+            </ul>
+          </div>
+        </li>
+      <?php
+      } else {
+      ?>
+        <li class="nav-item m-1">
+          <a class="btn btn-info" href="login">Sign in</a>
+        </li>
+        <li class="nav-item m-1">
+          <a class="btn btn-info" href="register">Sign up</a>
+        </li>
+      <?php
+      }
+      ?>
     </ul>
   </nav>
 
@@ -151,6 +179,8 @@ $userId = $_SESSION['user_data']['id']; // For updating current user's data
         </div>
 
         <form id="competitionForm" novalidate action="save_competition.php" method="POST" enctype="multipart/form-data">
+          <!-- <input name="userID" type="hidden" value="$userId"> -->
+          <input name="userID" type="hidden" value="<?php echo htmlspecialchars($userId); ?>">
           <ul class="nav nav-tabs" id="mainTabs" role="tablist">
             <li class="nav-item" role="presentation">
               <button class="nav-link active" id="tab-1-tab" data-bs-toggle="tab" data-bs-target="#tab-1" type="button" role="tab" aria-controls="tab-1" aria-selected="true">
@@ -768,21 +798,11 @@ $userId = $_SESSION['user_data']['id']; // For updating current user's data
 
           <div class="card-body">
             <?php
-            // تعریف کوئری با INNER JOIN برای جوین دو جدول
-            $select = "SELECT
-                    c.id,
-                    c.organizer_name,
-                    c.start_date,
-                    c.end_date,
-                    cp.user_id
-                   FROM
-                    competitions c
-                   INNER JOIN
-                    competition_participants cp
-                   ON
-                    c.id = cp.competition_id
-                   WHERE
-                    cp.user_id = $userId";
+
+
+
+            $select = "SELECT * FROM competitions WHERE user_id = $userId";
+
 
             $result = $conn->query($select);
 
@@ -808,6 +828,11 @@ $userId = $_SESSION['user_data']['id']; // For updating current user's data
                         <td><?php echo htmlspecialchars($row['organizer_name']); ?></td>
                         <td><?php echo htmlspecialchars($row['start_date']); ?></td>
                         <td><?php echo htmlspecialchars($row['end_date']); ?></td>
+                        <td>
+                          <a class="btn btn-warning btn-sm" href="edit_competition.php?id=<?php echo $row['id']; ?>">
+                            edit
+                          </a>
+                        </td>
                       </tr>
                     <?php
                       $counter++;
