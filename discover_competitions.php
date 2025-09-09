@@ -56,6 +56,9 @@ $competitions = get_competitions();
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
+    <link rel="icon" type="image/x-icon" href="images/logo.png">
+
+
     <style>
         .competition-card {
             border: none;
@@ -83,7 +86,7 @@ $competitions = get_competitions();
 <body class="bg-light">
 
     <?php include 'header.php'; ?>
-    
+
     <div class="container py-5">
         <div class="row align-items-center mb-5">
             <div class="col-md-8">
