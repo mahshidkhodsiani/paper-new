@@ -23,10 +23,21 @@ if (isset($_SESSION['user_data']['id'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
     <?php include "../includes.php"; ?>
+    <link rel="icon" type="image/x-icon" href="../images/logo.png">
+
 
     <style>
         body {
             background-color: #f0f2f5;
+        }
+
+
+        .card-body-custom .card-title-custom {
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+            max-width: 100%; 
+            margin-bottom: 0.5rem; 
         }
 
         .user-card {
@@ -160,8 +171,8 @@ if (isset($_SESSION['user_data']['id'])) {
                     while ($row = $result->fetch_assoc()) {
                         $target_user_id = $row["id"];
                         $fullName = htmlspecialchars($row["name"] . " " . $row["family"]);
-                        $education = htmlspecialchars($row["education"] ?? 'نامشخص');
-                        $university = htmlspecialchars($row["university"] ?? 'نامشخص');
+                        $education = htmlspecialchars($row["education"] ?? '-');
+                        $university = htmlspecialchars($row["university"] ?? '-');
                         $profilePic = htmlspecialchars($row["profile_pic"] ?? 'https://via.placeholder.com/100');
                         $coverPhoto = htmlspecialchars($row["cover_photo"] ?? 'https://via.placeholder.com/400x150/f0f2f5?text=Cover+Photo');
                         $introVideoPath = htmlspecialchars($row["intro_video_path"] ?? '');

@@ -220,23 +220,14 @@
                         <input type="url" class="form-control" name="paper_link" id="paper_link">
                         <div class="form-text help-text">Link to paper (e.g., arXiv, Google Scholar, etc.).</div>
                     </div>
-                    <div class="col-12">
-                        <label for="paper_abstract" class="form-label required-label">Abstract</label>
-                        <textarea class="form-control" name="paper_abstract" id="paper_abstract" rows="6" required></textarea>
-                    </div>
+                    
                     <div class="col-md-6">
                         <label for="tags" class="form-label">Tags</label>
                         <input type="text" class="form-control" name="tags" id="tags">
                         <div class="form-text help-text">Comma-separated keywords (e.g., AI, Machine Learning)</div>
                     </div>
-                    <div class="col-md-6 d-flex align-items-end">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="is_online" value="1" id="is_online">
-                            <label class="form-check-label" for="is_online">
-                                I want to present online.
-                            </label>
-                        </div>
-                    </div>
+        
+                    
                     <div class="col-12">
                         <label for="paper_file" class="form-label">Paper PDF (optional)</label>
                         <input class="form-control" type="file" name="paper_file" id="paper_file">

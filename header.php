@@ -37,7 +37,7 @@
                 <li><a href="#" class="nav-link px-2 link-secondary"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
                 <li><a href="people" class="nav-link px-2 link-dark"><i class="fas fa-users"></i> People</a></li>
                 <li>
-                    <a href="" class="nav-link px-2 link-dark"><i class="fas fa-flask"></i> Labs</a>
+                    <!-- <a href="" class="nav-link px-2 link-dark"><i class="fas fa-flask"></i> Labs</a> -->
                 </li>
             </ul>
         </li>

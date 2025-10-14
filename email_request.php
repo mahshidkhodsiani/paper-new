@@ -24,10 +24,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $presenter_name = htmlspecialchars($_POST['presenter_name'] ?? '');
     $presenter_email = htmlspecialchars($_POST['presenter_email'] ?? '');
     $paper_title = htmlspecialchars($_POST['paper_title'] ?? '');
-    $paper_abstract = htmlspecialchars($_POST['paper_abstract'] ?? '');
+
 
     // Validate required fields
-    if (empty($requester_name) || empty($requester_email) || empty($presenter_name) || empty($presenter_email) || empty($paper_title) || empty($paper_abstract) || !isset($_POST['consent'])) {
+    if (empty($requester_name) || empty($requester_email) || empty($presenter_name) || empty($presenter_email) || empty($paper_title) || !isset($_POST['consent'])) {
         // Redirect on error
         header("Location: present_request_form.php?status=error");
         exit;
@@ -101,25 +101,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     <span class="label">Link:</span>
                     <span class="value"><a href="' . htmlspecialchars($_POST['paper_link'] ?? '') . '" class="link-value">' . htmlspecialchars($_POST['paper_link'] ?? '') . '</a></span>
                 </div>
-                <div class="details-item">
-                    <span class="label">Abstract:</span>
-                    <p class="value">' . nl2br($paper_abstract) . '</p>
-                </div>
-                <div class="details-item">
-                    <span class="label">Tags:</span>
-                    <span class="value">' . htmlspecialchars($_POST['tags'] ?? '') . '</span>
-                </div>
-                <div class="details-item">
-                    <span class="label">Online Presentation:</span>
-                    <span class="value">' . (isset($_POST['is_online']) ? 'Yes' : 'No') . '</span>
-                </div>
+                
             </div>
     ';
 
-    if (isset($_POST['include_comp']) && $_POST['include_comp'] == '1') {
+    if (isset($_POST['include_comp']) && $_POST['include_comp'] == '1') 
+                {
         $email_body_html .= '
             <div class="details-section">
-                <h2>Competition Details</h2>
+                    <h2>Competition Details</h2>
                 <div class="details-item">
                     <span class="label">For Competition:</span>
                     <span class="value">Yes</span>
@@ -194,7 +184,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Redirect on success
         header("Location: present_request_form.php?status=success");
         exit;
-
     } catch (Exception $e) {
         // Redirect on error
         error_log("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
@@ -202,4 +191,3 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit;
     }
 }
-?>

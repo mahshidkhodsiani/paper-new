@@ -115,11 +115,9 @@ if (isset($_SESSION['user_data']['id'])) {
                 }
                 ?>
 
-
                 <li>
-                    <a href="" class="nav-link px-2 link-dark"><i class="fas fa-flask"></i> Labs</a>
+                    <!-- <a href="" class="nav-link px-2 link-dark"><i class="fas fa-flask"></i> Labs</a> -->
                 </li>
-
 
                 <?php
                 // بررسی می‌کنیم که آیا سشن کاربر وجود دارد یا خیر
