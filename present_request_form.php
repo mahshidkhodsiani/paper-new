@@ -7,6 +7,10 @@
     <title>Submit a Presentation</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="images/logo.png">
+    
+    <?php include "header.php"; ?>
+
     <style>
         :root {
             --primary-color: #4e73df;
@@ -146,7 +150,6 @@
 
 <body>
 
-    <?php include "header.php"; ?>
     <div class="container">
         <div class="header">
             <h2><i class="fas fa-presentation"></i> Submit a Presentation Request</h2>
@@ -220,14 +223,14 @@
                         <input type="url" class="form-control" name="paper_link" id="paper_link">
                         <div class="form-text help-text">Link to paper (e.g., arXiv, Google Scholar, etc.).</div>
                     </div>
-                    
+
                     <div class="col-md-6">
                         <label for="tags" class="form-label">Tags</label>
                         <input type="text" class="form-control" name="tags" id="tags">
                         <div class="form-text help-text">Comma-separated keywords (e.g., AI, Machine Learning)</div>
                     </div>
-        
-                    
+
+
                     <div class="col-12">
                         <label for="paper_file" class="form-label">Paper PDF (optional)</label>
                         <input class="form-control" type="file" name="paper_file" id="paper_file">
@@ -240,7 +243,7 @@
             </div>
             <div class="card p-4 mb-4">
                 <div class="mb-3">
-                    <label class="form-label">Are you submitting for a competition?</label>
+                    <label class="form-label">Are you requesting for a competition?</label>
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" name="include_comp" id="include_comp_yes" value="1">
                         <label class="form-check-label" for="include_comp_yes">Yes</label>
@@ -337,6 +340,8 @@
             showMessage('There was a problem submitting your request. Please try again.', 'error');
         }
     </script>
+
+    <?php include "footer.php" ?>
 </body>
 
 </html>

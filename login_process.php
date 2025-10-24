@@ -1,22 +1,27 @@
 <?php
 
+// --- Adding the following code to set the session lifetime to 2 hours (7200 seconds) ---
+$lifetime = 7200; // 2 hours in seconds
+session_set_cookie_params($lifetime);
+// ------------------------------------------------------------------
+
 session_start();
 include "config.php";
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 
-// بررسی خطای اتصال به دیتابیس
+// Check for database connection error
 if ($conn->connect_error) {
-    die("خطا در اتصال به دیتابیس: " . $conn->connect_error);
+    die("Database connection error: " . $conn->connect_error);
 }
 
-// بررسی اینکه آیا اطلاعات فرم با متد POST ارسال شده است یا خیر
+// Check if form data was submitted via POST method
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['email']) && isset($_POST['password'])) {
         $email = $_POST['email'];
         $password = $_POST['password'];
 
-        // استفاده از Prepared Statement برای جلوگیری از SQL Injection
+        // Use Prepared Statement to prevent SQL Injection
         $sql = "SELECT id, name, family, email, password, status, profile_pic FROM users WHERE email = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("s", $email);
@@ -27,9 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $row = $result->fetch_assoc();
             $stored_hashed_password = $row['password'];
 
-            // استفاده از password_verify() برای تأیید رمز عبور
+            // Use password_verify() to confirm the password
             if (password_verify($password, $stored_hashed_password)) {
-                // رمز عبور صحیح است.
+                // Password is correct.
                 if ($row['status'] == 0) {
                     $sql_reactivate = "UPDATE users SET status = 1 WHERE id = ?";
                     $stmt_reactivate = $conn->prepare($sql_reactivate);
@@ -50,26 +55,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header("Location: " . $redirect_url);
                     exit();
                 }
-                // هدایت کاربر به صفحه پروفایل
+                // Redirect user to the profile page
                 header("Location: profile");
                 exit();
             } else {
-                // رمز عبور اشتباه است.
-                $_SESSION['login_error'] = "ایمیل یا رمز عبور اشتباه است.";
+                // Incorrect password.
+                $_SESSION['login_error'] = "Incorrect email or password.";
             }
         } else {
-            // ایمیل در پایگاه داده یافت نشد.
-            $_SESSION['login_error'] = "ایمیل یا رمز عبور اشتباه است.";
+            // Email not found in the database.
+            $_SESSION['login_error'] = "Incorrect email or password.";
         }
     } else {
-        // اطلاعات کامل نیست.
-        $_SESSION['login_error'] = "لطفاً تمامی فیلدها را پر کنید.";
+        // Data is incomplete.
+        $_SESSION['login_error'] = "Please fill in all fields.";
     }
 } else {
-    // اگر درخواست با متد POST ارسال نشده باشد
-    $_SESSION['login_error'] = "درخواست نامعتبر.";
+    // If the request was not sent with the POST method
+    $_SESSION['login_error'] = "Invalid request.";
 }
 
-// در صورت بروز هر گونه خطا، به صفحه ورود بازگردان
+// Redirect back to the login page in case of any error
 header("Location: login.php");
 exit();

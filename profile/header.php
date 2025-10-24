@@ -1,4 +1,5 @@
 <?php
+// --- بخش PHP منطق بک‌اند (بدون تغییر) ---
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -46,6 +47,7 @@ if (isset($_SESSION['user_data']['id'])) {
 }
 ?>
 <style>
+    /* استایل‌های شما */
     .search-container {
         position: relative;
     }
@@ -64,20 +66,25 @@ if (isset($_SESSION['user_data']['id'])) {
     }
 </style>
 
-<header class="p-3 mb-3 border-bottom">
-    <div class="container">
-        <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
-            <a href="./" class="d-flex align-items-center mb-2 mb-lg-0 text-dark text-decoration-none">
-                <img src="../images/logo.png" class="img-fluid" height="80" width="80" alt="Logo">
+<nav>
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link" href="../">
+                <img src="../images/logo.png" alt="paperet" style="height: 30px;">
             </a>
+        </li>
 
-            <form id="search-form" class="col-12 col-lg-5 mb-3 mb-lg-0 me-lg-3 mr-2 search-container" style="margin-left: 5px;" role="search" method="GET" action="search.php">
-                <input class="form-control" type="search" name="query" placeholder="Search..." aria-label="Search">
+        <li class="nav-item mx-auto d-flex align-items-center" style="width: 50%;">
+            <form id="search-form" class="d-flex w-100 search-container mt-1" role="search" method="GET" action="../search.php">
+                <input class="form-control me-2" type="search" name="query" placeholder="Search..." aria-label="Search">
+                <button class="btn btn-info" type="submit">
+                    <i class="fas fa-search"></i>
+                </button>
                 <div id="suggestions" class="search-results-box" style="display: none;"></div>
             </form>
 
             <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
-                <li><a href="#" class="nav-link px-2 link-secondary"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
+                <!-- <li><a href="#" class="nav-link px-2 link-secondary"><i class="fab fa-linkedin"></i> LinkedIn</a></li> -->
                 <li><a href="../people" class="nav-link px-2 link-dark"><i class="fas fa-users"></i> People</a></li>
 
                 <li class="nav-item dropdown">
@@ -106,18 +113,19 @@ if (isset($_SESSION['user_data']['id'])) {
                         <li><a class="dropdown-item" href="my_requests.php"><i class="fas fa-users me-2"></i> View all connection requests</a></li>
                     </ul>
                 </li>
-                <!-- <li><a href="" class="nav-link px-2 link-dark"><i class="fas fa-flask"></i> Labs</a></li> -->
             </ul>
+        </li>
 
-            <?php
-            if ($_SESSION['user_data']['profile_pic'] == "images/2.png") {
-                $pic = "../images/2.png";
-            } else {
-                $pic = "../" . $_SESSION['user_data']['profile_pic'];
-            }
-            ?>
-
-            <div class="dropdown text-end">
+        <?php
+        // منطق تعیین آدرس عکس پروفایل (بدون تغییر)
+        if ($_SESSION['user_data']['profile_pic'] == "images/2.png") {
+            $pic = "../images/2.png";
+        } else {
+            $pic = "../" . $_SESSION['user_data']['profile_pic'];
+        }
+        ?>
+        <li class="nav-item dropdown m-1">
+            <div class="dropdown">
                 <a href="#" class="d-block link-dark text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
                     <img src="<?= $pic ?>" alt="profile" width="32" height="32" class="rounded-circle">
                 </a>
@@ -134,9 +142,9 @@ if (isset($_SESSION['user_data']['id'])) {
                     <li><a class="dropdown-item" href="../logout.php"><i class="fas fa-sign-out-alt me-2"></i> log out</a></li>
                 </ul>
             </div>
-        </div>
-    </div>
-</header>
+        </li>
+    </ul>
+</nav>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -145,7 +153,7 @@ if (isset($_SESSION['user_data']['id'])) {
     $(document).ready(function() {
         const searchInput = $('input[name="query"]');
         const suggestionsBox = $('#suggestions');
-        const searchForm = $('form[role="search"]'); // استفاده از انتخابگر attribute برای پیدا کردن فرم
+        const searchForm = $('#search-form'); // استفاده از ID جدید
         let timeout = null;
 
         function fetchResults(query) {
@@ -157,7 +165,7 @@ if (isset($_SESSION['user_data']['id'])) {
             clearTimeout(timeout);
             timeout = setTimeout(function() {
                 $.ajax({
-                    url: 'search_live.php', // مسیردهی صحیح به فایل search_live.php
+                    url: 'search_live.php',
                     type: 'GET',
                     data: {
                         query: query
@@ -174,6 +182,7 @@ if (isset($_SESSION['user_data']['id'])) {
 
         searchInput.on('keyup', function(e) {
             if (e.key === "Enter" || e.keyCode === 13) {
+                // اگر کاربر کلید Enter را بزند، فرم ارسال شود (حتی با وجود دکمه جستجو)
                 searchForm.submit();
             } else {
                 fetchResults($(this).val());

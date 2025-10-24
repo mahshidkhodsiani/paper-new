@@ -26,7 +26,15 @@ if (isset($_POST['action_type'])) {
 
             $title = $_POST['title'] ?? '';
             $description = $_POST['description'] ?? '';
-            $role = $_POST['role'] ?? 'Author'; // Default role
+            $co_authors = $_POST['co_authors'] ?? ''; // New field
+
+            // Handle content type logic (custom input takes precedence if 'Other' is selected)
+            $content_type = $_POST['content_type'] ?? 'Presentation';
+            if ($content_type === 'Other' && isset($_POST['custom_content_type']) && !empty($_POST['custom_content_type'])) {
+                $content_type = $_POST['custom_content_type'];
+            }
+
+            $role = $_POST['role'] ?? 'Author';
             $keywords = $_POST['keywords'] ?? '';
             $pdf_path = '';
             $video_path = '';
@@ -110,16 +118,18 @@ if (isset($_POST['action_type'])) {
 
             // If no errors occurred during file upload and a file path is available, insert into database
             if (empty($message) && (!empty($pdf_path) || !empty($video_path))) {
-                $sql_add = "INSERT INTO presentations (user_id, title, description, pdf_path, video_path, role, keywords) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                // ADDED co_authors and content_type to the SQL query
+                $sql_add = "INSERT INTO presentations (user_id, title, description, co_authors, content_type, pdf_path, video_path, role, keywords) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 $stmt_add = $conn_add->prepare($sql_add);
 
                 if ($stmt_add) {
-                    $stmt_add->bind_param("issssss", $userId, $title, $description, $pdf_path, $video_path, $role, $keywords);
+                    // Added two 's' for co_authors and content_type
+                    $stmt_add->bind_param("issssssss", $userId, $title, $description, $co_authors, $content_type, $pdf_path, $video_path, $role, $keywords);
                     if ($stmt_add->execute()) {
-                        header("Location: " . $_SERVER['PHP_SELF'] . "?status=success&msg=" . urlencode("Presentation added successfully!"));
+                        header("Location: " . $_SERVER['PHP_SELF'] . "?status=success&msg=" . urlencode("Presentation/Article added successfully!"));
                         exit();
                     } else {
-                        $message = "Error adding presentation: " . $stmt_add->error;
+                        $message = "Error adding presentation/article: " . $stmt_add->error;
                         $messageType = 'danger';
                     }
                     $stmt_add->close();
@@ -170,10 +180,10 @@ if (isset($_POST['action_type'])) {
                                     unlink(realpath($storedVideoPath));
                                 }
 
-                                header("Location: " . $_SERVER['PHP_SELF'] . "?status=success&msg=" . urlencode("Presentation deleted successfully!"));
+                                header("Location: " . $_SERVER['PHP_SELF'] . "?status=success&msg=" . urlencode("Presentation/Article deleted successfully!"));
                                 exit();
                             } else {
-                                $message = "Error deleting presentation from database: " . $stmt_delete->error;
+                                $message = "Error deleting presentation/article from database: " . $stmt_delete->error;
                                 $messageType = 'danger';
                             }
                             $stmt_delete->close();
@@ -182,7 +192,7 @@ if (isset($_POST['action_type'])) {
                             $messageType = 'danger';
                         }
                     } else {
-                        $message = "Presentation not found or you don't have permission to delete it.";
+                        $message = "Presentation/Article not found or you don't have permission to delete it.";
                         $messageType = 'danger';
                     }
                     $stmt_verify->close();
@@ -199,7 +209,7 @@ if (isset($_POST['action_type'])) {
     }
 }
 
-// --- Fetch Presentations for the current user (This part runs after add/delete operations) ---
+// --- Fetch Presentations/Articles for the current user (This part runs after add/delete operations) ---
 $presentations = [];
 $conn_fetch = new mysqli($servername, $username, $password, $dbname);
 if ($conn_fetch->connect_error) {
@@ -207,8 +217,8 @@ if ($conn_fetch->connect_error) {
 }
 $conn_fetch->set_charset("utf8mb4");
 
-// Prepare the SQL query to select presentations belonging to the current user
-$sql_fetch_presentations = "SELECT id, title, description, pdf_path, video_path, role, keywords FROM presentations WHERE user_id = ?";
+// Prepare the SQL query to select presentations belonging to the current user (ADDED co_authors and content_type)
+$sql_fetch_presentations = "SELECT id, title, description, co_authors, content_type, pdf_path, video_path, role, keywords FROM presentations WHERE user_id = ?";
 $stmt_fetch_presentations = $conn_fetch->prepare($sql_fetch_presentations);
 
 if ($stmt_fetch_presentations) {
@@ -270,10 +280,14 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Presentations</title>
+    <title>My Presentations/Articles</title>
 
     <?php include "../includes.php"; ?>
     <link rel="stylesheet" href="styles.css">
+
+    <link rel="icon" type="image/x-icon" href="../images/logo.png">
+
+
     <style>
         .presentations-table {
             width: 100%;
@@ -314,16 +328,39 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
                         </div>
                     <?php endif; ?>
 
-                    <h5 class="mt-4">Add New Presentation</h5>
+                    <h5 class="mt-4">Add New Presentation/Article</h5>
                     <form action="" method="post" enctype="multipart/form-data">
                         <div class="mb-3">
-                            <label for="presentationTitle" class="form-label">Presentation Title</label>
+                            <label for="presentationTitle" class="form-label">Title</label>
                             <input type="text" class="form-control" id="presentationTitle" name="title" required>
                         </div>
                         <div class="mb-3">
-                            <label for="presentationDescription" class="form-label">Description</label>
+                            <label for="presentationDescription" class="form-label">Abstract/Description</label>
                             <textarea class="form-control" id="presentationDescription" name="description" rows="3"></textarea>
                         </div>
+
+                        <div class="mb-3">
+                            <label for="coAuthors" class="form-label">Co-Authors' Names (Optional)</label>
+                            <input type="text" class="form-control" id="coAuthors" name="co_authors">
+                            <small class="text-muted">Separate names with commas (e.g., John Doe, Alice Smith).</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="contentType" class="form-label">Content Type</label>
+                            <select class="form-select" id="contentType" name="content_type" required onchange="toggleCustomType(this)">
+                                <option value="Presentation">Presentation</option>
+                                <option value="Article">Article</option>
+                                <option value="Journal">Journal</option>
+                                <option value="Conference">Conference Paper</option>
+                                <option value="ClassProject">Class Project</option>
+                                <option value="Other">Other (Specify below)</option>
+                            </select>
+                            <div id="customTypeDiv" class="mt-2" style="display:none;">
+                                <input type="text" class="form-control" id="customContentType" name="custom_content_type" placeholder="Enter custom type">
+                            </div>
+                            <small class="text-muted">Select the type of content.</small>
+                        </div>
+
                         <div class="mb-3">
                             <label for="presentationRole" class="form-label">Your Role</label>
                             <select class="form-select" id="presentationRole" name="role" required>
@@ -346,14 +383,14 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
                             <input class="form-control" type="file" id="videoFile" name="video_file" accept=".mp4, .webm, .ogg">
                             <small class="text-muted">Allowed formats: MP4, WebM, OGG.</small>
                         </div>
-                        <button type="submit" name="action_type" value="add_presentation" class="btn btn-success">Add Presentation</button>
+                        <button type="submit" name="action_type" value="add_presentation" class="btn btn-success">Add Content</button>
                     </form>
 
 
 
 
                     <br>
-                    <h4 class="mb-4">My Presentations</h4>
+                    <h4 class="mb-4">My Presentations/Articles</h4>
 
 
 
@@ -363,7 +400,8 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
                                 <thead>
                                     <tr>
                                         <th>Title</th>
-                                        <th>Description</th>
+                                        <th>Co-Authors</th>
+                                        <th>Type</th>
                                         <th>Rating</th>
                                         <th>File</th>
                                         <th>Actions</th>
@@ -373,7 +411,8 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
                                     <?php foreach ($presentations as $presentation): ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars($presentation['title']); ?></td>
-                                            <td><?php echo htmlspecialchars($presentation['description']); ?></td>
+                                            <td class="text-wrap" style="max-width: 150px;"><?php echo htmlspecialchars($presentation['co_authors'] ?: '-'); ?></td>
+                                            <td><?php echo htmlspecialchars($presentation['content_type']); ?></td>
                                             <td>
                                                 <div class="rating-stars me-2" data-rating="<?= htmlspecialchars($presentation['avg_rating']) ?>">
                                                     <?php
@@ -411,8 +450,9 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
                                             </td>
                                             <td>
                                                 <div class="presentation-actions">
+                                                    <a href="edit_presentation.php?id=<?php echo $presentation['id']; ?>" class="btn btn-info btn-sm text-white me-2"><i class="fas fa-edit"></i> Edit</a>
 
-                                                    <form action="" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this presentation? This action cannot be undone.');">
+                                                    <form action="" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this content? This action cannot be undone.');">
                                                         <input type="hidden" name="action_type" value="delete_presentation">
                                                         <input type="hidden" name="presentation_id" value="<?php echo $presentation['id']; ?>">
                                                         <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Delete</button>
@@ -422,7 +462,7 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
                                         </tr>
                                         <?php if (!empty($presentation['comments'])): ?>
                                             <tr>
-                                                <td colspan="5">
+                                                <td colspan="6">
                                                     <div class="card my-3">
                                                         <div class="card-header bg-primary text-white">
                                                             <h6 class="mb-0"><i class="fas fa-comments me-1"></i> User Comments</h6>
@@ -448,7 +488,7 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
                         </div>
                     <?php else: ?>
                         <div class="alert alert-info" role="alert">
-                            You haven't uploaded any presentations yet.
+                            You haven't uploaded any content yet.
                         </div>
                     <?php endif; ?>
 
@@ -462,17 +502,39 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
     </div>
 
     <script>
+        function toggleCustomType(selectElement) {
+            const customDiv = document.getElementById('customTypeDiv');
+            const customInput = document.getElementById('customContentType');
+            const roleSelect = document.getElementById('presentationRole'); // Assuming this exists
+
+            if (selectElement.value === 'Other') {
+                customDiv.style.display = 'block';
+                customInput.setAttribute('name', 'content_type'); // Use this field for POST
+                customInput.setAttribute('required', 'required');
+                selectElement.removeAttribute('name'); // Exclude select from POST
+            } else {
+                customDiv.style.display = 'none';
+                customInput.removeAttribute('name');
+                customInput.removeAttribute('required');
+                selectElement.setAttribute('name', 'content_type'); // Use select field for POST
+            }
+        }
+    </script>
+
+    <script>
         document.addEventListener('DOMContentLoaded', function() {
             const urlParams = new URLSearchParams(window.location.search);
             const statusParam = urlParams.get('status');
             const msgParam = urlParams.get('msg');
 
             if (statusParam && msgParam) {
+                // Remove GET parameters from URL after a short delay
                 setTimeout(() => {
                     const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
                     window.history.replaceState({}, document.title, cleanUrl);
                 }, 3000);
 
+                // Auto-close alert after a short delay
                 const alertElement = document.querySelector('.alert');
                 if (alertElement) {
                     setTimeout(() => {

@@ -5,7 +5,7 @@
       <!-- بخش لوگو و متن -->
       <div class="d-flex flex-column">
         <a href="./">
-          <img src="images/logo.png" class="img-fluid" height="100" width="100" alt="Logo">
+          <img src="../images/logo.png" class="img-fluid" height="100" width="100" alt="Logo">
         </a>
         <p class="text-body-secondary mb-0">© 2025 Paperet. All rights reserved</p>
       </div>

@@ -79,6 +79,65 @@ if (isset($_SESSION['user_data']['id']) && isset($user['id']) && $_SESSION['user
             </button>
 
         </div>
+
+        <br>
+
+
+        <?php
+        $introVideoPath = htmlspecialchars($user['intro_video_path'] ?? '');
+        $hasVideo = !empty($introVideoPath) && file_exists($introVideoPath);
+        ?>
+        <div class="mb-4">
+            <h5 class="profile-section-title"><i class="fas fa-briefcase me-2"></i>Education and Work Information</h5>
+            <?php if (!empty($user_universities_array)) : ?>
+                <h6><i class="fas fa-university me-2 text-primary"></i>Universities:</h6>
+                <ul>
+                    <?php foreach ($user_universities_array as $uni) : ?>
+                        <li><?= htmlspecialchars(trim($uni)) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+            <?php if (!empty($user_educations_array)) : ?>
+                <h6><i class="fas fa-graduation-cap me-2 text-primary"></i>Education:</h6>
+                <ul>
+                    <?php foreach ($user_educations_array as $edu) : ?>
+                        <li><?= htmlspecialchars(trim($edu)) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+            <?php if (!empty($user['workplace'])) : ?>
+                <p><i class="fas fa-building me-2 text-primary"></i>Workplace: <?= htmlspecialchars($user['workplace']) ?></p>
+            <?php endif; ?>
+        </div>
+        <?php if (!empty($user['biography'])) : ?>
+            <div class="mb-4">
+                <h5 class="profile-section-title"><i class="fas fa-info-circle me-2"></i>About Me</h5>
+                <p class="text-justify"><?= nl2br(htmlspecialchars($user['biography'])) ?></p>
+            </div>
+        <?php endif; ?>
+        <?php if (!empty($user['linkedin_url']) || !empty($user['x_url']) || !empty($user['google_scholar_url']) || !empty($user['github_url']) || !empty($user['website_url'])) : ?>
+            <div class="mb-4">
+                <h5 class="profile-section-title"><i class="fas fa-link me-2"></i>Social and Web Links</h5>
+                <div class="social-links">
+                    <?php if (!empty($user['linkedin_url'])) : ?>
+                        <a href="<?= htmlspecialchars($user['linkedin_url']) ?>" target="_blank" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                    <?php endif; ?>
+                    <?php if (!empty($user['x_url'])) : ?>
+                        <a href="<?= htmlspecialchars($user['x_url']) ?>" target="_blank" title="X (Twitter)"><i class="fab fa-x-twitter"></i></a>
+                    <?php endif; ?>
+                    <?php if (!empty($user['google_scholar_url'])) : ?>
+                        <a href="<?= htmlspecialchars($user['google_scholar_url']) ?>" target="_blank" title="Google Scholar"><i class="fas fa-graduation-cap"></i></a>
+                    <?php endif; ?>
+                    <?php if (!empty($user['github_url'])) : ?>
+                        <a href="<?= htmlspecialchars($user['github_url']) ?>" target="_blank" title="GitHub"><i class="fab fa-github"></i></a>
+                    <?php endif; ?>
+                    <?php if (!empty($user['website_url'])) : ?>
+                        <a href="<?= htmlspecialchars($user['website_url']) ?>" target="_blank" title="Website"><i class="fas fa-globe"></i></a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+      
     </div>
 </div>
 
@@ -161,6 +220,16 @@ if (isset($_SESSION['user_data']['id']) && isset($user['id']) && $_SESSION['user
 
     .play-icon-overlay-sidebar:hover {
         background-color: rgba(0, 0, 0, 0.7);
+    }
+
+
+    .sidebar-content p {
+        white-space: normal;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+        text-align: center;
+        display: inline-block;
+        max-width: 100%;
     }
 </style>
 

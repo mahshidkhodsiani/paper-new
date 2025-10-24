@@ -68,9 +68,10 @@ if (isset($_POST['update_profile_pic'])) {
             <a class="list-group-item list-group-item-action" href="saved_peoples.php">Connections</a>
             <a class="list-group-item list-group-item-action" href="messages.php">Messages</a>
             <a class="list-group-item list-group-item-action" href="my_requests.php">My requests</a>
-            <a class="list-group-item list-group-item-action" href="#">My Labs</a>
             <a class="list-group-item list-group-item-action" href="my_competitions.php">My Competitions</a>
+            <a class="list-group-item list-group-item-action" href="my_judgments.php">My judgments</a>
         </div>
+        
     </div>
 </div>
 
@@ -121,7 +122,7 @@ if (isset($_POST['update_profile_pic'])) {
             var videoPath = $(this).data('video-path');
 
             if (videoPath) {
-                var fullPath =  videoPath;
+                var fullPath = videoPath;
                 var videoPlayer = $('#introVideoPlayer');
 
                 // مسیر ویدیو را مستقیماً به تگ <video> اضافه می‌کنیم
