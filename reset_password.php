@@ -2,6 +2,14 @@
 session_start();
 include "config.php";
 include "includes.php";
+
+// ⚠️ بررسی اعتبار: مطمئن می‌شویم که کاربر از مسیر صحیح آمده است
+if (!isset($_SESSION['code_verified']) || $_SESSION['code_verified'] !== true || !isset($_SESSION['email_for_reset'])) {
+    $_SESSION['reset_error'] = "Access denied. Please verify your reset code again.";
+    header("Location: forgot_password.php");
+    exit();
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -12,9 +20,10 @@ include "includes.php";
 
     <link rel="icon" type="image/x-icon" href="images/logo.png">
 
-    <title>Verify Code</title>
+    <title>Reset Password</title>
 
     <style>
+        /* استفاده از همان استایل‌های قبلی */
         body {
             background: linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%);
             min-height: 100vh;
@@ -67,32 +76,31 @@ include "includes.php";
         <div class="row w-100 align-items-center justify-content-center">
             <div class="col-lg-5">
                 <div class="login-form-box">
-                    <h3 class="mb-4 login-title">Verify Reset Code</h3>
-                    <p class="mb-4">Enter the 6-digit code sent to your email.</p>
+                    <h3 class="mb-4 login-title">Set New Password</h3>
+                    <p class="mb-4">Enter and confirm your new password for <?php echo htmlspecialchars($_SESSION['email_for_reset']); ?>.</p>
 
                     <?php
-                    // نمایش پیام موفقیت یا خطا
+                    // نمایش پیام خطا در صورت وجود
                     if (isset($_SESSION['reset_error'])) {
                         echo '<div class="alert alert-danger">' . $_SESSION['reset_error'] . '</div>';
                         unset($_SESSION['reset_error']);
                     }
-                    if (isset($_SESSION['reset_success'])) {
-                        echo '<div class="alert alert-success">' . $_SESSION['reset_success'] . '</div>';
-                        unset($_SESSION['reset_success']);
-                    }
                     ?>
 
-                    <form method="post" action="verify_code_process.php">
+                    <form method="post" action="reset_password_process.php">
                         <div class="mb-3 text-start">
-                            <label for="code" class="form-label">Reset Code</label>
-                            <input type="text" class="form-control" id="code" name="code" required 
-                                maxlength="6" pattern="\d{6}" title="6-digit code" autocomplete="off">
+                            <label for="password" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
                         </div>
-                        <button type="submit" name="verify_code" class="btn btn-primary w-100" style="font-weight:600;">Verify Code</button>
+                        <div class="mb-3 text-start">
+                            <label for="confirm_password" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                        </div>
+                        <button type="submit" name="reset_password" class="btn btn-primary w-100" style="font-weight:600;">Change Password</button>
                     </form>
 
                     <div class="mt-3 text-center">
-                        <a href="forgot_password.php" class="back-link">Resend Code or Change Email</a>
+                        <a href="login.php" class="back-link">Back to Login</a>
                     </div>
                 </div>
             </div>

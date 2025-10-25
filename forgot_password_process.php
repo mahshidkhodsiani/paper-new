@@ -76,6 +76,8 @@ if (isset($_POST['send_code'])) {
 
             $mail->send();
 
+            $_SESSION['email_for_reset'] = $email; // ذخیره ایمیل کاربر در سشن
+
             $_SESSION['reset_success'] = "The password reset code has been sent to your email.";
             header("Location: verify_code.php");
             exit();
