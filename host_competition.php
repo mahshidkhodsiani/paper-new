@@ -506,8 +506,8 @@ $userId = $_SESSION['user_data']['id']; // For updating current user's data
                 </div>
 
                 <div class="mb-3">
-                  <label for="slideDeck" class="form-label">Slide Deck (required)</label>
-                  <input class="form-control" type="file" id="slideDeck" name="slideDeck" accept=".pdf,.ppt,.pptx" required>
+                  <label for="slideDeck" class="form-label">Slide Deck</label>
+                  <input class="form-control" type="file" id="slideDeck" name="slideDeck" accept=".pdf,.ppt,.pptx">
                   <div class="form-text">Upload slides as PDF or PowerPoint.</div>
                 </div>
 

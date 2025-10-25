@@ -13,6 +13,7 @@ if ($competition_id <= 0) {
 
 try {
     // Fetch main competition details
+    // The SELECT * is sufficient as user_id and organizer_email are present in the table
     $sql_main = "SELECT * FROM competitions WHERE id = ?";
     $stmt_main = $conn->prepare($sql_main);
     $stmt_main->bind_param("i", $competition_id);
@@ -70,6 +71,7 @@ try {
 
     // Simulated data
     $tags = ['Pitch', '10 min live'];
+    // In a real application, you would query these from the database
     $participants_count = rand(50, 150);
     $views_count = rand(500, 2000);
 
@@ -79,6 +81,10 @@ try {
             'title' => $competition['competition_title'],
             'description' => $competition['competition_description'],
             'organizer' => $competition['organizer_name'],
+            // START OF FIX: Added user_id and organizer_email for the frontend
+            'organizerUserId' => $competition['user_id'],
+            'organizerEmail' => $competition['organizer_email'],
+            // END OF FIX
             'startDate' => $competition['start_date'],
             'endDate' => $competition['end_date'],
             'status' => $status,

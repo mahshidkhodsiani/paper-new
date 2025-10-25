@@ -62,17 +62,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_account'])) {
         $stmt_delete_connections->execute();
         $stmt_delete_connections->close();
 
-        // حذف هر داده دیگری که به id کاربر وابسته است (مثلاً posts، comments، notifications و...)
-        // اگر جداول دیگری هم دارید، کوئری‌های مشابهی برای آن‌ها اضافه کنید.
-        // مثال:
-        // $sql_delete_posts = "DELETE FROM posts WHERE user_id = ?";
-        // $stmt_delete_posts = $conn->prepare($sql_delete_posts);
-        // $stmt_delete_posts->bind_param("i", $userId);
-        // $stmt_delete_posts->execute();
-        // $stmt_delete_posts->close();
 
 
-        // مرحله ۲: حذف کاربر از جدول users
         $sql_delete_user = "DELETE FROM users WHERE id = ?";
         $stmt_delete_user = $conn->prepare($sql_delete_user);
         if ($stmt_delete_user) {
@@ -378,6 +369,8 @@ $stmt->close();
     <?php include "../includes.php"; ?>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="styles.css">
+
+    <link rel="icon" type="image/x-icon" href="../images/logo.png">
 
     <style>
         .cover-photo-container {

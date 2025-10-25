@@ -58,6 +58,11 @@ include "includes.php";
         .back-link:hover {
             text-decoration: underline;
         }
+
+           .btn-primary,
+        .btn-info {
+            background-color: #4242f0;
+        }
     </style>
 </head>
 

@@ -225,7 +225,7 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label for="tags" class="form-label">Tags</label>
+                        <label for="tags" class="form-label">Keywords</label>
                         <input type="text" class="form-control" name="tags" id="tags">
                         <div class="form-text help-text">Comma-separated keywords (e.g., AI, Machine Learning)</div>
                     </div>

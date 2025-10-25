@@ -111,6 +111,11 @@
             cursor: pointer;
             color: #888;
         }
+
+        .btn-primary,
+        .btn-info {
+            background-color: #4242f0;
+        }
     </style>
 </head>
 

@@ -40,7 +40,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 
             while ($row = $presentations_result->fetch_assoc()) {
                 $presentationId = $row['id'];
-                
+
                 // منطق لایک واقعی
                 $row['has_user_liked'] = false;
                 if ($loggedInUserId) {
@@ -56,7 +56,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                         $stmt_check_like->close();
                     }
                 }
-                
+
                 // منطق رتبه‌بندی و کامنت
                 $sql_avg_rating = "SELECT AVG(rating_value) AS avg_rating, COUNT(id) AS rating_count FROM ratings WHERE presentation_id = ?";
                 $stmt_avg_rating = $conn->prepare($sql_avg_rating);
@@ -154,6 +154,8 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
     <title>Profile of <?php echo htmlspecialchars($user['name'] . ' ' . $user['family']); ?></title>
     <?php include "../includes.php"; ?>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="../images/logo.png">
+
     <style>
         .comment-section {
             background-color: #f8f9fa;
@@ -172,15 +174,17 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             border-bottom: none;
             margin-bottom: 0;
         }
-        
+
         /* CSS برای شبیه‌سازی ظاهر عکس */
         .presentation-card {
-            border-left: 5px solid #007bff; /* نوار آبی رنگ کنار کارت */
+            border-left: 5px solid #007bff;
+            /* نوار آبی رنگ کنار کارت */
         }
-        
+
         /* اصلاح برای تیره‌تر شدن متن متا دیتا */
         .presentation-meta {
-            color: #495057 !important; /* رنگ تیره تر (gray-700) */
+            color: #495057 !important;
+            /* رنگ تیره تر (gray-700) */
             font-weight: 500;
         }
 
@@ -192,25 +196,26 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            position: relative; /* برای اطمینان از قرارگیری در مرکز */
+            position: relative;
+            /* برای اطمینان از قرارگیری در مرکز */
         }
-        
+
         .video-play-link {
-             /* لینک اصلی ویدیو حذف شد تا مدال باز شود. */
-            color: inherit; /* حذف رنگ آبی لینک */
+            /* لینک اصلی ویدیو حذف شد تا مدال باز شود. */
+            color: inherit;
+            /* حذف رنگ آبی لینک */
             text-decoration: none;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
         }
-
     </style>
 </head>
 
 <body>
     <?php include "header.php"; ?>
-    
+
     <div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl">
             <div class="modal-content bg-dark">
@@ -231,12 +236,12 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             <?php include "sidebar.php"; ?>
             <div class="col-md-6">
                 <div class="main-content shadow-lg p-3 mb-5 bg-white rounded">
-                    
+
                     <?php if ($loggedInUserId == $profileId) : ?>
-                    <h3 class="mb-4 fw-bold">My Presentations</h3>
-                    <div class="d-flex justify-content-end mb-3">
-                        <button class="btn btn-primary"><i class="fas fa-upload me-2"></i> Upload New</button>
-                    </div>
+                        <h3 class="mb-4 fw-bold">My Presentations</h3>
+                        <div class="d-flex justify-content-end mb-3">
+                            <button class="btn btn-primary"><i class="fas fa-upload me-2"></i> Upload New</button>
+                        </div>
                     <?php endif; ?>
                     <?php if (!empty($presentations)) : ?>
                         <div class="mb-4">
@@ -247,7 +252,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                         <p class="small mb-3 presentation-meta">
                                             <i class="fas fa-calendar-alt me-1"></i> <?= date('M d, Y', strtotime($presentation['created_at'])) ?>
                                             <span class="mx-2">|</span>
-                                            <i class="fas fa-eye me-1"></i> <?= htmlspecialchars(number_format($presentation['views_count'] ?? 0)) ?> views 
+                                            <i class="fas fa-eye me-1"></i> <?= htmlspecialchars(number_format($presentation['views_count'] ?? 0)) ?> views
                                             <span class="mx-2">|</span>
                                             <i class="fas fa-comment me-1"></i> <?= htmlspecialchars($presentation['rating_count'] ?? 0) ?> comments
                                         </p>
@@ -256,13 +261,13 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                             <div class="col-md-8">
                                                 <?php if (!empty($presentation['video_path'])) : ?>
                                                     <div class="ratio ratio-16x9 media-placeholder"
-                                                         data-bs-toggle="modal"
-                                                         data-bs-target="#videoModal"
-                                                         data-video-path="<?= htmlspecialchars($presentation['video_path']) ?>"
-                                                         aria-label="Play Presentation Video">
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#videoModal"
+                                                        data-video-path="<?= htmlspecialchars($presentation['video_path']) ?>"
+                                                        aria-label="Play Presentation Video">
                                                         <div class="text-center video-play-link">
                                                             <i class="fas fa-play-circle fa-4x text-muted"></i>
-                                                            </div>
+                                                        </div>
                                                     </div>
                                                 <?php else : ?>
                                                     <div class="ratio ratio-16x9 media-placeholder">
@@ -275,8 +280,8 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                                     <div class="text-center p-3 border rounded">
                                                         <i class="fas fa-file-pdf fa-3x text-danger mb-2"></i>
                                                         <p class="fw-bold mb-1">Research Paper</p>
-                                                        <p class="text-muted small mb-3">12 pages · 2.4 MB</p> 
-                                                        
+                                                        <p class="text-muted small mb-3">12 pages · 2.4 MB</p>
+
                                                         <a href="<?= htmlspecialchars($presentation['pdf_path']) ?>" target="_blank" class="btn btn-primary btn-sm me-1 view-link"><i class="fas fa-eye me-1"></i> View</a>
                                                         <a href="<?= htmlspecialchars($presentation['pdf_path']) ?>" download class="btn btn-success btn-sm"><i class="fas fa-download me-1"></i> Download</a>
                                                     </div>
@@ -307,12 +312,12 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
 
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <div class="actions d-flex align-items-center">
-                                                
+
                                                 <?php if ($loggedInUserId) : ?>
-                                                    <button class="btn btn-link text-decoration-none like-toggle p-0 me-3" 
-                                                            data-presentation-id="<?= htmlspecialchars($presentation['id']) ?>"
-                                                            data-is-liked="<?= $presentation['has_user_liked'] ? 'true' : 'false' ?>"
-                                                            style="color: inherit;">
+                                                    <button class="btn btn-link text-decoration-none like-toggle p-0 me-3"
+                                                        data-presentation-id="<?= htmlspecialchars($presentation['id']) ?>"
+                                                        data-is-liked="<?= $presentation['has_user_liked'] ? 'true' : 'false' ?>"
+                                                        style="color: inherit;">
                                                         <span class="like-icon me-1">
                                                             <i class="<?= $presentation['has_user_liked'] ? 'fas fa-heart text-danger' : 'far fa-heart text-muted' ?>"></i>
                                                         </span>
@@ -322,22 +327,22 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                                     </button>
                                                 <?php else : ?>
                                                     <span class="text-muted p-0 me-3">
-                                                        <i class="far fa-heart me-1"></i> 
+                                                        <i class="far fa-heart me-1"></i>
                                                         <?= htmlspecialchars($presentation['likes_count'] ?? 0) ?>
                                                     </span>
                                                 <?php endif; ?>
-                                                
+
                                                 <p class="mb-0 text-muted me-3">
-                                                    <i class="far fa-comment me-1"></i> Comment 
+                                                    <i class="far fa-comment me-1"></i> Comment
                                                 </p>
-                                                
-                                                <?php 
-                                                    $isAlreadySaved = in_array($presentation['id'], $savedPresentationIds);
-                                                    if ($loggedInUserId && $loggedInUserId != $profileId) : ?>
-                                                    <button class="btn btn-link text-decoration-none save-toggle p-0 me-3" 
-                                                            data-presentation-id="<?= htmlspecialchars($presentation['id']) ?>"
-                                                            data-is-saved="<?= $isAlreadySaved ? 'true' : 'false' ?>"
-                                                            style="color: inherit;">
+
+                                                <?php
+                                                $isAlreadySaved = in_array($presentation['id'], $savedPresentationIds);
+                                                if ($loggedInUserId && $loggedInUserId != $profileId) : ?>
+                                                    <button class="btn btn-link text-decoration-none save-toggle p-0 me-3"
+                                                        data-presentation-id="<?= htmlspecialchars($presentation['id']) ?>"
+                                                        data-is-saved="<?= $isAlreadySaved ? 'true' : 'false' ?>"
+                                                        style="color: inherit;">
                                                         <span class="save-icon me-1">
                                                             <i class="<?= $isAlreadySaved ? 'fas fa-bookmark text-primary' : 'far fa-bookmark text-muted' ?>"></i>
                                                         </span>
@@ -346,7 +351,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                                 <?php endif; ?>
 
                                             </div>
-                                            
+
                                             <button class="btn btn-success" onclick="shareItem(
                                                 'Presentation: <?= htmlspecialchars($presentation['title']) ?> by <?= htmlspecialchars($user['name'] . ' ' . $user['family']) ?>',
                                                 'Check out this presentation on: <?= htmlspecialchars($presentation['title']) ?>',
@@ -365,7 +370,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                                         for ($i = 1; $i <= 5; $i++) {
                                                             if ($i <= $avgRating) {
                                                                 echo '<i class="fas fa-star text-warning"></i>';
-                                                            } else if ($i - 0.5 <= $avgRating) { 
+                                                            } else if ($i - 0.5 <= $avgRating) {
                                                                 echo '<i class="fas fa-star-half-alt text-warning"></i>';
                                                             } else {
                                                                 echo '<i class="far fa-star text-warning"></i>';
@@ -575,7 +580,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                 });
             }
         }
-        
+
         // منطق فعال‌سازی مدال ویدیو برای پرزنتیشن‌ها 
         document.addEventListener('DOMContentLoaded', function() {
             var videoModal = document.getElementById('videoModal');
@@ -597,7 +602,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                     videoPlayer.src = "";
                 });
             }
-            
+
             // =========================================================
             // منطق AJAX برای Like و Save (بر اساس فایل‌های toggle_like.php و toggle_save.php)
             // =========================================================
@@ -647,7 +652,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                 var isSaved = $button.data('is-saved') === true || $button.data('is-saved') === 'true'; // اطمینان از خواندن صحیح boolean
                 var action = isSaved ? 'unsave' : 'save';
                 var $icon = $button.find('.save-icon i');
-                
+
                 $button.attr('disabled', true); // غیرفعال کردن موقت دکمه
 
                 $.ajax({
@@ -661,7 +666,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                     success: function(response) {
                         if (response.status === 'success') {
                             $button.data('is-saved', !isSaved);
-                            
+
                             if (action === 'save') {
                                 $icon.removeClass('far fa-bookmark text-muted').addClass('fas fa-bookmark text-primary');
                             } else {

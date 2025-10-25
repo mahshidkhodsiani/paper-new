@@ -3,11 +3,18 @@
 session_start();
 include "config.php";
 
+// Assume the logged-in user's ID and Organizer name are stored here in the session.
+// You must ensure these variables are set after login.
+$loggedInOrganizerName = isset($_SESSION['user_organizer_name']) ? $_SESSION['user_organizer_name'] : null;
+$loggedInUserId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
+
+
 function get_competitions()
 {
     global $conn;
     $competitions = [];
 
+    // NOTE: The main SQL query does not need to be changed unless you want to implement server-side filtering.
     $sql = "SELECT id, competition_title, organizer_name, start_date, end_date, submission_type FROM competitions ORDER BY start_date DESC";
     $result = $conn->query($sql);
 
@@ -80,6 +87,11 @@ $competitions = get_competitions();
             font-size: 0.75rem;
             font-weight: 600;
         }
+
+        .btn-primary,
+        .btn-info {
+            background-color: #4242f0;
+        }
     </style>
 </head>
 
@@ -102,11 +114,15 @@ $competitions = get_competitions();
                 <div class="dropdown">
                     <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">All Statuses</button>
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#">All Statuses</a></li>
-                        <li><a class="dropdown-item" href="#">Upcoming</a></li>
-                        <li><a class="dropdown-item" href="#">Active</a></li>
-                        <li><a class="dropdown-item" href="#">Completed</a></li>
-                        <li><a class="dropdown-item" href="#">Expired</a></li>
+                        <li><a class="dropdown-item" href="#" data-filter="all">All Statuses</a></li>
+                        <li><a class="dropdown-item" href="#" data-filter="upcoming">Upcoming</a></li>
+                        <li><a class="dropdown-item" href="#" data-filter="active">Active</a></li>
+                        <li><a class="dropdown-item" href="#" data-filter="completed">Completed</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item fw-bold text-primary" href="#" data-filter="my_competitions">My Competitions (Organizer)</a></li>
+                        <li><a class="dropdown-item text-danger" href="#" data-filter="expired">Expired/Finished</a></li>
                     </ul>
                 </div>
             </div>
@@ -129,7 +145,7 @@ $competitions = get_competitions();
                             <span class="badge bg-primary rounded-pill mb-2 status-badge"><?php echo htmlspecialchars($competition['status']); ?></span>
                             <h5 class="card-title"><?php echo htmlspecialchars($competition['title']); ?></h5>
                             <p class="card-text text-muted mb-1"><small>
-                                    <i class="bi bi-building me-1"></i><?php echo htmlspecialchars($competition['organizer']); ?>
+                                    <i class="bi bi-building me-1"></i><span class="organizer-name"><?php echo htmlspecialchars($competition['organizer']); ?></span>
                                     <i class="bi bi-calendar-event me-1 ms-3"></i><?php echo htmlspecialchars($competition['date']); ?>
                                     <i class="bi bi-gift me-1 ms-3"></i><?php echo htmlspecialchars($competition['prize']); ?>
                                 </small></p>
@@ -199,13 +215,18 @@ $competitions = get_competitions();
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Define PHP variable in JavaScript for use in 'My Competitions' filter
+        const LOGGED_IN_ORGANIZER_NAME = '<?php echo $loggedInOrganizerName ? addslashes($loggedInOrganizerName) : ''; ?>';
+
         const competitionModal = document.getElementById('competitionModal');
         const participateBtn = document.getElementById('modal-participate-btn');
         const shareBtn = document.getElementById('modal-share-btn');
         const downloadBtn = document.getElementById('modal-download-btn');
         let currentCompetitionId = null;
+
+        // Define the base URL for the profile page
+        const PROFILE_BASE_URL = 'https://localhost/paper-new/people/profile.php?id=';
 
         // New function to show custom modal messages
         function showMessageModal(message, isSuccess = true) {
@@ -244,11 +265,15 @@ $competitions = get_competitions();
                     const daysLeft = Math.floor(timeLeftMs / (1000 * 60 * 60 * 24));
                     const deadlineText = daysLeft > 0 ? `${daysLeft} days left` : 'Expired';
 
+                    // Construct the profile URL using the user ID
+                    const profileLink = PROFILE_BASE_URL + data.competition.organizerUserId;
+
                     let contentHtml = `
                         <p class="text-muted"><span class="fw-bold">Description:</span> ${data.competition.description}</p>
                         <div class="row">
-                            <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Organizer:</span> ${data.competition.organizer}</p></div>
+                            <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Organizer:</span> <a href="${profileLink}" target="_blank">${data.competition.organizer}</a></p></div>
                             <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Date:</span> ${data.competition.startDate}</p></div>
+                            
                             <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Status:</span> ${data.competition.status}</p></div>
                             <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Deadline:</span> ${deadlineText}</p></div>
                             <div class="col-md-6"><p class="text-muted mb-0"><span class="fw-bold">Prizes:</span> ${data.competition.prize}</p></div>
@@ -366,6 +391,64 @@ $competitions = get_competitions();
                     console.error('Participation error:', error);
                 }
             }
+        });
+
+        // ----------------------------------------------------
+        // New competition card filtering logic (based on client request)
+        // ----------------------------------------------------
+        document.querySelectorAll('.dropdown-menu .dropdown-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                const filterType = this.getAttribute('data-filter');
+                const dropdownButton = this.closest('.dropdown').querySelector('.dropdown-toggle');
+
+                // Update dropdown button text
+                dropdownButton.textContent = this.textContent;
+
+                const competitionCards = document.querySelectorAll('.competition-card');
+                let visibleCount = 0;
+
+                competitionCards.forEach(card => {
+                    // Status is extracted from the card's badge
+                    const statusBadge = card.querySelector('.status-badge').textContent.trim();
+                    const cardElement = card.closest('.col-md-6.col-lg-4');
+
+                    // Organizer name is extracted from the <span> tag with class .organizer-name
+                    const organizerName = card.querySelector('.organizer-name').textContent.trim();
+
+                    // Check if this competition is hosted by the logged-in user
+                    const IS_MY_COMPETITION = (LOGGED_IN_ORGANIZER_NAME && organizerName === LOGGED_IN_ORGANIZER_NAME);
+
+                    let shouldShow = false;
+
+                    if (filterType === 'all') {
+                        shouldShow = true;
+                    } else if (filterType === 'upcoming' && statusBadge === 'Upcoming') {
+                        shouldShow = true;
+                    } else if (filterType === 'active' && statusBadge === 'Active') {
+                        shouldShow = true;
+                    } else if (filterType === 'completed' && statusBadge === 'Completed') {
+                        shouldShow = true;
+                    } else if (filterType === 'expired' && statusBadge === 'Completed') {
+                        // "Expired/Finished" is currently 'Completed' in your PHP logic
+                        shouldShow = true;
+                    } else if (filterType === 'my_competitions' && IS_MY_COMPETITION) {
+                        shouldShow = true;
+                    }
+
+                    if (shouldShow) {
+                        cardElement.style.display = 'block';
+                        visibleCount++;
+                    } else {
+                        cardElement.style.display = 'none';
+                    }
+                });
+
+                // Update results count
+                document.querySelector('.d-flex.justify-content-between.align-items-center.mb-3 p.text-muted').innerHTML = `${visibleCount} results`;
+
+            });
         });
     </script>
 

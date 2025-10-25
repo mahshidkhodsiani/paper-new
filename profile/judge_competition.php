@@ -133,7 +133,7 @@ if ($stmt_uploads) {
     $messageType = 'danger';
 }
 
-$conn->close();
+
 ?>
 
 <!DOCTYPE html>

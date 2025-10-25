@@ -1,56 +1,5 @@
 <?php
 
-/**
- * request_to_present.php
- * - Auth required (login/register/logout)
- * - Requester + Presenter are in separate "card" sections
- * - Competition toggle (Yes/No) -> shows Competition Details + optional Competition PDF
- * - Requester extra info (affiliation, phone) is stored & emailed
- * - Optional Paper PDF upload
- * - Email includes ONLY the raw custom message (no "template" header)
- * - Accept/Decline links, optional ICS, optional webhook, cron reminders
- *
- * ===== Fresh DB =====
- * CREATE TABLE IF NOT EXISTS users (
- *   id INT AUTO_INCREMENT PRIMARY KEY,
- *   name VARCHAR(120) NOT NULL,
- *   email VARCHAR(255) NOT NULL UNIQUE,
- *   password_hash VARCHAR(255) NOT NULL,
- *   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
- * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
- *
- * CREATE TABLE IF NOT EXISTS request_to_present (
- *   id INT AUTO_INCREMENT PRIMARY KEY,
- *   user_id INT NOT NULL,
- *   requester_name VARCHAR(120) NOT NULL,
- *   requester_email VARCHAR(255) NOT NULL,
- *   requester_affiliation VARCHAR(255) DEFAULT NULL,
- *   requester_phone VARCHAR(64) DEFAULT NULL,
- *   presenter_name VARCHAR(120) NOT NULL,
- *   presenter_email VARCHAR(255) NOT NULL,
- *   presenter_affiliation VARCHAR(255) DEFAULT NULL,
- *   paper_title VARCHAR(255) NOT NULL,
- *   paper_link VARCHAR(1024) DEFAULT NULL,
- *   pdf_path VARCHAR(1024) DEFAULT NULL,
- *   message TEXT,
- *   preferred_date DATE DEFAULT NULL,
- *   preferred_time VARCHAR(10) DEFAULT NULL,
- *   alternate_date DATE DEFAULT NULL,
- *   alternate_time VARCHAR(10) DEFAULT NULL,
- *   timezone VARCHAR(64) DEFAULT NULL,
- *   duration_minutes INT DEFAULT NULL,
- *   cc_emails VARCHAR(1024) DEFAULT NULL,
- *   status ENUM('pending','accepted','declined') DEFAULT 'pending',
- *   manage_token CHAR(64) NOT NULL,
- *   reminder_date DATE DEFAULT NULL,
- *   reminder_sent TINYINT(1) DEFAULT 0,
- *   comp_details TEXT DEFAULT NULL,
- *   comp_pdf_path VARCHAR(1024) DEFAULT NULL,
- *   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
- *   FOREIGN KEY (user_id) REFERENCES users(id)
- * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
- */
-
 session_start();
 
 $config = array(

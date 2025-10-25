@@ -207,3 +207,7 @@
   background-color: #28a745;
   color: white;
 }
+.btn-primary,
+.btn-info {
+    background-color: #4242f0;
+}

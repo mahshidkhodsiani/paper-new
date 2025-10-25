@@ -30,16 +30,21 @@ ini_set('display_errors', 1);
 
 
     <style>
+        .btn-primary,
+        .btn-info {
+            background-color: #4242f0;
+        }
+
         .btn-outline-info {
-            color: #17a2b8;
-            border-color: #17a2b8;
+            color: #4242f0;
+            border-color: #4242f0;
             width: 300px;
         }
 
         .btn-outline-info:hover {
             color: #fff;
-            background-color: #17a2b8;
-            border-color: #17a2b8;
+            background-color: #4242f0;
+            border-color: #4242f0;
         }
 
         /* استایل‌های مربوط به جستجو */
@@ -95,8 +100,8 @@ ini_set('display_errors', 1);
                 </a>
                 <br>
 
-      
-            
+
+
                 <a href="discover_competitions" class="btn btn-outline-info rounded mb-3">
                     <i class="fas fa-trophy"></i> Competitions
                 </a>

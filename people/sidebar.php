@@ -112,7 +112,9 @@ if (isset($_SESSION['user_data']['id']) && isset($user['id']) && $_SESSION['user
         <?php if (!empty($user['biography'])) : ?>
             <div class="mb-4">
                 <h5 class="profile-section-title"><i class="fas fa-info-circle me-2"></i>About Me</h5>
-                <p class="text-justify"><?= nl2br(htmlspecialchars($user['biography'])) ?></p>
+                <p class="text-justify" style="font-size: 10px;">
+                    <?= nl2br(htmlspecialchars($user['biography'])) ?>
+                </p>
             </div>
         <?php endif; ?>
         <?php if (!empty($user['linkedin_url']) || !empty($user['x_url']) || !empty($user['google_scholar_url']) || !empty($user['github_url']) || !empty($user['website_url'])) : ?>
@@ -122,9 +124,8 @@ if (isset($_SESSION['user_data']['id']) && isset($user['id']) && $_SESSION['user
                     <?php if (!empty($user['linkedin_url'])) : ?>
                         <a href="<?= htmlspecialchars($user['linkedin_url']) ?>" target="_blank" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
                     <?php endif; ?>
-                    <?php if (!empty($user['x_url'])) : ?>
-                        <a href="<?= htmlspecialchars($user['x_url']) ?>" target="_blank" title="X (Twitter)"><i class="fab fa-x-twitter"></i></a>
-                    <?php endif; ?>
+                   
+                    
                     <?php if (!empty($user['google_scholar_url'])) : ?>
                         <a href="<?= htmlspecialchars($user['google_scholar_url']) ?>" target="_blank" title="Google Scholar"><i class="fas fa-graduation-cap"></i></a>
                     <?php endif; ?>
@@ -137,7 +138,7 @@ if (isset($_SESSION['user_data']['id']) && isset($user['id']) && $_SESSION['user
                 </div>
             </div>
         <?php endif; ?>
-      
+
     </div>
 </div>
 

@@ -507,7 +507,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 </div>
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" id="slideDeckRequired" name="slideDeckRequired" <?php echo ($competitionData['slide_deck_required'] ?? '') ? 'checked' : ''; ?>>
-                                    <label class="form-check-label" for="slideDeckRequired">Slide Deck Required</label>
+                                    <label class="form-check-label" for="slideDeckRequired">Slide Deck </label>
                                 </div>
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" id="abstractText" name="abstractText" <?php echo ($competitionData['abstract_text_field'] ?? '') ? 'checked' : ''; ?>>

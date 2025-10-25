@@ -26,18 +26,25 @@ if (isset($_SESSION['user_data']['id'])) {
     <link rel="icon" type="image/x-icon" href="../images/logo.png">
 
 
+
+
     <style>
         body {
             background-color: #f0f2f5;
         }
 
+        .btn-primary,
+        .btn-info {
+            background-color: #4242f0;
+        }
+
 
         .card-body-custom .card-title-custom {
-            white-space: nowrap; 
-            overflow: hidden; 
+            white-space: nowrap;
+            overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 100%; 
-            margin-bottom: 0.5rem; 
+            max-width: 100%;
+            margin-bottom: 0.5rem;
         }
 
         .user-card {
@@ -148,12 +155,12 @@ if (isset($_SESSION['user_data']['id'])) {
         <div class="row">
             <?php
             try {
-                // اضافه کردن شرط WHERE status = 1 به کوئری
+                // Add WHERE status = 1 to the query
                 $sql = "SELECT id, name, family, education, university, profile_pic, cover_photo, intro_video_path FROM users WHERE status = 1";
                 $params = [];
                 $types = "";
 
-                // اگر کاربر وارد شده باشد، خودش را از لیست حذف می‌کنیم.
+                // If the user is logged in, exclude them from the list.
                 if ($current_user_id !== null) {
                     $sql .= " AND id != ?";
                     $params[] = $current_user_id;
@@ -173,7 +180,22 @@ if (isset($_SESSION['user_data']['id'])) {
                         $fullName = htmlspecialchars($row["name"] . " " . $row["family"]);
                         $education = htmlspecialchars($row["education"] ?? '-');
                         $university = htmlspecialchars($row["university"] ?? '-');
-                        $profilePic = htmlspecialchars($row["profile_pic"] ?? 'https://via.placeholder.com/100');
+
+                        // **CORRECTED LOGIC FOR PROFILE PICTURE PATH**
+                        $dbProfilePic = $row["profile_pic"];
+                        $defaultImagePath = 'images/2.png'; // Path relative to the root folder
+
+                        // Check if the DB path is empty OR if the file path (prefixed with ../) does NOT exist
+                        if (empty($dbProfilePic) || !file_exists('../' . $dbProfilePic)) {
+                            // If empty or file missing, use the default image path
+                            $finalProfilePic = '../' . $defaultImagePath;
+                        } else {
+                            // Otherwise, use the path from DB
+                            $finalProfilePic = '../' . htmlspecialchars($dbProfilePic);
+                        }
+                        // **END OF CORRECTION**
+
+
                         $coverPhoto = htmlspecialchars($row["cover_photo"] ?? 'https://via.placeholder.com/400x150/f0f2f5?text=Cover+Photo');
                         $introVideoPath = htmlspecialchars($row["intro_video_path"] ?? '');
                         $profileLink = "profile.php?id=" . (int)$target_user_id;
@@ -216,7 +238,8 @@ if (isset($_SESSION['user_data']['id'])) {
                                 <div class="cover-photo" style="background-image: url('../<?= $coverPhoto ?>');"></div>
 
                                 <div class="profile-pic-container">
-                                    <img src="../<?= $profilePic ?>" class="profile-picture" alt="Profile Picture">
+                                    <img src="<?= $finalProfilePic ?>" class="profile-picture" alt="Profile Picture">
+
                                     <?php if (!empty($introVideoPath)) : ?>
                                         <div class="play-icon-overlay" data-video-path="<?= $introVideoPath ?>" data-bs-toggle="modal" data-bs-target="#videoModal">
                                             <i class="fas fa-play-circle play-icon"></i>
@@ -322,7 +345,7 @@ if (isset($_SESSION['user_data']['id'])) {
                                 clickedButton.classList.remove('btn-info');
                                 clickedButton.classList.add('btn-secondary');
 
-                                // نمایش پیام موفقیت
+                                // Show success message
                                 const messageAlert = document.getElementById('message-alert');
                                 if (messageAlert) {
                                     messageAlert.textContent = data.message;
@@ -338,7 +361,7 @@ if (isset($_SESSION['user_data']['id'])) {
                                 clickedButton.disabled = false;
                                 console.error('Error:', data.message);
 
-                                // نمایش پیام خطا
+                                // Show error message
                                 const messageAlert = document.getElementById('message-alert');
                                 if (messageAlert) {
                                     messageAlert.textContent = 'Failed to send connection request: ' + data.message;
@@ -356,7 +379,7 @@ if (isset($_SESSION['user_data']['id'])) {
                             clickedButton.className = originalClass;
                             clickedButton.disabled = false;
 
-                            // نمایش پیام خطای شبکه
+                            // Show network error message
                             const messageAlert = document.getElementById('message-alert');
                             if (messageAlert) {
                                 messageAlert.textContent = 'Network error or server issue. Please try again.';
