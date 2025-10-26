@@ -74,8 +74,9 @@ if (isset($_POST['action_type'])) {
                     }
                 }
             } else {
-                $message = "PDF file is required.";
-                $messageType = 'danger';
+                // Removed PDF requirement to be optional as per the user's form design
+                // $message = "PDF file is required."; 
+                // $messageType = 'danger';
             }
 
             // Handle video file upload (optional)
@@ -287,26 +288,6 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
 
     <link rel="icon" type="image/x-icon" href="../images/logo.png">
 
-
-    <style>
-        .presentations-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        .presentations-table th,
-        .presentations-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-
-        .presentations-table th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }
-    </style>
 </head>
 
 <body>
@@ -374,8 +355,8 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
                             <small class="text-muted">Separate keywords with commas.</small>
                         </div>
                         <div class="mb-3">
-                            <label for="pdfFile" class="form-label">PDF File (Required)</label>
-                            <input class="form-control" type="file" id="pdfFile" name="pdf_file" accept=".pdf" required>
+                            <label for="pdfFile" class="form-label">PDF File (Optional)</label>
+                            <input class="form-control" type="file" id="pdfFile" name="pdf_file" accept=".pdf">
                             <small class="text-muted">Only PDF files are allowed.</small>
                         </div>
                         <div class="mb-3">
@@ -386,106 +367,133 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
                         <button type="submit" name="action_type" value="add_presentation" class="btn btn-success">Add Content</button>
                     </form>
 
-
-
-
                     <br>
+                    <hr>
                     <h4 class="mb-4">My Presentations/Articles</h4>
 
-
-
                     <?php if (!empty($presentations)): ?>
-                        <div class="table-responsive">
-                            <table class="table table-hover presentations-table">
-                                <thead>
-                                    <tr>
-                                        <th>Title</th>
-                                        <th>Co-Authors</th>
-                                        <th>Type</th>
-                                        <th>Rating</th>
-                                        <th>File</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($presentations as $presentation): ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($presentation['title']); ?></td>
-                                            <td class="text-wrap" style="max-width: 150px;"><?php echo htmlspecialchars($presentation['co_authors'] ?: '-'); ?></td>
-                                            <td><?php echo htmlspecialchars($presentation['content_type']); ?></td>
-                                            <td>
-                                                <div class="rating-stars me-2" data-rating="<?= htmlspecialchars($presentation['avg_rating']) ?>">
-                                                    <?php
-                                                    $avgRating = $presentation['avg_rating'];
-                                                    for ($i = 1; $i <= 5; $i++) {
-                                                        if ($i <= $avgRating) {
-                                                            echo '<i class="fas fa-star text-warning"></i>';
-                                                        } else {
-                                                            echo '<i class="far fa-star text-muted"></i>';
-                                                        }
-                                                    }
-                                                    ?>
-                                                </div>
-                                                <small class="text-muted ms-2">(<?= htmlspecialchars($presentation['rating_count']) ?> votes)</small>
-                                            </td>
-                                            <td>
-                                                <?php
-                                                // Check for file existence using realpath to handle relative paths correctly
-                                                $isPdfAvailable = !empty($presentation['pdf_path']) && file_exists(realpath($presentation['pdf_path']));
-                                                $isVideoAvailable = !empty($presentation['video_path']) && file_exists(realpath($presentation['video_path']));
-                                                ?>
+                        <?php foreach ($presentations as $index => $presentation): ?>
+                            <?php
+                            // Unique ID for the collapse feature
+                            $collapseId = 'details-' . $presentation['id'];
+                            $avgRating = $presentation['avg_rating'];
 
-                                                <?php if ($isPdfAvailable): ?>
-                                                    <a href="<?php echo htmlspecialchars($presentation['pdf_path']); ?>" target="_blank">View PDF</a>
-                                                <?php endif; ?>
+                            // Check for file existence using realpath to handle relative paths correctly
+                            $isPdfAvailable = !empty($presentation['pdf_path']) && file_exists(realpath($presentation['pdf_path']));
+                            $isVideoAvailable = !empty($presentation['video_path']) && file_exists(realpath($presentation['video_path']));
 
-                                                <?php if ($isVideoAvailable): ?>
-                                                    <?php if ($isPdfAvailable): ?> | <?php endif; ?>
-                                                    <a href="<?php echo htmlspecialchars($presentation['video_path']); ?>" target="_blank">View Video</a>
-                                                <?php endif; ?>
+                            $description = htmlspecialchars($presentation['description']);
+                            $shortDescription = substr($description, 0, 150);
+                            $isTooLong = strlen($description) > 150;
+                            ?>
 
-                                                <?php if (!$isPdfAvailable && !$isVideoAvailable): ?>
-                                                    File Not Available
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <div class="presentation-actions">
-                                                    <a href="edit_presentation.php?id=<?php echo $presentation['id']; ?>" class="btn btn-info btn-sm text-white me-2"><i class="fas fa-edit"></i> Edit</a>
+                            <div class="card mb-3 shadow-sm border-0">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h5 class="card-title text-primary mb-1"><?php echo htmlspecialchars($presentation['title']); ?></h5>
+                                        <div class="presentation-actions ms-3 d-flex flex-shrink-0">
+                                            <a href="edit_presentation.php?id=<?php echo $presentation['id']; ?>" class="btn btn-info btn-sm text-white me-2" title="Edit"><i class="fas fa-edit"></i></a>
+                                            <form action="" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this content? This action cannot be undone.');">
+                                                <input type="hidden" name="action_type" value="delete_presentation">
+                                                <input type="hidden" name="presentation_id" value="<?php echo $presentation['id']; ?>">
+                                                <button type="submit" class="btn btn-danger btn-sm" title="Delete"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </div>
 
-                                                    <form action="" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this content? This action cannot be undone.');">
-                                                        <input type="hidden" name="action_type" value="delete_presentation">
-                                                        <input type="hidden" name="presentation_id" value="<?php echo $presentation['id']; ?>">
-                                                        <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Delete</button>
-                                                    </form>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <?php if (!empty($presentation['comments'])): ?>
-                                            <tr>
-                                                <td colspan="6">
-                                                    <div class="card my-3">
-                                                        <div class="card-header bg-primary text-white">
-                                                            <h6 class="mb-0"><i class="fas fa-comments me-1"></i> User Comments</h6>
-                                                        </div>
-                                                        <div class="card-body">
-                                                            <?php foreach ($presentation['comments'] as $comment): ?>
-                                                                <div class="mb-3 border-bottom pb-2">
-                                                                    <p class="mb-1">
-                                                                        <strong><?= htmlspecialchars($comment['name'] . ' ' . $comment['family']) ?></strong>
-                                                                        <small class="text-muted float-end"><?= date('M d, Y', strtotime($comment['created_at'])) ?></small>
-                                                                    </p>
-                                                                    <p class="mb-0"><?= nl2br(htmlspecialchars($comment['comment'])) ?></p>
-                                                                </div>
-                                                            <?php endforeach; ?>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                    <p class="card-text text-muted mb-2" style="white-space: pre-wrap;">
+                                        <?php
+                                        echo nl2br($shortDescription);
+                                        if ($isTooLong) {
+                                            echo '...';
+                                        }
+                                        ?>
+                                    </p>
+
+                                    <a class="btn btn-link btn-sm p-0 mb-2" data-bs-toggle="collapse" href="#<?php echo $collapseId; ?>" role="button" aria-expanded="false" aria-controls="<?php echo $collapseId; ?>">
+                                        <span class="collapsed-text">See More <i class="fas fa-chevron-down ms-1"></i></span>
+                                        <span class="expanded-text" style="display:none;">See Less <i class="fas fa-chevron-up ms-1"></i></span>
+                                    </a>
+
+
+                                    <div class="collapse" id="<?php echo $collapseId; ?>">
+                                        <hr class="mt-2 mb-3">
+
+                                        <?php if ($isTooLong): ?>
+                                            <p class="mb-1 fw-bold"><small class="text-muted">Full Abstract/Description:</small></p>
+                                            <p class="mb-3" style="white-space: pre-wrap;"><?= nl2br($description) ?></p>
                                         <?php endif; ?>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
+
+                                        <div class="row g-3 mb-3">
+                                            <div class="col-md-6 col-lg-3">
+                                                <p class="mb-1"><small class="text-muted">Co-Authors:</small></p>
+                                                <p class="fw-bold mb-0"><?php echo htmlspecialchars($presentation['co_authors'] ?: 'None'); ?></p>
+                                            </div>
+                                            <div class="col-md-6 col-lg-3">
+                                                <p class="mb-1"><small class="text-muted">Content Type:</small></p>
+                                                <p class="fw-bold mb-0"><?php echo htmlspecialchars($presentation['content_type']); ?></p>
+                                            </div>
+                                            <div class="col-md-6 col-lg-3">
+                                                <p class="mb-1"><small class="text-muted">Rating:</small></p>
+                                                <div class="d-flex align-items-center mb-0">
+                                                    <div class="rating-stars me-2" data-rating="<?= $avgRating ?>">
+                                                        <?php
+                                                        for ($i = 1; $i <= 5; $i++) {
+                                                            if ($i <= $avgRating) {
+                                                                echo '<i class="fas fa-star text-warning"></i>';
+                                                            } else {
+                                                                echo '<i class="far fa-star text-muted"></i>';
+                                                            }
+                                                        }
+                                                        ?>
+                                                    </div>
+                                                    <span class="text-muted">(<?= htmlspecialchars($presentation['rating_count']) ?> votes)</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6 col-lg-3">
+                                                <p class="mb-1"><small class="text-muted">Files:</small></p>
+                                                <div class="mb-0">
+                                                    <?php if ($isPdfAvailable): ?>
+                                                        <a href="<?php echo htmlspecialchars($presentation['pdf_path']); ?>" target="_blank" class="btn btn-outline-dark btn-sm me-2"><i class="fas fa-file-pdf"></i> PDF</a>
+                                                    <?php endif; ?>
+                                                    <?php if ($isVideoAvailable): ?>
+                                                        <a href="<?php echo htmlspecialchars($presentation['video_path']); ?>" target="_blank" class="btn btn-outline-dark btn-sm"><i class="fas fa-video"></i> Video</a>
+                                                    <?php endif; ?>
+                                                    <?php if (!$isPdfAvailable && !$isVideoAvailable): ?>
+                                                        <span class="text-danger">File Not Available</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <?php if (!empty($presentation['comments'])): ?>
+                                            <div class="card my-3">
+                                                <div class="card-header bg-primary text-white">
+                                                    <h6 class="mb-0"><i class="fas fa-comments me-1"></i> User Comments</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <?php foreach ($presentation['comments'] as $comment): ?>
+                                                        <div class="mb-3 border-bottom pb-2">
+                                                            <p class="mb-1">
+                                                                <strong><?= htmlspecialchars($comment['name'] . ' ' . $comment['family']) ?></strong>
+                                                                <small class="text-muted float-end"><?= date('M d, Y', strtotime($comment['created_at'])) ?></small>
+                                                            </p>
+                                                            <p class="mb-0"><?= nl2br(htmlspecialchars($comment['comment'])) ?></p>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <?php if ($index < count($presentations) - 1): ?>
+                                <hr class="my-4">
+                            <?php endif; ?>
+
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <div class="alert alert-info" role="alert">
                             You haven't uploaded any content yet.
@@ -523,6 +531,25 @@ if (isset($_GET['status']) && isset($_GET['msg'])) {
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Logic to toggle "See More" and "See Less" text
+            document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(trigger => {
+                trigger.addEventListener('click', function() {
+                    const collapsedText = this.querySelector('.collapsed-text');
+                    const expandedText = this.querySelector('.expanded-text');
+
+                    if (this.classList.contains('collapsed') || this.getAttribute('aria-expanded') === 'true') {
+                        // Collapse is opening (showing details) -> change to 'See Less'
+                        collapsedText.style.display = 'none';
+                        expandedText.style.display = 'inline';
+                    } else {
+                        // Collapse is closing (hiding details) -> change to 'See More'
+                        collapsedText.style.display = 'inline';
+                        expandedText.style.display = 'none';
+                    }
+                });
+            });
+
+            // Handle URL cleanup and alert dismissal
             const urlParams = new URLSearchParams(window.location.search);
             const statusParam = urlParams.get('status');
             const msgParam = urlParams.get('msg');

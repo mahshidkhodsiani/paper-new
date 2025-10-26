@@ -299,7 +299,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['deactivate_account'])
                 $messageType = 'success';
 
                 // --- Crucial section: full update of $_SESSION['user_data'] from the database ---
-                $sql_fetch_updated_user = "SELECT id, name, family, email, profile_pic, cover_photo, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, created_at, updated_at FROM users WHERE id = ?";
+                // $sql_fetch_updated_user = "SELECT id, name, family, email, profile_pic, cover_photo, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, created_at, updated_at FROM users WHERE id = ?";
+                $sql_fetch_updated_user = "SELECT id, name, family, email, profile_pic, cover_photo, university, birthdate, education, workplace, meeting_info, linkedin_url, x_url, google_scholar_url, github_url, website_url, biography, custom_profile_link, availability_status, meeting_link, google_calendar, last_resume_update, intro_video_path, resume_pdf_path, hide_resume FROM users WHERE id = ?";
                 $stmt_fetch = $conn->prepare($sql_fetch_updated_user);
                 if ($stmt_fetch) {
                     $stmt_fetch->bind_param("i", $userId);

@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" type="image/x-icon" href="images/logo.png">
-    
+
     <?php include "header.php"; ?>
 
     <style>
@@ -170,7 +170,35 @@
             </div>
             <div class="card p-4 mb-4">
                 <div class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-md-2">
+                        <label for="requester_title" class="form-label">Title</label>
+                        <select class="form-select" name="requester_title" id="requester_title">
+                            <option value="">(None)</option>
+                            <option value="Mr.">Mr.</option>
+                            <option value="Ms.">Ms.</option>
+                            <option value="Mrs.">Mrs.</option>
+                            <option value="Miss">Miss</option>
+                            <option value="Dr.">Dr.</option>
+                            <option value="Prof.">Prof.</option>
+                            <option value="BS">BS</option>
+                            <option value="BA">BA</option>
+                            <option value="BSc">BSc</option>
+                            <option value="MS">MS</option>
+                            <option value="MA">MA</option>
+                            <option value="MSc">MSc</option>
+                            <option value="MBA">MBA</option>
+                            <option value="PhD">PhD</option>
+                            <option value="MD">MD</option>
+                            <option value="DDS">DDS</option>
+                            <option value="DVM">DVM</option>
+                            <option value="JD">JD</option>
+                            <option value="Psy">Psy</option>
+                            <option value="RN">RN</option>
+                            <option value="PA">PA</option>
+                            <option value="RPh">RPh</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label for="requester_name" class="form-label required-label">Name</label>
                         <input type="text" class="form-control" name="requester_name" id="requester_name" required>
                     </div>
@@ -194,7 +222,35 @@
             </div>
             <div class="card p-4 mb-4">
                 <div class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-md-2">
+                        <label for="presenter_title" class="form-label">Title</label>
+                        <select class="form-select" name="presenter_title" id="presenter_title">
+                            <option value="">(None)</option>
+                            <option value="Mr.">Mr.</option>
+                            <option value="Ms.">Ms.</option>
+                            <option value="Mrs.">Mrs.</option>
+                            <option value="Miss">Miss</option>
+                            <option value="Dr.">Dr.</option>
+                            <option value="Prof.">Prof.</option>
+                            <option value="BS">BS</option>
+                            <option value="BA">BA</option>
+                            <option value="BSc">BSc</option>
+                            <option value="MS">MS</option>
+                            <option value="MA">MA</option>
+                            <option value="MSc">MSc</option>
+                            <option value="MBA">MBA</option>
+                            <option value="PhD">PhD</option>
+                            <option value="MD">MD</option>
+                            <option value="DDS">DDS</option>
+                            <option value="DVM">DVM</option>
+                            <option value="JD">JD</option>
+                            <option value="Psy">Psy</option>
+                            <option value="RN">RN</option>
+                            <option value="PA">PA</option>
+                            <option value="RPh">RPh</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label for="presenter_name" class="form-label required-label">Name</label>
                         <input type="text" class="form-control" name="presenter_name" id="presenter_name" required>
                     </div>

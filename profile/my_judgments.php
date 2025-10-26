@@ -5,17 +5,16 @@ session_start();
 include(__DIR__ . '/../config.php');
 
 // Check if user is logged in and get email
-$userEmail = null; // متغیر جدید برای ذخیره ایمیل
+$userEmail = null;
 if (isset($_SESSION['user_data']['id']) && isset($_SESSION['user_data']['email'])) {
-    $userId = $_SESSION['user_data']['id']; // ID همچنان برای کوئری‌های آینده مفید است
-    $userEmail = $_SESSION['user_data']['email']; // ایمیل کاربر جاری
+    $userId = $_SESSION['user_data']['id'];
+    $userEmail = $_SESSION['user_data']['email'];
 } else {
     // If not logged in, redirect to login page
     header("Location: ../login.php");
     exit();
 }
 
-// --- Fetch Competitions where the current user is a judge ---
 $judgments = [];
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
@@ -23,6 +22,37 @@ if ($conn->connect_error) {
 }
 $conn->set_charset("utf8mb4");
 
+// --- NEW: Handle Judge Response (Accept/Deny) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['invitation_action']) && isset($_POST['competition_id'])) {
+    $comp_id = $_POST['competition_id'];
+    $action = $_POST['invitation_action']; // 'Accept' or 'Deny'
+    $new_status = ($action === 'Accept') ? 'Accepted' : (($action === 'Deny') ? 'Denied' : null);
+
+    if ($new_status) {
+        $sql_update = "
+            UPDATE competition_judges 
+            SET status = ? 
+            WHERE competition_id = ? AND email = ?
+        ";
+        $stmt_update = $conn->prepare($sql_update);
+        if ($stmt_update) {
+            $stmt_update->bind_param("sis", $new_status, $comp_id, $userEmail);
+            if ($stmt_update->execute()) {
+                // Success redirect to clear POST data and show status
+                header("Location: my_judgments.php?status=success&msg=" . urlencode("Invitation $new_status successfully."));
+                exit();
+            } else {
+                $error_message = "Error updating status: " . $stmt_update->error;
+            }
+            $stmt_update->close();
+        } else {
+            $error_message = "Update query preparation failed: " . $conn->error;
+        }
+    }
+}
+// --- END NEW: Handle Judge Response (Accept/Deny) ---
+
+// --- Fetch Competitions where the current user is a judge ---
 // Query: Join competitions with competition_judges where the judge's email matches the current user's email
 $sql = "
     SELECT 
@@ -32,21 +62,26 @@ $sql = "
         c.competition_description,
         c.start_date,
         c.end_date,
-        cj.title AS judge_role 
+        cj.title AS judge_role,
+        cj.status AS invitation_status  -- <<< NEW: Fetch the status
     FROM competitions c
     JOIN competition_judges cj ON c.id = cj.competition_id
-    WHERE cj.email = ?  -- !!! FIX: استفاده از ستون email
+    WHERE cj.email = ?  
     ORDER BY c.end_date DESC
 ";
 
 $stmt = $conn->prepare($sql);
 if ($stmt) {
-    $stmt->bind_param("s", $userEmail); // !!! FIX: نوع پارامتر به 's' (رشته) تغییر یافت.
+    $stmt->bind_param("s", $userEmail);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
+            // Set default status if the column doesn't exist yet (for backward compatibility during migration)
+            if (!isset($row['invitation_status'])) {
+                $row['invitation_status'] = 'Pending';
+            }
             $judgments[] = $row;
         }
     }
@@ -55,20 +90,27 @@ if ($stmt) {
     $error_message = "Database query preparation failed: " . $conn->error;
 }
 
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Judgments</title>
-    
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    
+
+    <link rel="icon" type="image/x-icon" href="../images/logo.png">
+
     <style>
-        body { background-color: #f0f2f5; }
+        body {
+            background-color: #f0f2f5;
+        }
+
         .competition-card {
             background-color: #fff;
             border-radius: 10px;
@@ -77,10 +119,30 @@ if ($stmt) {
             overflow: hidden;
             position: relative;
         }
-        .card-body-custom { padding: 15px; }
-        .card-title-custom { font-size: 1.25rem; font-weight: bold; margin-bottom: 5px; }
-        .icon-text { display: flex; align-items: center; margin-top: 5px; font-size: 0.9rem; color: #555; }
-        .icon-text i { width: 20px; margin-right: 8px; color: #007bff; }
+
+        .card-body-custom {
+            padding: 15px;
+        }
+
+        .card-title-custom {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .icon-text {
+            display: flex;
+            align-items: center;
+            margin-top: 5px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .icon-text i {
+            width: 20px;
+            margin-right: 8px;
+            color: #007bff;
+        }
     </style>
 </head>
 
@@ -94,7 +156,13 @@ if ($stmt) {
 
             <div class="col-md-9">
                 <h3 class="mb-4"><i class="fas fa-gavel text-primary me-2"></i> My Judging Assignments</h3>
-                
+
+                <?php
+                // Display success/danger messages from POST redirect
+                if (isset($_GET['status']) && isset($_GET['msg'])): ?>
+                    <div class="alert alert-<?= htmlspecialchars($_GET['status']) ?>"><?= htmlspecialchars($_GET['msg']) ?></div>
+                <?php endif; ?>
+
                 <?php if (isset($error_message)): ?>
                     <div class="alert alert-danger"><?= htmlspecialchars($error_message) ?></div>
                 <?php endif; ?>
@@ -117,6 +185,10 @@ if ($stmt) {
                                             Your Role: **<?= htmlspecialchars($competition['judge_role'] ?: 'Judge'); ?>**
                                         </div>
                                         <div class="icon-text">
+                                            <i class="fas fa-tasks"></i>
+                                            Status: **<span class="badge bg-<?= $competition['invitation_status'] == 'Accepted' ? 'success' : ($competition['invitation_status'] == 'Pending' ? 'warning' : 'danger') ?>"><?= htmlspecialchars($competition['invitation_status'] ?: 'Pending'); ?></span>**
+                                        </div>
+                                        <div class="icon-text">
                                             <i class="fas fa-calendar-alt"></i>
                                             Start: <?= htmlspecialchars($competition['start_date']); ?>
                                         </div>
@@ -124,15 +196,32 @@ if ($stmt) {
                                             <i class="fas fa-calendar-check"></i>
                                             End: <?= htmlspecialchars($competition['end_date']); ?>
                                         </div>
-                                        
+
                                         <p class="mt-3 mb-3 text-start description-text">
                                             <?= nl2br(htmlspecialchars(substr($competition['competition_description'], 0, 100) . (strlen($competition['competition_description']) > 100 ? '...' : ''))); ?>
                                         </p>
-                                        
+
                                         <div class="mt-3 text-center">
-                                            <a href="judge_competition.php?id=<?php echo $competition['id']; ?>" class="btn btn-primary">
-                                                <i class="fas fa-balance-scale"></i> Start/Continue Judging
-                                            </a>
+                                            <?php if ($competition['invitation_status'] === 'Accepted'): ?>
+                                                <a href="judge_competition.php?id=<?php echo $competition['id']; ?>" class="btn btn-primary">
+                                                    <i class="fas fa-balance-scale"></i> Start/Continue Judging
+                                                </a>
+                                            <?php elseif ($competition['invitation_status'] === 'Pending'): ?>
+                                                <form method="post" action="my_judgments.php" class="d-inline">
+                                                    <input type="hidden" name="competition_id" value="<?= $competition['id'] ?>">
+                                                    <button type="submit" name="invitation_action" value="Accept" class="btn btn-success me-2">
+                                                        <i class="fas fa-check"></i> Accept Invitation
+                                                    </button>
+                                                    <button type="submit" name="invitation_action" value="Deny" class="btn btn-danger">
+                                                        <i class="fas fa-times"></i> Deny Invitation
+                                                    </button>
+                                                </form>
+                                            <?php else: // Denied Status 
+                                            ?>
+                                                <button class="btn btn-outline-danger" disabled>
+                                                    <i class="fas fa-times-circle"></i> Denied
+                                                </button>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
@@ -152,7 +241,7 @@ if ($stmt) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    
+
     <script>
         $(document).ready(function() {
             var fileName = 'my_judgments.php';
@@ -160,7 +249,7 @@ if ($stmt) {
             $('.list-group-item-action[href$="' + fileName + '"]').addClass('active');
         });
     </script>
-    
+
     <?php include "footer.php"; ?>
 </body>
 

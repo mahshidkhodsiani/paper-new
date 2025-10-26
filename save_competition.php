@@ -283,7 +283,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $competition_link = 'https://paperet.com/competition/' . $competition_id; // **این لینک را با لینک واقعی مسابقه خود جایگزین کنید**
         foreach ($_POST['judgeEmail'] as $index => $email) {
             $name = sanitizeInput($_POST['judgeName'][$index]);
-            sendInvitationEmail($email, $name, $competition_title, $competition_link, 'داور');
+            sendInvitationEmail($email, $name, $competition_title, $competition_link, 'Referee');
         }
     }
 

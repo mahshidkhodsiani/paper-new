@@ -175,20 +175,20 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             margin-bottom: 0;
         }
 
-        /* CSS برای شبیه‌سازی ظاهر عکس */
+        /* CSS for appearance simulation */
         .presentation-card {
             border-left: 5px solid #007bff;
-            /* نوار آبی رنگ کنار کارت */
+            /* Blue bar next to the card */
         }
 
-        /* اصلاح برای تیره‌تر شدن متن متا دیتا */
+        /* Fix for darker metadata text */
         .presentation-meta {
             color: #495057 !important;
-            /* رنگ تیره تر (gray-700) */
+            /* Darker color (gray-700) */
             font-weight: 500;
         }
 
-        /* اصلاح برای قرارگیری دکمه پلی ویدیو در وسط */
+        /* Fix for centering the video play button */
         .media-placeholder {
             background-color: #f8f9fa;
             border-radius: .25rem;
@@ -197,13 +197,13 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             align-items: center;
             cursor: pointer;
             position: relative;
-            /* برای اطمینان از قرارگیری در مرکز */
+            /* To ensure centering */
         }
 
         .video-play-link {
-            /* لینک اصلی ویدیو حذف شد تا مدال باز شود. */
+            /* Main video link was removed to open the modal. */
             color: inherit;
-            /* حذف رنگ آبی لینک */
+            /* Remove blue link color */
             text-decoration: none;
             display: flex;
             flex-direction: column;
@@ -246,6 +246,10 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                     <?php if (!empty($presentations)) : ?>
                         <div class="mb-4">
                             <?php foreach ($presentations as $presentation) : ?>
+                                <?php
+                                $collapseId = 'presentation-details-' . htmlspecialchars($presentation['id']);
+                                $hasMoreContent = !empty($presentation['description']) || !empty($presentation['slides_path']) || !empty($presentation['supplements_path']) || !empty($presentation['comments']) || ($loggedInUserId && ($loggedInUserId != $profileId && !$presentation['has_user_rated']) || ($loggedInUserId && $presentation['has_user_rated']));
+                                ?>
                                 <div class="card presentation-card mb-4 shadow-sm">
                                     <div class="card-body">
                                         <h4 class="card-title mb-1 fw-bold"><?= htmlspecialchars($presentation['title']) ?></h4>
@@ -282,35 +286,105 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                                         <p class="fw-bold mb-1">Research Paper</p>
                                                         <p class="text-muted small mb-3">12 pages · 2.4 MB</p>
 
-                                                        <a href="<?= htmlspecialchars($presentation['pdf_path']) ?>" target="_blank" class="btn btn-primary btn-sm me-1 view-link"><i class="fas fa-eye me-1"></i> View</a>
-                                                        <a href="<?= htmlspecialchars($presentation['pdf_path']) ?>" download class="btn btn-success btn-sm"><i class="fas fa-download me-1"></i> Download</a>
+                                                        <div class="d-flex justify-content-center">
+                                                            <a href="<?= htmlspecialchars($presentation['pdf_path']) ?>" target="_blank" class="btn btn-primary btn-sm me-1 view-link"><i class="fas fa-eye me-1"></i> View</a>
+                                                            <a href="<?= htmlspecialchars($presentation['pdf_path']) ?>" download class="btn btn-success btn-sm"><i class="fas fa-download me-1"></i> Download</a>
+                                                        </div>
                                                     </div>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
-                                        <?php if (!empty($presentation['description'])) : ?>
-                                            <p class="card-text mb-4"><?= nl2br(htmlspecialchars($presentation['description'])) ?></p>
+                                        
+                                        <?php if ($hasMoreContent) : ?>
+                                            <button class="btn btn-link p-0 mb-3 collapsed text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $collapseId ?>" aria-expanded="false" aria-controls="<?= $collapseId ?>">
+                                                <span class="see-more-text">See more <i class="fas fa-chevron-down ms-1 small"></i></span>
+                                            </button>
+                                            
+                                            <div class="collapse" id="<?= $collapseId ?>">
+                                                
+                                                <?php if (!empty($presentation['description'])) : ?>
+                                                    <p class="card-text mb-4"><?= nl2br(htmlspecialchars($presentation['description'])) ?></p>
+                                                <?php endif; ?>
+
+                                                <div class="mb-4">
+                                                    <?php if (!empty($presentation['slides_path'])) : ?>
+                                                        <p class="mb-2 text-muted">
+                                                            <i class="far fa-file-powerpoint me-1 text-info"></i> Presentation Slides.pptx
+                                                            <a href="<?= htmlspecialchars($presentation['slides_path']) ?>" download class="float-end text-secondary"><i class="fas fa-download"></i></a>
+                                                        </p>
+                                                    <?php endif; ?>
+
+                                                    <?php if (!empty($presentation['supplements_path'])) : ?>
+                                                        <p class="mb-0 text-muted">
+                                                            <i class="fas fa-file-archive me-1 text-secondary"></i> Supplementary Materials.zip
+                                                            <a href="<?= htmlspecialchars($presentation['supplements_path']) ?>" download class="float-end text-secondary"><i class="fas fa-download"></i></a>
+                                                        </p>
+                                                    <?php endif; ?>
+                                                </div>
+
+                                                <hr>
+
+                                                <?php if ($presentation['rating_count'] > 0) : ?>
+                                                    <div class="rating-section mt-3">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="rating-stars me-2" data-rating="<?= htmlspecialchars($presentation['avg_rating']) ?>">
+                                                                <?php
+                                                                $avgRating = $presentation['avg_rating'];
+                                                                for ($i = 1; $i <= 5; $i++) {
+                                                                    if ($i <= $avgRating) {
+                                                                        echo '<i class="fas fa-star text-warning"></i>';
+                                                                    } else if ($i - 0.5 <= $avgRating) {
+                                                                        echo '<i class="fas fa-star-half-alt text-warning"></i>';
+                                                                    } else {
+                                                                        echo '<i class="far fa-star text-warning"></i>';
+                                                                    }
+                                                                }
+                                                                ?>
+                                                            </div>
+                                                            <p class="mb-0 fw-bold me-2">(<?= htmlspecialchars($avgRating) ?>/5)</p>
+                                                            <small class="text-muted ms-2">(<?= htmlspecialchars($presentation['rating_count']) ?> votes)</small>
+                                                        </div>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <?php if ($loggedInUserId && $loggedInUserId != $profileId && !$presentation['has_user_rated']) : ?>
+                                                    <div class="rating-form mt-3" data-presentation-id="<?= htmlspecialchars($presentation['id']) ?>">
+                                                        <?php for ($i = 1; $i <= 5; $i++) : ?>
+                                                            <i class="far fa-star rating-star" data-rating="<?= $i ?>"></i>
+                                                        <?php endfor; ?>
+                                                        <div class="mt-2" style="display:none;" id="comment-box-<?= htmlspecialchars($presentation['id']) ?>">
+                                                            <textarea class="form-control" rows="2" placeholder="Leave a comment..."></textarea>
+                                                        </div>
+                                                        <button class="btn btn-primary btn-sm mt-2 submit-rating-btn" style="display:none;">Submit Rating</button>
+                                                    </div>
+                                                <?php elseif ($loggedInUserId && $presentation['has_user_rated']) : ?>
+                                                    <div class="alert alert-info py-2 px-3 d-inline-block mt-3">
+                                                        You have rated this:
+                                                        <span class="text-warning">
+                                                            <?php for ($i = 1; $i <= $presentation['user_rating']; $i++) {
+                                                                echo '<i class="fas fa-star"></i>';
+                                                            } ?>
+                                                        </span>
+                                                        <?php if (!empty($presentation['user_comment'])) : ?>
+                                                            <p class="mt-2 mb-0">Your comment: "<?= htmlspecialchars($presentation['user_comment']) ?>"</p>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <?php if (!empty($presentation['comments'])) : ?>
+                                                    <div class="comment-section mt-4">
+                                                        <h6><i class="fas fa-comments me-1"></i> User Comments</h6>
+                                                        <?php foreach ($presentation['comments'] as $comment) : ?>
+                                                            <div class="comment-item">
+                                                                <p class="mb-1"><strong><?= htmlspecialchars($comment['name'] . ' ' . $comment['family']) ?></strong> <small class="text-muted ms-2"><?= date('M d, Y', strtotime($comment['created_at'])) ?></small></p>
+                                                                <p class="mb-0"><?= nl2br(htmlspecialchars($comment['comment'])) ?></p>
+                                                            </div>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                            </div>
                                         <?php endif; ?>
-
-                                        <div class="mb-4">
-                                            <?php if (!empty($presentation['slides_path'])) : ?>
-                                                <p class="mb-2 text-muted">
-                                                    <i class="far fa-file-powerpoint me-1 text-info"></i> Presentation Slides.pptx
-                                                    <a href="<?= htmlspecialchars($presentation['slides_path']) ?>" download class="float-end text-secondary"><i class="fas fa-download"></i></a>
-                                                </p>
-                                            <?php endif; ?>
-
-                                            <?php if (!empty($presentation['supplements_path'])) : ?>
-                                                <p class="mb-0 text-muted">
-                                                    <i class="fas fa-file-archive me-1 text-secondary"></i> Supplementary Materials.zip
-                                                    <a href="<?= htmlspecialchars($presentation['supplements_path']) ?>" download class="float-end text-secondary"><i class="fas fa-download"></i></a>
-                                                </p>
-                                            <?php endif; ?>
-                                        </div>
-
-                                        <hr>
-
-                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-3 mt-3">
                                             <div class="actions d-flex align-items-center">
 
                                                 <?php if ($loggedInUserId) : ?>
@@ -360,64 +434,6 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                                                 <i class="fas fa-share-alt me-1"></i> Share
                                             </button>
                                         </div>
-
-                                        <?php if ($presentation['rating_count'] > 0) : ?>
-                                            <div class="rating-section mt-3">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="rating-stars me-2" data-rating="<?= htmlspecialchars($presentation['avg_rating']) ?>">
-                                                        <?php
-                                                        $avgRating = $presentation['avg_rating'];
-                                                        for ($i = 1; $i <= 5; $i++) {
-                                                            if ($i <= $avgRating) {
-                                                                echo '<i class="fas fa-star text-warning"></i>';
-                                                            } else if ($i - 0.5 <= $avgRating) {
-                                                                echo '<i class="fas fa-star-half-alt text-warning"></i>';
-                                                            } else {
-                                                                echo '<i class="far fa-star text-warning"></i>';
-                                                            }
-                                                        }
-                                                        ?>
-                                                    </div>
-                                                    <p class="mb-0 fw-bold me-2">(<?= htmlspecialchars($avgRating) ?>/5)</p>
-                                                    <small class="text-muted ms-2">(<?= htmlspecialchars($presentation['rating_count']) ?> votes)</small>
-                                                </div>
-                                            </div>
-                                        <?php endif; ?>
-
-                                        <?php if ($loggedInUserId && $loggedInUserId != $profileId && !$presentation['has_user_rated']) : ?>
-                                            <div class="rating-form mt-3" data-presentation-id="<?= htmlspecialchars($presentation['id']) ?>">
-                                                <?php for ($i = 1; $i <= 5; $i++) : ?>
-                                                    <i class="far fa-star rating-star" data-rating="<?= $i ?>"></i>
-                                                <?php endfor; ?>
-                                                <div class="mt-2" style="display:none;" id="comment-box-<?= htmlspecialchars($presentation['id']) ?>">
-                                                    <textarea class="form-control" rows="2" placeholder="Leave a comment..."></textarea>
-                                                </div>
-                                                <button class="btn btn-primary btn-sm mt-2 submit-rating-btn" style="display:none;">Submit Rating</button>
-                                            </div>
-                                        <?php elseif ($loggedInUserId && $presentation['has_user_rated']) : ?>
-                                            <div class="alert alert-info py-2 px-3 d-inline-block mt-3">
-                                                You have rated this:
-                                                <span class="text-warning">
-                                                    <?php for ($i = 1; $i <= $presentation['user_rating']; $i++) {
-                                                        echo '<i class="fas fa-star"></i>';
-                                                    } ?>
-                                                </span>
-                                                <?php if (!empty($presentation['user_comment'])) : ?>
-                                                    <p class="mt-2 mb-0">Your comment: "<?= htmlspecialchars($presentation['user_comment']) ?>"</p>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php endif; ?>
-                                        <?php if (!empty($presentation['comments'])) : ?>
-                                            <div class="comment-section mt-4">
-                                                <h6><i class="fas fa-comments me-1"></i> User Comments</h6>
-                                                <?php foreach ($presentation['comments'] as $comment) : ?>
-                                                    <div class="comment-item">
-                                                        <p class="mb-1"><strong><?= htmlspecialchars($comment['name'] . ' ' . $comment['family']) ?></strong> <small class="text-muted ms-2"><?= date('M d, Y', strtotime($comment['created_at'])) ?></small></p>
-                                                        <p class="mb-0"><?= nl2br(htmlspecialchars($comment['comment'])) ?></p>
-                                                    </div>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        <?php endif; ?>
                                     </div>
                                 </div> <?php endforeach; ?>
                         </div>
@@ -515,20 +531,38 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
     </div>
     <script src="rate_presentation.js"></script>
     <script>
-        // اضافه کردن jQuery برای AJAX (اگر در includes.php نباشد)
+        // Adding jQuery for AJAX (if not in includes.php)
         if (typeof jQuery == 'undefined') {
             document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
         }
 
-        // توابع showMessage و shareItem (بدون تغییر)
+        // showMessage and shareItem functions (unchanged)
         document.addEventListener('DOMContentLoaded', function() {
-            // ... منطق ویدیوی معرفی و نمایش پیام ...
+            // ... logic for intro video and message display ...
             const urlParams = new URLSearchParams(window.location.search);
             const statusParam = urlParams.get('status');
             const msgParam = urlParams.get('msg');
             if (statusParam && msgParam) {
                 showMessage(decodeURIComponent(msgParam), statusParam);
             }
+            
+            // Logic for See more/See less
+            var collapseElements = document.querySelectorAll('.collapse');
+            collapseElements.forEach(function(collapseEl) {
+                collapseEl.addEventListener('show.bs.collapse', function() {
+                    var button = document.querySelector('[data-bs-target="#' + collapseEl.id + '"]');
+                    if (button) {
+                        button.querySelector('.see-more-text').innerHTML = 'See less <i class="fas fa-chevron-up ms-1 small"></i>';
+                    }
+                });
+
+                collapseEl.addEventListener('hide.bs.collapse', function() {
+                    var button = document.querySelector('[data-bs-target="#' + collapseEl.id + '"]');
+                    if (button) {
+                        button.querySelector('.see-more-text').innerHTML = 'See more <i class="fas fa-chevron-down ms-1 small"></i>';
+                    }
+                });
+            });
         });
 
         function showMessage(message, type = 'info') {
@@ -552,8 +586,8 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                 bsAlert.close();
 
                 setTimeout(() => {
-                    // بجای رفرش کامل، در این حالت فقط پیام را حذف می‌کنیم تا رفرش ناخواسته پیش نیاید، 
-                    // مگر اینکه سیستم اصلی شما برای رفرش ساخته شده باشد.
+                    // Instead of full refresh, only remove the message here to prevent unwanted refresh, 
+                    // unless your primary system is built for refresh.
                     // window.location.reload(); 
                 }, 1000);
 
@@ -581,7 +615,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             }
         }
 
-        // منطق فعال‌سازی مدال ویدیو برای پرزنتیشن‌ها 
+        // Logic for activating video modal for presentations 
         document.addEventListener('DOMContentLoaded', function() {
             var videoModal = document.getElementById('videoModal');
             var videoPlayer = document.getElementById('introVideoPlayer');
@@ -589,7 +623,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             if (videoModal && videoPlayer) {
                 videoModal.addEventListener('show.bs.modal', function(event) {
                     var button = event.relatedTarget;
-                    // استفاده از data-video-path برای پرزنتیشن‌ها
+                    // Use data-video-path for presentations
                     var videoPath = button.getAttribute('data-video-path');
                     if (videoPath) {
                         videoPlayer.src = videoPath;
@@ -604,19 +638,19 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
             }
 
             // =========================================================
-            // منطق AJAX برای Like و Save (بر اساس فایل‌های toggle_like.php و toggle_save.php)
+            // AJAX Logic for Like and Save (Based on toggle_like.php and toggle_save.php files)
             // =========================================================
             $('.like-toggle').on('click', function(e) {
                 e.preventDefault();
                 var $button = $(this);
                 var presentationId = $button.data('presentation-id');
-                var isLiked = $button.data('is-liked') === true || $button.data('is-liked') === 'true'; // اطمینان از خواندن صحیح boolean
+                var isLiked = $button.data('is-liked') === true || $button.data('is-liked') === 'true'; // Ensure correct boolean reading
                 var action = isLiked ? 'unlike' : 'like';
                 var $icon = $button.find('.like-icon i');
                 var $count = $button.find('.like-count');
 
                 $.ajax({
-                    url: '../actions/toggle_like.php', // آدرس واقعی به فایل PHP لایک
+                    url: '../actions/toggle_like.php', // Actual path to the PHP like file
                     type: 'POST',
                     dataType: 'json',
                     data: {
@@ -625,7 +659,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                     },
                     success: function(response) {
                         if (response.status === 'success') {
-                            // به‌روزرسانی وضعیت و شمارنده در HTML
+                            // Update status and counter in HTML
                             $button.data('is-liked', !isLiked);
                             $count.text(response.new_count);
 
@@ -649,14 +683,14 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                 e.preventDefault();
                 var $button = $(this);
                 var presentationId = $button.data('presentation-id');
-                var isSaved = $button.data('is-saved') === true || $button.data('is-saved') === 'true'; // اطمینان از خواندن صحیح boolean
+                var isSaved = $button.data('is-saved') === true || $button.data('is-saved') === 'true'; // Ensure correct boolean reading
                 var action = isSaved ? 'unsave' : 'save';
                 var $icon = $button.find('.save-icon i');
 
-                $button.attr('disabled', true); // غیرفعال کردن موقت دکمه
+                $button.attr('disabled', true); // Temporarily disable button
 
                 $.ajax({
-                    url: '../actions/toggle_save.php', // آدرس واقعی به فایل PHP ذخیره
+                    url: '../actions/toggle_save.php', // Actual path to the PHP save file
                     type: 'POST',
                     dataType: 'json',
                     data: {
@@ -680,7 +714,7 @@ $user_educations_array = !empty($user['education']) ? explode(';', $user['educat
                         alert('Error communicating with the server for saving.');
                     },
                     complete: function() {
-                        $button.attr('disabled', false); // فعال کردن مجدد دکمه
+                        $button.attr('disabled', false); // Re-enable button
                     }
                 });
             });

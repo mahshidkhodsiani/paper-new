@@ -14,22 +14,28 @@ function get_competitions()
     global $conn;
     $competitions = [];
 
-    // NOTE: The main SQL query does not need to be changed unless you want to implement server-side filtering.
-    $sql = "SELECT id, competition_title, organizer_name, start_date, end_date, submission_type FROM competitions ORDER BY start_date DESC";
+    // FIX: Changed column name from 'organizer_user_id' to the correct 'user_id'
+    $sql = "SELECT id, competition_title, organizer_name, start_date, end_date, submission_type, user_id FROM competitions";
     $result = $conn->query($sql);
 
     if ($result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
             $status = 'Upcoming';
             $now = new DateTime();
-            $start_date = new DateTime($row['start_date']);
-            $end_date = new DateTime($row['end_date']);
+            // Handle case where date might be null or invalid
+            try {
+                $start_date = new DateTime($row['start_date']);
+                $end_date = new DateTime($row['end_date']);
 
-            if ($now > $start_date && $now < $end_date) {
-                $status = 'Active';
-            } elseif ($now >= $end_date) {
-                $status = 'Completed';
+                if ($now > $start_date && $now < $end_date) {
+                    $status = 'Active';
+                } elseif ($now >= $end_date) {
+                    $status = 'Completed';
+                }
+            } catch (Exception $e) {
+                // Keep default 'Upcoming' or handle date error
             }
+
 
             $competitions[] = [
                 'id' => $row['id'],
@@ -40,11 +46,41 @@ function get_competitions()
                 'status' => $status,
                 'format' => 'TBD',
                 'submission' => $row['submission_type'],
+                // FIX: Use the correct DB field 'user_id' and map it to our internal array key
+                'organizer_user_id' => $row['user_id'],
             ];
         }
     }
 
-    $conn->close();
+    // Close connection before sorting
+    // NOTE: If you use $conn in other parts of the script after this call, you should remove this line.
+    // For now, I will keep it commented out to prevent unexpected 'connection closed' errors
+    // $conn->close(); 
+
+    // CUSTOM SORTING LOGIC: Priority for user_id = 1, then sort by date DESC
+    usort($competitions, function ($a, $b) {
+        // Check if the competition is from the main Paperet account (ID = 1)
+        $is_a_paperet = (isset($a['organizer_user_id']) && $a['organizer_user_id'] == '1');
+        $is_b_paperet = (isset($b['organizer_user_id']) && $b['organizer_user_id'] == '1');
+
+        // 1. Prioritize Paperet Competitions
+        if ($is_a_paperet && !$is_b_paperet) {
+            return -1; // A comes before B
+        }
+        if (!$is_a_paperet && $is_b_paperet) {
+            return 1; // B comes before A
+        }
+
+        // 2. If both are Paperet OR neither are, sort by date (DESC - latest date first)
+        $date_a = strtotime($a['date']);
+        $date_b = strtotime($b['date']);
+
+        // Return 1 if A's date is older than B's date (puts B first). Return -1 if A is newer (puts A first).
+        if ($date_a == $date_b) {
+            return 0;
+        }
+        return ($date_a < $date_b) ? 1 : -1;
+    });
 
     return $competitions;
 }
@@ -78,6 +114,38 @@ $competitions = get_competitions();
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
             transform: translateY(-5px);
         }
+
+        /* --- START: STYLES FOR PAPERET FEATURED CARD --- */
+        .paperet-featured-card {
+            border: 3px solid #f6c23e !important;
+            /* Gold Border */
+            box-shadow: 0 0 20px rgba(246, 194, 62, 0.5) !important;
+            /* Gold Glow */
+            background-color: #fffaf0;
+            /* Creamy background */
+        }
+
+        .paperet-featured-card .card-title {
+            color: #4e73df;
+            /* Primary Blue for Title */
+            font-weight: 900;
+            /* Extra bold */
+        }
+
+        .paperet-featured-card .status-badge.bg-primary {
+            background-color: #f6c23e !important;
+            /* Gold badge color */
+            color: #333 !important;
+            font-weight: 700;
+        }
+
+        .paperet-featured-card .btn-primary {
+            background-color: #d63384 !important;
+            /* Hot pink button */
+            border-color: #d63384 !important;
+        }
+
+        /* --- END: STYLES FOR PAPERET FEATURED CARD --- */
 
         .card-title {
             font-weight: bold;
@@ -138,12 +206,21 @@ $competitions = get_competitions();
             </div>
         </div>
         <div class="row g-4">
-            <?php foreach ($competitions as $competition) : ?>
+            <?php foreach ($competitions as $competition) :
+                // Check if this is the main Paperet account competition by checking 'organizer_user_id' (which is mapped to DB 'user_id')
+                $is_paperet = (isset($competition['organizer_user_id']) && $competition['organizer_user_id'] == '1');
+                $card_class = $is_paperet ? 'paperet-featured-card' : '';
+            ?>
                 <div class="col-md-6 col-lg-4">
-                    <div class="card competition-card h-100">
+                    <div class="card competition-card h-100 <?php echo $card_class; ?>">
                         <div class="card-body d-flex flex-column">
                             <span class="badge bg-primary rounded-pill mb-2 status-badge"><?php echo htmlspecialchars($competition['status']); ?></span>
-                            <h5 class="card-title"><?php echo htmlspecialchars($competition['title']); ?></h5>
+                            <h5 class="card-title">
+                                <?php echo htmlspecialchars($competition['title']); ?>
+                                <?php if ($is_paperet): ?>
+                                    <i class="fas fa-crown text-warning ms-1" title="Official Paperet Competition"></i>
+                                <?php endif; ?>
+                            </h5>
                             <p class="card-text text-muted mb-1"><small>
                                     <i class="bi bi-building me-1"></i><span class="organizer-name"><?php echo htmlspecialchars($competition['organizer']); ?></span>
                                     <i class="bi bi-calendar-event me-1 ms-3"></i><?php echo htmlspecialchars($competition['date']); ?>

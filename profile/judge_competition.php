@@ -7,8 +7,8 @@ if (!isset($_SESSION['user_data'])) {
     exit();
 }
 
-$userId = $_SESSION['user_data']['id']; // برای ثبت نمره در جدول competition_judgments
-$userEmail = $_SESSION['user_data']['email']; // برای چک کردن دسترسی در competition_judges
+$userId = $_SESSION['user_data']['id']; 
+$userEmail = $_SESSION['user_data']['email']; 
 
 include "../config.php";
 
@@ -29,25 +29,25 @@ $conn->set_charset("utf8mb4");
 // --- 1. Verify Judge and Fetch Competition Info ---
 // -----------------------------------------------------------
 if ($competitionId) {
-    // Check if the user is a registered judge for this competition using the email column
+    // Check if the user is a registered judge AND has accepted the invitation
     $sql_comp = "
         SELECT c.*, cj.title AS judge_role 
         FROM competitions c
         JOIN competition_judges cj ON c.id = cj.competition_id
-        WHERE c.id = ? AND cj.email = ? -- !!! FIX: چک کردن دسترسی با email
+        WHERE c.id = ? AND cj.email = ? AND cj.status = 'Accepted' -- <<< CRITICAL FIX: Only allow access if status is 'Accepted'
     ";
     $stmt_comp = $conn->prepare($sql_comp);
 
     if ($stmt_comp) {
-        $stmt_comp->bind_param("is", $competitionId, $userEmail); // !!! FIX: استفاده از ID مسابقه (int) و ایمیل کاربر (string)
+        $stmt_comp->bind_param("is", $competitionId, $userEmail); 
         $stmt_comp->execute();
         $result_comp = $stmt_comp->get_result();
 
         if ($result_comp->num_rows > 0) {
             $competitionInfo = $result_comp->fetch_assoc();
         } else {
-            // Not authorized to judge this competition
-            header("Location: my_judgments.php?status=danger&msg=" . urlencode("You are not authorized to judge this competition."));
+            // Not authorized or has not accepted the invitation
+            header("Location: my_judgments.php?status=danger&msg=" . urlencode("You must accept the invitation before judging this competition."));
             exit();
         }
         $stmt_comp->close();
@@ -61,7 +61,7 @@ if ($competitionId) {
 // -----------------------------------------------------------
 // --- 2. Handle Submission of Judgment (POST) ---
 // -----------------------------------------------------------
-// این بخش نیازی به تغییر ندارد زیرا از judge_user_id (که همان $userId است) برای ثبت نمره استفاده می‌کند.
+// The logic here is fine as it uses $userId which is confirmed to be the judge.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_judgment'])) {
     $uploadId = $_POST['upload_id'] ?? null; 
     $scoreValue = filter_var($_POST['score_value'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
@@ -190,8 +190,7 @@ if ($stmt_uploads) {
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     <?php endif; ?>
-
-                    <?php if (empty($submissions)): ?>
+<?php if (empty($submissions)): ?>
                         <div class="alert alert-info" role="alert">
                             No uploads have been made for this competition yet.
                         </div>

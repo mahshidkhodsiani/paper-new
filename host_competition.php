@@ -36,6 +36,11 @@ $userId = $_SESSION['user_data']['id']; // For updating current user's data
       margin-top: 1rem;
     }
 
+    .btn-primary,
+    .btn-info {
+      background-color: #4242f0;
+    }
+
     #logoPreview {
       max-width: 160px;
       max-height: 120px;

@@ -274,6 +274,10 @@ $user = $_SESSION['user_data'];
     include "../includes.php";
     ?>
     <link rel="stylesheet" href="styles.css">
+
+    <link rel="icon" type="image/x-icon" href="../images/logo.png">
+
+
     <style>
         /* CSS for delete button styling */
         .delete-btn {
