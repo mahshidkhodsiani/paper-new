@@ -30,8 +30,9 @@ if (!empty($all_results)) {
     for ($i = 0; $i < min(4, count($all_results)); $i++) {
         $result = $all_results[$i];
         echo '<li class="list-group-item">';
-        echo '<h5><a href="paper-new/' . htmlspecialchars($result['file_path']) . '" target="_blank">' . htmlspecialchars($result['title']) . '</a></h5>';
-        echo '<p>' . htmlspecialchars($result['description']) . '</p>';
+        // خطای 'file_path' را به 'pdf_path' اصلاح کنید و برای اطمینان از مقدار خالی، ?? '' اضافه کنید
+        echo '<h5><a href="paper-new/' . htmlspecialchars($result['pdf_path'] ?? '') . '" target="_blank">' . htmlspecialchars($result['title'] ?? '') . '</a></h5>';
+        echo '<p>' . htmlspecialchars($result['description'] ?? '') . '</p>';
         echo '</li>';
     }
     echo '</ul>';

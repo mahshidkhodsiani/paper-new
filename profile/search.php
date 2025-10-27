@@ -1,37 +1,37 @@
 <?php
 // search.php
 session_start();
-// اصلاح مسیردهی به فایل config.php و includes.php
+// Fixing the path to config.php and includes.php
 include '../config.php';
 include '../includes.php';
 
 $all_results = [];
 $search_query = isset($_GET['query']) ? trim($_GET['query']) : '';
 
-// بررسی نوع درخواست (AJAX یا معمولی)
+// Check the request type (AJAX or regular)
 $is_ajax_request = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
 
-// تابع کمکی برای اصلاح مسیر فایل
+// Helper function to correct the file path
 function getCorrectFilePath($path)
 {
     if (empty($path)) {
         return '#';
     }
-    // اگر مسیر از قبل مطلق باشد، آن را برگردان
+    // If the path is already absolute, return it
     if (strpos($path, '/') === 0) {
         return $path;
     }
-    // اگر مسیر نسبی است (مانند ../uploads/...)، آن را به درستی تنظیم کن
+    // If the path is relative (like ../uploads/...), set it correctly
     if (strpos($path, '../') === 0) {
-        // حذف ".." از ابتدای مسیر و اضافه کردن /paper-new/
+        // Remove ".." from the beginning of the path and add /paper-new/
         return '/paper-new' . substr($path, 2);
     }
     return $path;
 }
 
-// اگر کوئری وجود داشته باشد، جستجو را انجام بده
+// If query exists, perform the search
 if (!empty($search_query) && strlen($search_query) >= 3) {
-    // اصلاح کوئری SQL برای join با جدول users و دریافت نام و نام خانوادگی نویسنده
+    // Correcting the SQL query to join with the users table and retrieve the author's full name
     $sql = "SELECT p.*, CONCAT(u.name, ' ', u.family) AS full_name, u.id AS user_id FROM `presentations` p JOIN `users` u ON p.user_id = u.id WHERE p.`title` LIKE ? OR p.`keywords` LIKE ? ORDER BY p.`created_at` DESC";
     $stmt = $conn->prepare($sql);
     $search_param = "%" . $search_query . "%";
@@ -44,28 +44,31 @@ if (!empty($search_query) && strlen($search_query) >= 3) {
         }
     }
     $stmt->close();
-    
 }
 
-// اگر درخواست AJAX باشد، نتایج را برای جستجوی زنده برمی‌گردانیم
+// If it's an AJAX request, we return the results for live search
 if ($is_ajax_request) {
     if (!empty($all_results)) {
         echo '<ul class="list-group">';
         for ($i = 0; $i < min(5, count($all_results)); $i++) {
             $result = $all_results[$i];
+
+            // Note: In AJAX response, Author name/link was missing in the original code, but description/title were available. 
+            // The original structure only included title and description for AJAX results.
+
             echo '<li class="list-group-item">';
-            echo '<h5><a href="' . getCorrectFilePath($result['pdf_path']) . '" target="_blank">' . htmlspecialchars($result['title']) . '</a></h5>';
-            echo '<p>' . htmlspecialchars($result['description']) . '</p>';
+            echo '<h5><a href="' . getCorrectFilePath($result['pdf_path'] ?? '') . '" target="_blank">' . htmlspecialchars($result['title'] ?? 'N/A') . '</a></h5>';
+            echo '<p>' . htmlspecialchars($result['description'] ?? 'N/A') . '</p>';
             echo '</li>';
         }
         echo '</ul>';
     } else {
-        echo '<div class="list-group-item">نتیجه‌ای یافت نشد.</div>';
+        echo '<div class="list-group-item">No result found.</div>'; // نتیجه‌ای یافت نشد.
     }
 }
-// اگر درخواست معمولی باشد (برای صفحه کامل نتایج)
+// If it's a regular request (for the full results page)
 else {
-    // شامل کردن هدر برای لود شدن استایل‌ها و نوار ناوبری
+    // Including the header to load styles and navigation bar
     include 'header.php';
 ?>
     <style>
@@ -80,20 +83,24 @@ else {
 
         .search-result-card .card-title {
             color: #0d6efd;
-            /* رنگ آبی برای عنوان */
+            /* Blue color for the title */
+            // رنگ آبی برای عنوان
         }
     </style>
 
+    <link rel="icon" type="image/x-icon" href="../images/logo.png">
+
+
     <div class="container mt-5">
-        <h2 class="mb-4">نتایج جستجو برای "<?php echo htmlspecialchars($search_query); ?>"</h2>
+        <h2 class="mb-4">Search Results for "<?php echo htmlspecialchars($search_query); ?>"</h2>
         <hr>
         <?php if (!empty($all_results)): ?>
             <div class="row">
                 <?php foreach ($all_results as $result): ?>
                     <?php
                     $filePath = getCorrectFilePath($result['pdf_path'] ?? '');
-                    // استفاده از user_id از نتایج کوئری
-                    $authorProfileLink = '../people/profile.php?id=' . urlencode($result['user_id'] ?? '');
+                    // Using user_id from the query results
+                    $authorProfileLink = '../people/profile.php?id=' . urlencode($result['user_id'] ?? ''); // اصلاح مسیر نسبی: ../people/profile.php
                     ?>
                     <div class="col-md-6 mb-4">
                         <div class="card search-result-card h-100">
@@ -103,8 +110,7 @@ else {
                                 <small class="text-secondary d-block mt-2">
                                     **Author:** <a href="<?php echo $authorProfileLink; ?>"><?php echo htmlspecialchars($result['full_name'] ?? 'N/A'); ?></a>
                                     <br>
-                                    **keywords:** <?php echo htmlspecialchars($result['keywords'] ?? 'N/A'); ?>
-                                </small>
+                                    **Keywords:** <?php echo htmlspecialchars($result['keywords'] ?? 'N/A'); ?> </small>
                             </div>
                         </div>
                     </div>
@@ -113,13 +119,13 @@ else {
         <?php else: ?>
             <div class="alert alert-warning text-center" role="alert">
                 <i class="fas fa-exclamation-triangle me-2"></i>
-                نتیجه‌ای برای "<?php echo htmlspecialchars($search_query); ?>" یافت نشد.
+                No result found for "<?php echo htmlspecialchars($search_query); ?>".
             </div>
         <?php endif; ?>
     </div>
 
 <?php
-    // شامل کردن فوتر
+    // Including the footer
     include 'footer.php';
 }
 ?>

@@ -74,9 +74,16 @@ if ($is_ajax_request) {
 else {
     // شامل کردن هدر برای لود شدن استایل‌ها و نوار ناوبری
     include 'header.php';
+
 ?>
     <link rel="icon" type="image/x-icon" href="images/logo.png">
 
+    <style>
+        .btn-primary,
+        .btn-info {
+            background-color: #4242f0;
+        }
+    </style>
     <div class="container mt-5">
         <h2>Search Results for "<?php echo htmlspecialchars($search_query); ?>"</h2>
         <hr>
